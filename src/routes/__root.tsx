@@ -125,7 +125,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             Deferred
           </Link>{' '}
           <Link
-            // @ts-expect-error
+            // @ts-expect-error - intentionally linking to non-existent route for demo
             to="/this-route-does-not-exist"
             activeProps={{
               className: 'font-bold',

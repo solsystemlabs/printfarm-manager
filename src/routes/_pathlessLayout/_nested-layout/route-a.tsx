@@ -6,5 +6,5 @@ export const Route = createFileRoute('/_pathlessLayout/_nested-layout/route-a')(
 )
 
 function LayoutAComponent() {
-  return <div>I'm A!</div>
+  return <div>I&apos;m A!</div>
 }

@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pm",
+  "compatibility_date": "2025-10-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "routes": [
+    {
+      "pattern": "pm.solsystemlabs.com",
+      "custom_domain": true
+    }
+  ]
+}

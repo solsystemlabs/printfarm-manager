@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pm-staging",
+  "compatibility_date": "2025-10-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "routes": [
+    {
+      "pattern": "pm-staging.solsystemlabs.com",
+      "custom_domain": true
+    }
+  ]
+}

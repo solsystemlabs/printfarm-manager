@@ -1,6 +1,6 @@
 node_modules
-package-lock.json
 yarn.lock
+.wrangler
 
 .DS_Store
 .cache
@@ -8,6 +8,7 @@ yarn.lock
 .vercel
 .output
 /build/
+/dist/
 /api/
 /server/build
 /public/build# Sentry Config File
