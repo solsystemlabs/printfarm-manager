@@ -3,5 +3,48 @@
   "name": "pm-dev",
   "compatibility_date": "2025-10-04",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry"
+  "main": "@tanstack/react-start/server-entry",
+
+  // Observability: Enable automatic logging and monitoring
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+
+  // Smart Placement: Optimize worker location based on backend proximity
+  "placement": {
+    "mode": "smart"
+  },
+
+  // Development environment variables (non-sensitive only)
+  "vars": {
+    "ENVIRONMENT": "development"
+  },
+
+  "env": {
+    "staging": {
+      "name": "pm-staging",
+      "routes": [
+        {
+          "pattern": "pm-staging.solsystemlabs.com",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "staging"
+      }
+    },
+    "production": {
+      "name": "pm",
+      "routes": [
+        {
+          "pattern": "pm.solsystemlabs.com",
+          "custom_domain": true
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "production"
+      }
+    }
+  }
 }

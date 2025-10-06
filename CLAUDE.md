@@ -90,38 +90,149 @@ src/
 
 ## Cloudflare Workers Deployment
 
+This project uses **Cloudflare Workers Builds** (native Git integration) for CI/CD. All deployments are handled automatically by Cloudflare when you push to specific branches.
+
 ### Environments
-Two deployment environments configured:
-- **Staging**: `pm-staging` worker → `pm-staging.solsystemlabs.com` (auto-deploy on master)
-- **Production**: `pm` worker → `pm.solsystemlabs.com` (manual trigger or after staging)
+Two deployment environments configured in `wrangler.jsonc`:
 
-### Configuration Files
-- `wrangler.staging.jsonc` - Staging worker configuration
-- `wrangler.production.jsonc` - Production worker configuration
+- **Development**: `pm-dev` worker (local development via `npm run dev`)
+- **Staging**: `pm-staging` worker → `pm-staging.solsystemlabs.com` (auto-deploy on push to `master`)
+- **Production**: `pm` worker → `pm.solsystemlabs.com` (auto-deploy on push to `production`)
 
-Both configs:
-- Node.js compatibility enabled
-- Use `@tanstack/react-start/server-entry` as main entry point
-- Custom domains configured with Cloudflare
+### Configuration
+All environments are defined in a single `wrangler.jsonc` file using Wrangler environments:
+```jsonc
+{
+  "name": "pm-dev",  // Default for local development
+  "env": {
+    "staging": { "name": "pm-staging", ... },
+    "production": { "name": "pm", ... }
+  }
+}
+```
 
-## CI/CD Pipeline
+### Deployment Strategy
 
-### GitHub Actions Workflows
-1. **CI** (`.github/workflows/ci.yml`) - Runs on all PRs and pushes to master
-   - Parallel jobs: lint, typecheck, test, build
+**Pull Requests**:
+- Cloudflare builds code and uploads versions
+- Preview URLs posted as PR comments
+- No actual deployment until merged
 
-2. **Deploy to Staging** (`.github/workflows/deploy-staging.yml`)
-   - Triggers after successful CI on master branch
-   - Deploys to `pm-staging.solsystemlabs.com`
+**Push to `master` branch**:
+- Cloudflare runs: `npm run build`
+- Deploys via: `npx wrangler deploy --env staging`
+- Live at: https://pm-staging.solsystemlabs.com
 
-3. **Deploy to Production** (`.github/workflows/deploy-production.yml`)
-   - Triggers manually via workflow_dispatch OR after successful staging deployment
-   - Requires GitHub environment approval (production environment)
-   - Deploys to `pm.solsystemlabs.com`
+**Push to `production` branch**:
+- Cloudflare runs: `npm run build`
+- Deploys via: `npx wrangler deploy --env production`
+- Live at: https://pm.solsystemlabs.com
 
-### Required GitHub Secrets
-- `CLOUDFLARE_API_TOKEN` - Cloudflare API token with Workers Deploy permission
-- `CLOUDFLARE_ACCOUNT_ID` - Cloudflare account ID
+**Promoting staging to production**:
+```bash
+git checkout production
+git merge master
+git push
+```
 
-### GitHub Environment Setup
-Create a `production` environment in repository settings with required reviewers for deployment approval.
+### Setup Instructions
+See `CLOUDFLARE_SETUP.md` for detailed instructions on connecting your GitHub repository to Cloudflare Workers Builds.
+
+## Working with Cloudflare Workers Context
+
+### Accessing Environment Variables in API Routes
+
+To access Cloudflare environment variables and bindings in your server-side API routes, use `getContext('cloudflare')` from `vinxi/http`:
+
+```typescript
+import { createFileRoute } from '@tanstack/react-router'
+import { json } from '@tanstack/react-start'
+import { getContext } from 'vinxi/http'
+
+export const Route = createFileRoute('/api/example')({
+  server: {
+    handlers: {
+      GET: async ({ request }) => {
+        // Access Cloudflare context
+        const cf = getContext('cloudflare')
+
+        // Access environment variables
+        const environment = cf.env.ENVIRONMENT // "development", "staging", or "production"
+
+        // Access other Cloudflare bindings (KV, R2, D1, etc.) when configured
+        // const db = cf.env.DB
+        // const bucket = cf.env.MY_BUCKET
+
+        console.log(`API called in ${environment} environment`)
+
+        return json({ environment })
+      },
+    },
+  },
+})
+```
+
+### Available Environment Variables
+
+The following environment variables are configured in `wrangler.jsonc`:
+
+- **`ENVIRONMENT`**: Current deployment environment
+  - `"development"` - Local development (`npm run dev`)
+  - `"staging"` - Staging deployment (`pm-staging.solsystemlabs.com`)
+  - `"production"` - Production deployment (`pm.solsystemlabs.com`)
+
+### Observability & Logging
+
+**Observability is enabled** with 100% request sampling in `wrangler.jsonc`:
+```jsonc
+"observability": {
+  "enabled": true,
+  "head_sampling_rate": 1
+}
+```
+
+**Accessing logs**:
+- Local: View in terminal during `npm run dev`
+- Deployed: Cloudflare Dashboard → Workers & Pages → [worker name] → Logs
+- All `console.log()`, `console.error()`, etc. are automatically captured
+
+**Note**: TanStack Start currently has limitations accessing Cloudflare context in SSR loaders. The `getContext('cloudflare')` approach works reliably in:
+- API route handlers (`src/routes/api/*.ts`)
+- Server functions called from client-side code
+
+### Smart Placement
+
+**Smart Placement is enabled** in `wrangler.jsonc`:
+```jsonc
+"placement": {
+  "mode": "smart"
+}
+```
+
+This automatically optimizes where your worker executes:
+- If your worker makes multiple subrequests to backend services, it will run closer to those backends
+- No code changes needed - it analyzes traffic patterns automatically
+- Takes ~15 minutes after deployment to start optimizing
+
+### Adding Secrets
+
+For sensitive values (API keys, tokens, etc.), **never use `vars` in `wrangler.jsonc`**. Use Wrangler secrets instead:
+
+```bash
+# For local development
+echo "SECRET_VALUE" > .dev.vars
+# Add to .dev.vars file:
+# MY_SECRET=secret_value_here
+
+# For staging
+npx wrangler secret put MY_SECRET --env staging
+
+# For production
+npx wrangler secret put MY_SECRET --env production
+```
+
+Access secrets the same way as environment variables:
+```typescript
+const cf = getContext('cloudflare')
+const secret = cf.env.MY_SECRET
+```

@@ -8,15 +8,15 @@
     "build": "vite build && tsc --noEmit",
     "preview": "vite preview",
     "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
     "cf-typegen": "wrangler types",
     "test": "vitest",
     "test:run": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
-    "deploy:staging": "npm run build && cd dist/server && npx wrangler deploy -c wrangler.json --name pm-staging",
-    "deploy:production": "npm run build && cd dist/server && npx wrangler deploy -c wrangler.json --name pm"
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {
     "@tanstack/react-query": "^5.66.0",
