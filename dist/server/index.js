@@ -1,4 +1,4 @@
-import { A } from "./assets/worker-entry-D3b-hMU_.js";
+import { A } from "./assets/worker-entry-CP344yKL.js";
 import "node:events";
 import "node:stream";
 import "node:async_hooks";
