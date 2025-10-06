@@ -16,6 +16,10 @@
     "mode": "smart"
   },
 
+  // Development settings
+  "workers_dev": false,
+  "preview_urls": true,
+
   // Development environment variables (non-sensitive only)
   "vars": {
     "ENVIRONMENT": "development"
