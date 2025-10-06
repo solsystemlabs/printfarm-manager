@@ -113,20 +113,24 @@ All environments are defined in a single `wrangler.jsonc` file using Wrangler en
 
 ### Deployment Strategy
 
-**Pull Requests**:
-- Cloudflare builds code and uploads versions
-- Preview URLs posted as PR comments
-- No actual deployment until merged
+**Pull Requests (Isolated Previews)**:
+- Cloudflare runs: `npm run build`
+- Uploads via: `npx wrangler versions upload --env staging`
+- Generates isolated preview URL (e.g., `feature-branch-pm-staging.<subdomain>.workers.dev`)
+- Preview URL posted as comment on PR
+- **Preview URLs are completely isolated from staging** - they do NOT affect the live staging environment
+- Same preview URL updates with each commit to the PR branch
+- Previews are deleted when PR is closed/merged
 
-**Push to `master` branch**:
+**Push to `master` branch (Staging Deployment)**:
 - Cloudflare runs: `npm run build`
 - Deploys via: `npx wrangler deploy --env staging`
-- Live at: https://pm-staging.solsystemlabs.com
+- Updates live staging: https://pm-staging.solsystemlabs.com
 
-**Push to `production` branch**:
+**Push to `production` branch (Production Deployment)**:
 - Cloudflare runs: `npm run build`
 - Deploys via: `npx wrangler deploy --env production`
-- Live at: https://pm.solsystemlabs.com
+- Updates live production: https://pm.solsystemlabs.com
 
 **Promoting staging to production**:
 ```bash
@@ -134,6 +138,25 @@ git checkout production
 git merge master
 git push
 ```
+
+### Preview URLs vs Environments
+
+**Preview URLs** (PR branches):
+- Temporary, isolated deployments
+- Format: `<branch-name>-pm-staging.<subdomain>.workers.dev`
+- Automatically created for each PR (when "Enable Pull Request Previews" is checked)
+- Do NOT affect staging or production
+- Public by default (can be protected with Cloudflare Access)
+
+**Staging Environment** (master branch):
+- Persistent deployment at `pm-staging.solsystemlabs.com`
+- Updated only when merging to `master`
+- Used for final QA before production
+
+**Production Environment** (production branch):
+- Persistent deployment at `pm.solsystemlabs.com`
+- Updated only when merging to `production`
+- Live environment serving real users
 
 ### Setup Instructions
 See `CLOUDFLARE_SETUP.md` for detailed instructions on connecting your GitHub repository to Cloudflare Workers Builds.
