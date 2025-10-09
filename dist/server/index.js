@@ -1,8 +1,8 @@
-import { A } from "./assets/worker-entry-CP344yKL.js";
+import { x } from "./assets/worker-entry-CUfqNQy7.js";
 import "node:events";
 import "node:stream";
 import "node:async_hooks";
 import "node:stream/web";
 export {
-  A as default
+  x as default
 };
