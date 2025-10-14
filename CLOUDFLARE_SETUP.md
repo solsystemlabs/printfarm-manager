@@ -36,27 +36,44 @@ Before connecting Git repositories, enable Preview URLs for both workers:
 
 ### 3. Configure Staging Environment (pm-staging worker)
 
-After connecting the repository, configure the build settings in **Settings → Build → Branch control**:
+After connecting the repository, configure the build settings in **Settings → Build**:
 
+#### Branch Control:
 - **Production Branch**: `master`
 - **Build Command**: `npm run build`
-- **Deploy Command**: `npx wrangler deploy --env staging`
+- **Deploy Command**: `npx wrangler deploy --config dist/server/wrangler.json`
 - **☑️ Enable Pull Request Previews**: Checked
-- **Non-production branch deploy command**: `npx wrangler versions upload --env staging`
+- **Non-production branch deploy command**: `npx wrangler versions upload --config dist/server/wrangler.json --env staging`
+
+#### Environment Variables (Settings → Build → Environment Variables):
+Add the following **build-time** environment variable:
+- **Variable name**: `CLOUDFLARE_ENV`
+- **Value**: `staging`
+
+**Important**: This variable controls which Cloudflare environment configuration TanStack Start/Vite uses during the build. It must be set as a build environment variable, not in `wrangler.jsonc`.
 
 **What this does**:
 - Push to `master` → Auto-deploys to staging at `pm-staging.solsystemlabs.com`
 - Pull requests → Creates isolated preview URLs (does NOT affect staging)
 - Preview URLs are posted as comments on PRs automatically
+- During build, Vite reads `CLOUDFLARE_ENV=staging` and generates the correct `wrangler.json` for the pm-staging worker
 
 ### 4. Configure Production Environment (pm worker)
 
-In **Settings → Build → Branch control** for the **pm** worker:
+In **Settings → Build** for the **pm** worker:
 
+#### Branch Control:
 - **Production Branch**: `production`
 - **Build Command**: `npm run build`
-- **Deploy Command**: `npx wrangler deploy --env production`
+- **Deploy Command**: `npx wrangler deploy --config dist/server/wrangler.json`
 - **⬜ Enable Pull Request Previews**: Unchecked
+
+#### Environment Variables (Settings → Build → Environment Variables):
+Add the following **build-time** environment variable:
+- **Variable name**: `CLOUDFLARE_ENV`
+- **Value**: `production`
+
+**Important**: This variable controls which Cloudflare environment configuration TanStack Start/Vite uses during the build. It must be set as a build environment variable, not in `wrangler.jsonc`.
 
 **Note**: Leave PR previews disabled for production. The pm-staging worker handles all PR previews.
 
@@ -76,22 +93,34 @@ git push
 ## How It Works
 
 ### Pull Requests (Isolated Preview Deployments)
-- Cloudflare runs `npm run build`
-- Uploads a version using `npx wrangler versions upload --env staging`
+- Cloudflare runs `npm run build` with `CLOUDFLARE_ENV=staging`
+- TanStack Start/Vite generates `dist/server/wrangler.json` configured for the staging environment
+- Uploads a version using `npx wrangler versions upload --config dist/server/wrangler.json --env staging`
 - Generates a unique, isolated preview URL (format: `<branch-name>-pm-staging.<subdomain>.workers.dev`)
 - Preview URL is posted as a comment on the PR
 - **Important**: Preview URLs are completely isolated from staging - they do NOT affect `pm-staging.solsystemlabs.com`
 - Same preview URL updates with each push to the PR branch
 
 ### Merge to Master (Staging Deployment)
-- Cloudflare runs `npm run build`
-- Deploys using `npx wrangler deploy --env staging`
+- Cloudflare runs `npm run build` with `CLOUDFLARE_ENV=staging`
+- TanStack Start/Vite generates `dist/server/wrangler.json` with worker name `pm-staging`
+- Deploys using `npx wrangler deploy --config dist/server/wrangler.json`
 - Updates the live staging worker at https://pm-staging.solsystemlabs.com
 
 ### Merge to Production (Production Deployment)
-- Cloudflare runs `npm run build`
-- Deploys using `npx wrangler deploy --env production`
+- Cloudflare runs `npm run build` with `CLOUDFLARE_ENV=production`
+- TanStack Start/Vite generates `dist/server/wrangler.json` with worker name `pm`
+- Deploys using `npx wrangler deploy --config dist/server/wrangler.json`
 - Updates the live production worker at https://pm.solsystemlabs.com
+
+### Why CLOUDFLARE_ENV is Required
+
+TanStack Start uses Vite, which generates the `wrangler.json` configuration file during the build process. The `CLOUDFLARE_ENV` environment variable tells Vite which environment section from your `wrangler.jsonc` to use:
+
+- `CLOUDFLARE_ENV=staging` → Vite generates config with `name: "pm-staging"`
+- `CLOUDFLARE_ENV=production` → Vite generates config with `name: "pm"`
+
+This must be set at **build time** (not deploy time) because the configuration is baked into `dist/server/wrangler.json` during the build. The traditional `--env` flag doesn't work with Vite-based projects for this reason.
 
 ## Required Cloudflare Permissions
 

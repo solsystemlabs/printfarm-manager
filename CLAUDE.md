@@ -93,7 +93,7 @@ src/
 This project uses **Cloudflare Workers Builds** (native Git integration) for CI/CD. All deployments are handled automatically by Cloudflare when you push to specific branches.
 
 ### Environments
-Two deployment environments configured in `wrangler.jsonc`:
+Three deployment environments configured in `wrangler.jsonc`:
 
 - **Development**: `pm-dev` worker (local development via `npm run dev`)
 - **Staging**: `pm-staging` worker → `pm-staging.solsystemlabs.com` (auto-deploy on push to `master`)
@@ -111,11 +111,14 @@ All environments are defined in a single `wrangler.jsonc` file using Wrangler en
 }
 ```
 
+**Important**: TanStack Start uses Vite, which generates `dist/server/wrangler.json` during the build. The `CLOUDFLARE_ENV` environment variable (set in Cloudflare dashboard) tells Vite which environment configuration to use.
+
 ### Deployment Strategy
 
 **Pull Requests (Isolated Previews)**:
-- Cloudflare runs: `npm run build`
-- Uploads via: `npx wrangler versions upload --env staging`
+- Cloudflare runs: `npm run build` with `CLOUDFLARE_ENV=staging`
+- Vite generates: `dist/server/wrangler.json` for staging environment
+- Uploads via: `npx wrangler versions upload --config dist/server/wrangler.json --env staging`
 - Generates isolated preview URL (e.g., `feature-branch-pm-staging.<subdomain>.workers.dev`)
 - Preview URL posted as comment on PR
 - **Preview URLs are completely isolated from staging** - they do NOT affect the live staging environment
@@ -123,13 +126,15 @@ All environments are defined in a single `wrangler.jsonc` file using Wrangler en
 - Previews are deleted when PR is closed/merged
 
 **Push to `master` branch (Staging Deployment)**:
-- Cloudflare runs: `npm run build`
-- Deploys via: `npx wrangler deploy --env staging`
+- Cloudflare runs: `npm run build` with `CLOUDFLARE_ENV=staging`
+- Vite generates: `dist/server/wrangler.json` with `name: "pm-staging"`
+- Deploys via: `npx wrangler deploy --config dist/server/wrangler.json`
 - Updates live staging: https://pm-staging.solsystemlabs.com
 
 **Push to `production` branch (Production Deployment)**:
-- Cloudflare runs: `npm run build`
-- Deploys via: `npx wrangler deploy --env production`
+- Cloudflare runs: `npm run build` with `CLOUDFLARE_ENV=production`
+- Vite generates: `dist/server/wrangler.json` with `name: "pm"`
+- Deploys via: `npx wrangler deploy --config dist/server/wrangler.json`
 - Updates live production: https://pm.solsystemlabs.com
 
 **Promoting staging to production**:
@@ -138,6 +143,8 @@ git checkout production
 git merge master
 git push
 ```
+
+**Note**: The `CLOUDFLARE_ENV` variable must be set at **build time** in the Cloudflare dashboard (Settings → Build → Environment Variables). The traditional `--env` flag doesn't work with Vite-based projects because the configuration is generated during the build, not at deploy time.
 
 ### Preview URLs vs Environments
 
