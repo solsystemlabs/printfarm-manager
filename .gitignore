@@ -2,6 +2,8 @@ node_modules
 yarn.lock
 .wrangler
 
+BMAD-METHOD/
+
 .DS_Store
 .cache
 .env
