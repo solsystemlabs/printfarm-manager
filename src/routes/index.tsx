@@ -7,7 +7,7 @@ function Home() {
   return (
     <div className="p-2">
       <h3>{"You're a dummy!!!"}</h3>
-      <div>Whoa</div>
+      <div>Whoa man, try again</div>
     </div>
   );
 }
