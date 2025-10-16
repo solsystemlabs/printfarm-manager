@@ -1,0 +1,169 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.1</storyId>
+    <title>Configure Cloudflare Workers Environments</title>
+    <status>Ready for Review</status>
+    <generatedAt>2025-10-16</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-1.1.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>three distinct Cloudflare Workers environments configured in wrangler.jsonc</iWant>
+    <soThat>I can develop locally, test in staging, and deploy to production safely</soThat>
+    <tasks>
+- [x] Create/update wrangler.jsonc with environment configurations (AC: #1, #2, #3)
+  - [x] Define base configuration for pm-dev (development)
+  - [x] Add env.staging block for pm-staging worker
+  - [x] Add env.production block for pm worker
+  - [x] Set ENVIRONMENT variable for each environment
+  - [x] Configure custom domain routes for staging/production
+- [x] Enable Smart Placement and Observability (AC: #4, #5)
+  - [x] Add `placement: { mode: "smart" }` to base config
+  - [x] Add `observability: { enabled: true, head_sampling_rate: 1 }` to base config
+- [x] Verify local development configuration (AC: #6)
+  - [x] Run `npm run dev` and verify pm-dev worker name in output
+  - [x] Test that ENVIRONMENT variable is accessible via getContext
+- [x] Test staging/production configurations (AC: #1, #2, #3)
+  - [x] Run `npx wrangler deploy --env staging --dry-run`
+  - [x] Run `npx wrangler deploy --env production --dry-run`
+  - [x] Verify correct worker names and variables in dry-run output
+- [x] Update documentation (AC: #7)
+  - [x] Add environment configuration details to CLAUDE.md or separate doc
+  - [x] Document wrangler.jsonc structure and purpose of each environment
+### Review Follow-ups (AI)
+- [ ] [AI-Review][High] Add environment configuration tests - Create `src/__tests__/config/wrangler-config.test.ts`
+- [ ] [AI-Review][High] Fix hydration warning in route test - `src/__tests__/routes/index.test.tsx:18`
+- [ ] [AI-Review][Medium] Create build configuration integration test
+- [ ] [AI-Review][Low] Enhance Dev Agent Record file list completeness</tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. `wrangler.jsonc` defines three environments: development (pm-dev), staging (pm-staging), production (pm)
+2. Each environment has unique worker name to prevent conflicts
+3. Environment-specific variables configured: `ENVIRONMENT` = "development"/"staging"/"production"
+4. Smart Placement enabled in wrangler.jsonc (`placement: { mode: "smart" }`)
+5. Observability configured with 100% head sampling rate
+6. Local development runs with `npm run dev` using pm-dev configuration
+7. Documentation updated with environment configuration details
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="/home/taylor/projects/printfarm-manager/CLAUDE.md" title="Project Architecture & Deployment Guide" section="Cloudflare Workers Deployment">
+        - Describes three-environment strategy (development, staging, production)
+        - Documents wrangler.jsonc structure with base config + env blocks
+        - Explains CLOUDFLARE_ENV build-time variable pattern
+        - Details deployment workflows for PR previews, staging, and production
+        - Documents Smart Placement and Observability features
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/CLAUDE.md" title="Project Architecture & Deployment Guide" section="Working with Cloudflare Workers Context">
+        - Shows how to access ENVIRONMENT variable via getContext('cloudflare')
+        - Documents available environment variables
+        - Explains secrets management pattern (.dev.vars for local, wrangler secret for deployed)
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/tech-spec-epic-1.md" title="Technical Specification: Epic 1" section="Story 1.1: Configure Cloudflare Workers Environments" lines="63-165">
+        - Complete technical requirements for three environment configuration
+        - Example wrangler.jsonc structure with all required fields
+        - Acceptance criteria definition
+        - Testing commands and verification steps
+        - Smart Placement and Observability configuration details
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/stories/story-1.1.md" title="Story 1.1 Implementation Record" section="Dev Notes">
+        - Technical approach: Single wrangler.jsonc with environment blocks
+        - Key configuration points (Smart Placement, Observability)
+        - Testing strategy (local, dry-run deployments)
+        - Project structure notes (TanStack Start integration, CLOUDFLARE_ENV)
+        - Example configuration from tech spec
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/stories/story-1.1.md" title="Story 1.1 Implementation Record" section="Senior Developer Review (AI)" lines="189-338">
+        - Identified test gaps: missing environment configuration tests
+        - Documented hydration warning in existing route test
+        - Suggested test structure for wrangler-config.test.ts
+        - Architectural alignment validation
+      </doc>
+    </docs>
+    <code>
+      <artifact path="/home/taylor/projects/printfarm-manager/wrangler.jsonc" kind="config" symbol="N/A" lines="1-54" reason="Primary configuration file - defines all three environments (pm-dev, pm-staging, pm) with ENVIRONMENT variables, Smart Placement, and Observability settings as required by story ACs">
+        Contains base development config and env.staging/env.production blocks with unique worker names, routes, and environment-specific variables
+      </artifact>
+      <artifact path="/home/taylor/projects/printfarm-manager/src/routes/api/users.ts" kind="api-route" symbol="Route.server.handlers.GET" lines="6-20" reason="Example pattern for accessing Cloudflare context in API routes - shows console.info logging which will be captured by observability">
+        Demonstrates server-side API handler structure that runs on Cloudflare Workers
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@tanstack/react-start" version="^1.132.36" reason="Framework that generates dist/server/wrangler.json during build based on CLOUDFLARE_ENV" />
+        <package name="@tanstack/react-router" version="^1.132.33" reason="Router powering file-based routing and server-side API handlers" />
+        <package name="vite" version="^7.1.7" reason="Build tool that coordinates with TanStack Start to generate environment-specific configs" />
+        <package name="wrangler" version="^4.42.0" reason="Cloudflare Workers CLI - deployment and configuration tool" />
+        <package name="@cloudflare/vite-plugin" version="^1.13.10" reason="Vite plugin for Cloudflare Workers integration" />
+      </node>
+      <testing>
+        <package name="vitest" version="^3.2.4" reason="Test runner for implementing configuration validation tests" />
+        <package name="@testing-library/react" version="^16.3.0" reason="React testing utilities" />
+        <package name="jsdom" version="^27.0.0" reason="DOM environment for tests" />
+      </testing>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Use JSONC format (JSON with comments) for wrangler.jsonc to improve readability</constraint>
+    <constraint>Follow TanStack Start conventions - do NOT manually edit dist/server/wrangler.json (auto-generated during build)</constraint>
+    <constraint>CLOUDFLARE_ENV environment variable must be set at BUILD TIME in Cloudflare dashboard, not deploy time</constraint>
+    <constraint>Traditional --env flag does not work with Vite-based projects - configuration is generated during build phase</constraint>
+    <constraint>Never use vars for sensitive values in wrangler.jsonc - use wrangler secrets or .dev.vars instead</constraint>
+    <constraint>Each environment must have unique worker name to prevent conflicts (pm-dev, pm-staging, pm)</constraint>
+    <constraint>Smart Placement takes ~15 minutes after deployment to start optimizing - not instant</constraint>
+    <constraint>Free tier Cloudflare Workers Builds with native Git integration - all deployments automated via push to branches</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="getContext" kind="function" signature="getContext('cloudflare'): CloudflareContext" path="vinxi/http">
+      Access Cloudflare environment variables and bindings in server-side API routes. Returns context object with env property containing ENVIRONMENT variable and other bindings (R2, KV, secrets).
+    </interface>
+    <interface name="createFileRoute" kind="function" signature="createFileRoute(path: string): RouteBuilder" path="@tanstack/react-router">
+      Create route configuration - use server.handlers object for API routes that run on Cloudflare Workers
+    </interface>
+    <interface name="ENVIRONMENT" kind="env-var" signature="'development' | 'staging' | 'production'" path="wrangler.jsonc">
+      Environment variable set per wrangler.jsonc environment - accessible via cf.env.ENVIRONMENT in server handlers
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Use Vitest as test runner with React Testing Library for component/route tests. Testing framework configured in package.json with "test" and "test:run" scripts. Tests should validate configuration files (wrangler.jsonc) and runtime behavior (environment variable access). Follow pattern in src/__tests__/routes/index.test.tsx for route testing structure.
+    </standards>
+    <locations>
+      - src/__tests__/ - Main test directory
+      - src/__tests__/routes/ - Route-specific tests
+      - src/__tests__/config/ - Configuration tests (to be created per review follow-up)
+    </locations>
+    <ideas>
+      <idea ac="AC-3" priority="high">
+        Create src/__tests__/config/wrangler-config.test.ts to validate:
+        - Base config vars.ENVIRONMENT === "development"
+        - env.staging.vars.ENVIRONMENT === "staging"
+        - env.production.vars.ENVIRONMENT === "production"
+        - Unique worker names (pm-dev, pm-staging, pm)
+        - Smart Placement mode === "smart"
+        - Observability enabled === true with head_sampling_rate === 1
+      </idea>
+      <idea ac="AC-6" priority="medium">
+        Create integration test (script or CI workflow step) that:
+        - Builds with CLOUDFLARE_ENV=staging
+        - Reads generated dist/server/wrangler.json
+        - Verifies it contains name: "pm-staging" and ENVIRONMENT: "staging"
+        - Validates Smart Placement and Observability settings propagated
+      </idea>
+      <idea ac="general" priority="high">
+        Fix hydration warning in src/__tests__/routes/index.test.tsx:18 - investigate HTML structure mismatch between server render and client hydration (warning: "In HTML, &lt;html&gt; cannot be a child of &lt;div&gt;")
+      </idea>
+      <idea ac="AC-1,AC-2" priority="low">
+        Add smoke test for each environment that verifies worker name in deployment logs matches expected value (pm-dev locally, pm-staging in staging, pm in production)
+      </idea>
+    </ideas>
+  </tests>
+</story-context>
