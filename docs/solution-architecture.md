@@ -888,13 +888,13 @@ npm install -D @types/jszip
 
 ---
 
-#### ADR-002: sharp for Server-Side Image Resizing
+#### ADR-002: sharp for Server-Side Image Resizing with Fallback Strategy
 
-**Status**: Accepted (with verification required)
+**Status**: Accepted (with Epic 2 Story 2.5 verification spike)
 
 **Context**: Need to auto-resize images >2MB or >1024x1024 per FR-3 and NFR-2.
 
-**Decision**: Use `sharp` for server-side image resizing in API routes.
+**Decision**: Use `sharp` for server-side image resizing in API routes, with documented fallback strategy if Cloudflare Workers compatibility fails.
 
 **Rationale**:
 - Production-grade performance (libvips under the hood)
@@ -906,14 +906,73 @@ npm install -D @types/jszip
 - ✅ High-quality, fast resizing
 - ✅ Reduces client-side compute
 - ⚠️ **Risk**: sharp requires native bindings - may not work in Cloudflare Workers
-- ⚠️ **Mitigation**: Verify Workers compatibility; fallback to wasm-vips or Cloudflare Images if needed
-- ⚠️ **Alternative**: Client-side canvas resizing before upload (degrade experience but works)
+- ✅ **Mitigation**: Multi-tier fallback strategy documented below
 
-**Verification Required**: Test sharp in Cloudflare Workers dev environment before committing
+**Verification Spike (Story 2.5.1)**: Test sharp in Cloudflare Workers dev environment
+```typescript
+// Test code to run in Worker
+import sharp from 'sharp'
+
+export async function testSharp() {
+  try {
+    const buffer = await sharp({
+      create: { width: 100, height: 100, channels: 3, background: '#ff0000' }
+    }).jpeg().toBuffer()
+    return { success: true, size: buffer.length }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+```
+
+**Fallback Strategy** (execute in order if previous fails):
+
+1. **Primary: sharp with wasm build** (if native fails)
+   - Package: `@img/sharp-wasm32` or equivalent
+   - Performance: Slightly slower than native, acceptable for MVP
+   - Implementation: Swap import, same API
+
+2. **Secondary: Browser-side resize before upload** (if wasm unavailable)
+   - Use HTML5 Canvas API in client
+   - Implementation:
+     ```typescript
+     // Client-side utility
+     async function resizeImage(file: File, maxWidth: 1024, maxHeight: 1024): Promise<Blob> {
+       const img = await createImageBitmap(file)
+       const canvas = document.createElement('canvas')
+       // ... canvas resize logic
+       return canvas.toBlob()
+     }
+     ```
+   - Trade-offs: Client compute, inconsistent results across devices
+   - Acceptable for MVP (users have modern browsers)
+
+3. **Tertiary: Reject oversized images** (temporary degradation)
+   - Upload validation: reject images >2MB or >1024x1024
+   - User message: "Please resize image before upload (max 1024x1024, 2MB)"
+   - Acceptable for MVP (rare scenario, manual workaround available)
+
+**Decision Tree** (Story 2.5 implementation):
+```
+Upload image → Check size
+  ├─ If ≤2MB AND ≤1024x1024 → Accept directly
+  └─ If oversized
+      ├─ Try sharp (native)
+      │   ├─ Success → Resize → Upload
+      │   └─ Fail → Try wasm
+      │       ├─ Success → Resize → Upload
+      │       └─ Fail → Use client-side resize
+      │           ├─ Success → Upload
+      │           └─ Fail → Reject with helpful message
+```
+
+**Implementation Timeline**:
+- Sprint 2 (Epic 2): Attempt sharp native → fallback to client-side for MVP
+- Post-MVP: Investigate wasm build or Cloudflare Images if needed
 
 **Alternatives Considered**:
-- Cloudflare Images (costs money after free tier)
-- Browser canvas (less control, client-side compute)
+- Cloudflare Images (costs money after free tier, overkill for MVP)
+- Always client-side (inconsistent, poor UX, but viable fallback)
 
 ---
 
@@ -1299,13 +1358,22 @@ model SliceModel {
 model SliceFilament {
   id           String   @id @default(uuid())
   sliceId      String
-  filamentId   String
+  filamentId   String?  // nullable to support filament deletion per FR-10
   amsSlotIndex Int      // 1-based, non-contiguous OK
   createdAt    DateTime @default(now())
 
   // Relationships
-  slice    Slice    @relation(fields: [sliceId], references: [id], onDelete: Cascade)
-  filament Filament @relation(fields: [filamentId], references: [id], onDelete: Restrict) // prevent deletion if used
+  slice    Slice     @relation(fields: [sliceId], references: [id], onDelete: Cascade)
+  filament Filament? @relation(fields: [filamentId], references: [id], onDelete: SetNull) // Allow deletion, nullify references
+
+  // Note: Per FR-10, filament deletion is ALLOWED even when used in slices.
+  // When filament is deleted:
+  // 1. filamentId becomes null in this junction table
+  // 2. Application layer detects null filamentId
+  // 3. UI displays warning: "Missing filament for Slot X (was deleted)"
+  // 4. Slice becomes unusable until user reassigns replacement filament
+  // 5. User can manually update filamentId to different filament via UI
+  // See FR-10 for complete deletion behavior specification.
 
   @@unique([sliceId, amsSlotIndex]) // slot numbers unique per slice
   @@index([sliceId])
@@ -1367,7 +1435,8 @@ model SliceVariant {
 2. **Slices ↔ Filaments** (many-to-many via `SliceFilament`):
    - A slice uses multiple filaments (multi-color prints)
    - Includes AMS slot assignment per filament
-   - `onDelete: Restrict` prevents deletion of filaments used in slices (per FR-10)
+   - `onDelete: SetNull` allows filament deletion even when used (per FR-10)
+   - When filament deleted: `filamentId` becomes null, UI shows warning, slice becomes unusable until reassigned
 
 3. **Slices ↔ Variants** (many-to-many via `SliceVariant`):
    - A slice can produce multiple variants (e.g., same slice for different quantities)
