@@ -3,12 +3,12 @@
     "file": "assets/app-DwIKF79D.css",
     "src": "/home/taylor/projects/printfarm-manager/src/styles/app.css"
   },
-  "_router-CfhMfeix.js": {
-    "file": "assets/router-CfhMfeix.js",
+  "_router-CY_rG-Ic.js": {
+    "file": "assets/router-CY_rG-Ic.js",
     "name": "router",
     "isDynamicEntry": true,
     "imports": [
-      "_worker-entry-CUfqNQy7.js"
+      "_worker-entry-DlcQkWIm.js"
     ],
     "dynamicImports": [
       "src/routes/deferred.tsx?tsr-split=component",
@@ -22,14 +22,14 @@
       "assets/app-DwIKF79D.css"
     ]
   },
-  "_worker-entry-CUfqNQy7.js": {
-    "file": "assets/worker-entry-CUfqNQy7.js",
+  "_worker-entry-DlcQkWIm.js": {
+    "file": "assets/worker-entry-DlcQkWIm.js",
     "name": "worker-entry",
     "dynamicImports": [
       "tanstack-start-manifest:v",
       "tanstack-start-server-fn-manifest:v",
       "tanstack-start-injected-head-scripts:v",
-      "_router-CfhMfeix.js",
+      "_router-CY_rG-Ic.js",
       "node_modules/@tanstack/react-start/dist/plugin/default-entry/start.ts"
     ]
   },
@@ -40,59 +40,59 @@
     "isDynamicEntry": true
   },
   "src/routes/_pathlessLayout.tsx?tsr-split=component": {
-    "file": "assets/_pathlessLayout-C9Ec4-tG.js",
+    "file": "assets/_pathlessLayout-DhsQC0Cs.js",
     "name": "_pathlessLayout",
     "src": "src/routes/_pathlessLayout.tsx?tsr-split=component",
     "isDynamicEntry": true,
     "imports": [
-      "_worker-entry-CUfqNQy7.js"
+      "_worker-entry-DlcQkWIm.js"
     ]
   },
   "src/routes/_pathlessLayout/_nested-layout.tsx?tsr-split=component": {
-    "file": "assets/_nested-layout-B3rJyXNb.js",
+    "file": "assets/_nested-layout-DPw5Oss_.js",
     "name": "_nested-layout",
     "src": "src/routes/_pathlessLayout/_nested-layout.tsx?tsr-split=component",
     "isDynamicEntry": true,
     "imports": [
-      "_worker-entry-CUfqNQy7.js",
-      "_router-CfhMfeix.js"
+      "_worker-entry-DlcQkWIm.js",
+      "_router-CY_rG-Ic.js"
     ]
   },
   "src/routes/_pathlessLayout/_nested-layout/route-a.tsx?tsr-split=component": {
-    "file": "assets/route-a-BLkQSlU3.js",
+    "file": "assets/route-a-CBH_5hKy.js",
     "name": "route-a",
     "src": "src/routes/_pathlessLayout/_nested-layout/route-a.tsx?tsr-split=component",
     "isDynamicEntry": true,
     "imports": [
-      "_worker-entry-CUfqNQy7.js"
+      "_worker-entry-DlcQkWIm.js"
     ]
   },
   "src/routes/_pathlessLayout/_nested-layout/route-b.tsx?tsr-split=component": {
-    "file": "assets/route-b-CYfuVK_D.js",
+    "file": "assets/route-b-C3lSoFBe.js",
     "name": "route-b",
     "src": "src/routes/_pathlessLayout/_nested-layout/route-b.tsx?tsr-split=component",
     "isDynamicEntry": true,
     "imports": [
-      "_worker-entry-CUfqNQy7.js"
+      "_worker-entry-DlcQkWIm.js"
     ]
   },
   "src/routes/deferred.tsx?tsr-split=component": {
-    "file": "assets/deferred-DW3hv1_0.js",
+    "file": "assets/deferred-Bxto_Kc_.js",
     "name": "deferred",
     "src": "src/routes/deferred.tsx?tsr-split=component",
     "isDynamicEntry": true,
     "imports": [
-      "_worker-entry-CUfqNQy7.js",
-      "_router-CfhMfeix.js"
+      "_worker-entry-DlcQkWIm.js",
+      "_router-CY_rG-Ic.js"
     ]
   },
   "src/routes/index.tsx?tsr-split=component": {
-    "file": "assets/index-CkCF31xz.js",
+    "file": "assets/index-BxTo6VbX.js",
     "name": "index",
     "src": "src/routes/index.tsx?tsr-split=component",
     "isDynamicEntry": true,
     "imports": [
-      "_worker-entry-CUfqNQy7.js"
+      "_worker-entry-DlcQkWIm.js"
     ]
   },
   "tanstack-start-injected-head-scripts:v": {
@@ -102,7 +102,7 @@
     "isDynamicEntry": true
   },
   "tanstack-start-manifest:v": {
-    "file": "assets/_tanstack-start-manifest_v-ShhnGpiH.js",
+    "file": "assets/_tanstack-start-manifest_v-DhjRmSI6.js",
     "name": "_tanstack-start-manifest_v",
     "src": "tanstack-start-manifest:v",
     "isDynamicEntry": true
@@ -119,7 +119,7 @@
     "src": "virtual:cloudflare/worker-entry",
     "isEntry": true,
     "imports": [
-      "_worker-entry-CUfqNQy7.js"
+      "_worker-entry-DlcQkWIm.js"
     ]
   }
 }

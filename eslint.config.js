@@ -11,6 +11,8 @@ export default tseslint.config(
       '.wrangler/**',
       'build/**',
       'routeTree.gen.ts',
+      'BMAD-METHOD/**',
+      'bmad/**',
     ],
   },
   js.configs.recommended,
