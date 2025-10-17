@@ -14,6 +14,7 @@ import { Route as DeferredRouteImport } from './routes/deferred'
 import { Route as PathlessLayoutRouteImport } from './routes/_pathlessLayout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiUsersRouteImport } from './routes/api/users'
+import { Route as ApiTestR2RouteImport } from './routes/api/test-r2'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as PathlessLayoutNestedLayoutRouteImport } from './routes/_pathlessLayout/_nested-layout'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users.$id'
@@ -42,6 +43,11 @@ const IndexRoute = IndexRouteImport.update({
 const ApiUsersRoute = ApiUsersRouteImport.update({
   id: '/api/users',
   path: '/api/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTestR2Route = ApiTestR2RouteImport.update({
+  id: '/api/test-r2',
+  path: '/api/test-r2',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/deferred': typeof DeferredRoute
   '/redirect': typeof RedirectRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/test-r2': typeof ApiTestR2Route
   '/api/users': typeof ApiUsersRouteWithChildren
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/deferred': typeof DeferredRoute
   '/redirect': typeof RedirectRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/test-r2': typeof ApiTestR2Route
   '/api/users': typeof ApiUsersRouteWithChildren
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/redirect': typeof RedirectRoute
   '/_pathlessLayout/_nested-layout': typeof PathlessLayoutNestedLayoutRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/test-r2': typeof ApiTestR2Route
   '/api/users': typeof ApiUsersRouteWithChildren
   '/_pathlessLayout/_nested-layout/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/_pathlessLayout/_nested-layout/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
     | '/deferred'
     | '/redirect'
     | '/api/health'
+    | '/api/test-r2'
     | '/api/users'
     | '/route-a'
     | '/route-b'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/deferred'
     | '/redirect'
     | '/api/health'
+    | '/api/test-r2'
     | '/api/users'
     | '/route-a'
     | '/route-b'
@@ -134,6 +145,7 @@ export interface FileRouteTypes {
     | '/redirect'
     | '/_pathlessLayout/_nested-layout'
     | '/api/health'
+    | '/api/test-r2'
     | '/api/users'
     | '/_pathlessLayout/_nested-layout/route-a'
     | '/_pathlessLayout/_nested-layout/route-b'
@@ -146,6 +158,7 @@ export interface RootRouteChildren {
   DeferredRoute: typeof DeferredRoute
   RedirectRoute: typeof RedirectRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiTestR2Route: typeof ApiTestR2Route
   ApiUsersRoute: typeof ApiUsersRouteWithChildren
 }
 
@@ -184,6 +197,13 @@ declare module '@tanstack/react-router' {
       path: '/api/users'
       fullPath: '/api/users'
       preLoaderRoute: typeof ApiUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/test-r2': {
+      id: '/api/test-r2'
+      path: '/api/test-r2'
+      fullPath: '/api/test-r2'
+      preLoaderRoute: typeof ApiTestR2RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -272,6 +292,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeferredRoute: DeferredRoute,
   RedirectRoute: RedirectRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiTestR2Route: ApiTestR2Route,
   ApiUsersRoute: ApiUsersRouteWithChildren,
 }
 export const routeTree = rootRouteImport

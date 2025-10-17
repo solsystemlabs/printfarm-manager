@@ -38,7 +38,13 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "XATA_BRANCH": "staging"
-      }
+      },
+      "r2_buckets": [
+        {
+          "binding": "FILES_BUCKET",
+          "bucket_name": "pm-staging-files"
+        }
+      ]
     },
     "production": {
       "name": "pm",
@@ -51,7 +57,13 @@
       "vars": {
         "ENVIRONMENT": "production",
         "XATA_BRANCH": "production"
-      }
+      },
+      "r2_buckets": [
+        {
+          "binding": "FILES_BUCKET",
+          "bucket_name": "pm-files"
+        }
+      ]
     }
   }
 }
