@@ -16,3 +16,4 @@ Routing guidance:
 | 2025-10-16 | 1.2 | 1 | Bug | High | Developer | Resolved | Fix connection pool leak in error paths - FIXED: Singleton pattern manages pool lifecycle |
 | 2025-10-16 | 1.2 | 1 | DevOps | Medium | Developer | Resolved | Add `restart: unless-stopped` to Docker Compose - FIXED: Added to docker-compose.yml:7 |
 | 2025-10-16 | 1.2 | 1 | TechDebt | Medium | Developer | Resolved | Replace `process.env` with `getContext('cloudflare').env` - ACCEPTED: process.env works in both local and Workers runtimes per TanStack Start design |
+| 2025-10-17 | 2.1 | 2 | Implementation | Medium | Developer | Open | Implement Prisma + Cloudflare Workers bundling configuration - Deferred from Story 1.2. Need to configure Vite/Rollup to properly bundle Prisma Client for Workers runtime. Solution is well-documented and doesn't require additional tools like Accelerate or Hyperdrive. |

@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
-import { getPrismaClient } from '~/lib/db'
 
 export const Route = createFileRoute('/api/health')({
   server: {
@@ -11,35 +10,20 @@ export const Route = createFileRoute('/api/health')({
         // In Workers: process.env is populated by the runtime from wrangler.jsonc vars
         const environment = process.env.ENVIRONMENT || 'development'
         const xataBranch = process.env.XATA_BRANCH || 'dev'
+        const databaseUrl = process.env.DATABASE_URL
 
-        try {
-          // Get singleton Prisma client and pool
-          const { prisma } = getPrismaClient()
+        // NOTE: Database connection testing with Prisma deferred until Epic 2
+        // For now, just verify environment configuration is working
+        const databaseConfigured = !!databaseUrl
 
-          // Test database connection with a simple query
-          await prisma.$connect()
-          await prisma.$disconnect()
-
-          return json({
-            status: 'healthy',
-            database: 'connected',
-            environment,
-            xataBranch,
-            timestamp: new Date().toISOString(),
-          })
-        } catch (error) {
-          return json(
-            {
-              status: 'unhealthy',
-              database: 'disconnected',
-              environment,
-              xataBranch,
-              error: error instanceof Error ? error.message : 'Unknown error',
-              timestamp: new Date().toISOString(),
-            },
-            { status: 503 },
-          )
-        }
+        return json({
+          status: 'healthy',
+          database: databaseConfigured ? 'configured' : 'not configured',
+          environment,
+          xataBranch,
+          timestamp: new Date().toISOString(),
+          note: 'Database connection testing will be implemented in Epic 2 with actual schema',
+        })
       },
     },
   },

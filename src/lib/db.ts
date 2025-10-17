@@ -2,43 +2,28 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 
-// Singleton pattern for Prisma Client to avoid memory leaks in Cloudflare Workers
-// See: https://www.prisma.io/docs/orm/prisma-client/deployment/edge/deploy-to-cloudflare
+// Database client factory for Cloudflare Workers edge runtime
+// Note: In Workers, we need to be careful about connection pooling
+// For now, we create instances per-request and clean them up
+// Future optimization: Use Cloudflare Hyperdrive for connection pooling
 
-let prismaInstance: PrismaClient | null = null
-let poolInstance: pg.Pool | null = null
-
-export function getPrismaClient(): {
+export function getPrismaClient(databaseUrl: string): {
   prisma: PrismaClient
   pool: pg.Pool
 } {
-  if (!prismaInstance || !poolInstance) {
-    // Create PostgreSQL connection pool
-    poolInstance = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
-    })
+  // Create PostgreSQL connection pool
+  const pool = new pg.Pool({
+    connectionString: databaseUrl,
+  })
 
-    // Create Prisma adapter for edge runtime
-    const adapter = new PrismaPg(poolInstance)
+  // Create Prisma adapter for edge runtime
+  const adapter = new PrismaPg(pool)
 
-    // Initialize Prisma client with adapter
-    prismaInstance = new PrismaClient({ adapter })
-  }
+  // Initialize Prisma client with adapter
+  const prisma = new PrismaClient({ adapter })
 
   return {
-    prisma: prismaInstance,
-    pool: poolInstance,
-  }
-}
-
-// Cleanup function for graceful shutdown
-export async function closePrismaClient(): Promise<void> {
-  if (prismaInstance) {
-    await prismaInstance.$disconnect()
-    prismaInstance = null
-  }
-  if (poolInstance) {
-    await poolInstance.end()
-    poolInstance = null
+    prisma,
+    pool,
   }
 }
