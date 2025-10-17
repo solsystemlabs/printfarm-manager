@@ -1,0 +1,15 @@
+// Prisma schema for PrintFarm Manager
+// Database: Local PostgreSQL (dev) / Xata (staging, production)
+// Branch strategy: local docker, xata staging branch, xata production branch
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Schema tables will be defined in Epic 2, Story 2.1
+// This initial schema only sets up infrastructure

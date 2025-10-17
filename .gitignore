@@ -7,6 +7,9 @@ BMAD-METHOD/
 .DS_Store
 .cache
 .env
+.dev.vars
+.xata/
+.xatarc
 .vercel
 .output
 /build/

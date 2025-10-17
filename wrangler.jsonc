@@ -22,7 +22,8 @@
 
   // Development environment variables (non-sensitive only)
   "vars": {
-    "ENVIRONMENT": "development"
+    "ENVIRONMENT": "development",
+    "XATA_BRANCH": "dev"
   },
 
   "env": {
@@ -35,7 +36,8 @@
         }
       ],
       "vars": {
-        "ENVIRONMENT": "staging"
+        "ENVIRONMENT": "staging",
+        "XATA_BRANCH": "staging"
       }
     },
     "production": {
@@ -47,7 +49,8 @@
         }
       ],
       "vars": {
-        "ENVIRONMENT": "production"
+        "ENVIRONMENT": "production",
+        "XATA_BRANCH": "production"
       }
     }
   }
