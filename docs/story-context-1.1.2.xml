@@ -1,0 +1,130 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.2</storyId>
+    <title>Set Up Xata Database with Branching</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-16</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-1.2.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>Xata database configured with branch-per-environment strategy</iWant>
+    <soThat>dev/staging/production have isolated data and PR previews get dedicated branches</soThat>
+    <tasks>
+      <task id="1" status="pending">Create Xata project and initialize (AC: #1, #3, #4)</task>
+      <task id="2" status="pending">Create environment branches (AC: #2)</task>
+      <task id="3" status="pending">Configure Prisma for database access (AC: #3)</task>
+      <task id="4" status="pending">Set up environment-specific connection strings (AC: #5)</task>
+      <task id="5" status="pending">Verify database connections (AC: #5)</task>
+      <task id="6" status="pending">Confirm backup configuration (AC: #6)</task>
+      <task id="7" status="pending">Document PR preview branch strategy (AC: #7)</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Xata project created with main database instance</criterion>
+    <criterion id="2">Three persistent branches created: dev, staging, production</criterion>
+    <criterion id="3">Database schema initialized (defer table definitions to Epic 2, just structure)</criterion>
+    <criterion id="4">Xata CLI authenticated and configured locally</criterion>
+    <criterion id="5">Environment variables set per environment pointing to correct Xata branch</criterion>
+    <criterion id="6">Automated daily backups confirmed operational in Xata dashboard</criterion>
+    <criterion id="7">PR preview branch auto-creation configured (verify in Story 1.4)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/tech-spec-epic-1.md" section="Story 1.2: Set Up Xata Database with Branching" lines="168-308">
+        Complete technical specification for Story 1.2 including Xata project setup, branch strategy, Prisma configuration, connection strings per environment, and testing procedures.
+      </doc>
+      <doc path="docs/solution-architecture.md" section="Data Architecture - Database Schema" lines="1215-1517">
+        Complete Prisma schema design with datasource configuration for Xata (Postgres-compatible), generator settings, and all entity models. Shows initial schema structure to be created in this story.
+      </doc>
+      <doc path="docs/solution-architecture.md" section="Database Schema - Initial Setup" lines="232-244">
+        Prisma schema.prisma initial configuration showing datasource provider (postgresql), url from env variable, and generator settings. This is the baseline schema to create in Story 1.2.
+      </doc>
+      <doc path="CLAUDE.md" section="Cloudflare Workers Context - Environment Variables" lines="150-180">
+        Documentation on accessing Cloudflare context via getContext('cloudflare'), environment variables configuration, and how ENVIRONMENT variable works across dev/staging/production.
+      </doc>
+      <doc path="CLOUDFLARE_SETUP.md">
+        Complete setup instructions for Cloudflare Workers Builds, environment configuration, and deployment strategy. Critical for understanding how Xata branches map to deployment environments.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="wrangler.jsonc" kind="config" lines="1-54" reason="Main Cloudflare Workers configuration showing environment structure (dev/staging/production) where XATA_BRANCH variables must be added per Story 1.2 requirements">
+        Current wrangler.jsonc defines three environments with ENVIRONMENT variables. Story 1.2 requires adding XATA_BRANCH variables to staging and production env blocks.
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="@xata.io/cli" version="latest" scope="global">Xata CLI for project initialization, authentication, branch management</package>
+        <package name="prisma" version="^6.1.0" scope="devDependencies">Database ORM and schema management</package>
+        <package name="@prisma/client" version="latest" scope="dependencies">Prisma client for database access (generated from schema)</package>
+      </ecosystem>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Use Prisma as ORM for type-safe database access (per solution architecture)</constraint>
+    <constraint>All database credentials must be stored as Cloudflare secrets, never committed to version control</constraint>
+    <constraint>Schema tables deferred to Epic 2, Story 2.1 - this story only sets up infrastructure (datasource + generator configuration)</constraint>
+    <constraint>Connection string format: postgresql://[workspace]:[api-key]@[region].xata.sh/printfarm-manager:[branch]?sslmode=require</constraint>
+    <constraint>Xata provides automatic daily backups with 7-day retention on free tier - no additional configuration needed</constraint>
+    <constraint>CLOUDFLARE_ENV environment variable must be set at build time in Cloudflare dashboard (not deploy time)</constraint>
+    <constraint>Branch-per-environment strategy: dev (local), staging (master branch), production (production branch), PR previews (auto-created/deleted)</constraint>
+  </constraints>
+  <interfaces>
+    <interface name="Xata CLI" kind="cli" signature="xata auth login, xata init, xata branch create [name]">
+      CLI commands for Xata authentication, project initialization, and branch management
+    </interface>
+    <interface name="Prisma CLI" kind="cli" signature="npx prisma init, npx prisma generate, npx prisma db push">
+      CLI commands for Prisma schema initialization, client generation, and schema deployment
+    </interface>
+    <interface name="Wrangler Secrets" kind="cli" signature="npx wrangler secret put DATABASE_URL --env [staging|production]">
+      CLI commands for setting Cloudflare Worker secrets per environment
+    </interface>
+    <interface name="getContext('cloudflare')" kind="api" signature="const cf = getContext('cloudflare'); const env = cf.env.DATABASE_URL" path="vinxi/http">
+      Server-side API for accessing Cloudflare environment variables and bindings in TanStack Start API routes
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      This is an infrastructure setup story focused on external service configuration (Xata database and Prisma ORM). Testing primarily involves manual verification steps rather than automated unit tests:
+
+      - Manual verification via Xata dashboard (confirm branches exist, backups enabled)
+      - Manual CLI testing (xata init, xata auth login, xata branch create commands)
+      - Manual connection testing via simple health check API route
+      - Configuration validation (verify wrangler.jsonc changes, .dev.vars setup)
+
+      No automated test suite required for this story per project testing standards (Vitest/React Testing Library used for application code, not infrastructure setup).
+    </standards>
+    <locations>
+      No automated test files required. Manual testing procedures documented in Dev Notes section of story file (lines 120-133) and tech spec (lines 296-308).
+    </locations>
+    <ideas>
+      <test-idea ac-id="1,3,4">
+        Verify Xata project initialization: Run 'xata init' command, confirm project created in Xata dashboard, verify .xata/ directory created locally with config file
+      </test-idea>
+      <test-idea ac-id="2">
+        Verify branch creation: Navigate to Xata dashboard at https://app.xata.io/workspaces/[workspace]/databases/printfarm-manager, confirm three branches visible (dev, staging, production)
+      </test-idea>
+      <test-idea ac-id="3">
+        Verify Prisma schema: Create prisma/schema.prisma with datasource and generator only (no tables), run 'npx prisma generate', confirm @prisma/client generated in node_modules
+      </test-idea>
+      <test-idea ac-id="5">
+        Test dev connection: Add DATABASE_URL to .dev.vars, run 'npm run dev', create simple API route that logs cf.env.DATABASE_URL, verify connection string format correct
+      </test-idea>
+      <test-idea ac-id="5">
+        Verify environment variables: Check wrangler.jsonc has XATA_BRANCH vars in staging/production env blocks, verify .dev.vars has DATABASE_URL (gitignored)
+      </test-idea>
+      <test-idea ac-id="6">
+        Confirm backups: Navigate to Xata dashboard → Settings → Backups, verify "Daily backups" enabled, retention set to 7 days (default on free tier)
+      </test-idea>
+      <test-idea ac-id="7">
+        Document PR preview strategy: Add note to documentation explaining PR preview branches auto-created by Cloudflare during deployment (actual testing deferred to Story 1.4 CI/CD setup)
+      </test-idea>
+    </ideas>
+  </tests>
+</story-context>
