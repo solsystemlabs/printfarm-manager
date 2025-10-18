@@ -6,7 +6,7 @@ export const Route = createFileRoute("/")({
 function Home() {
   return (
     <div className="p-2">
-      <h3>{"You're a dummy!!!"}</h3>
+      <h3>{"This is great!!!"}</h3>
       <div>Whoa man, try again</div>
     </div>
   );
