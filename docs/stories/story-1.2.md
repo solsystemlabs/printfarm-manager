@@ -157,7 +157,7 @@ curl https://pm-staging.solsystemlabs.com/api/health
 
 ### Context Reference
 
-- `/home/taylor/projects/printfarm-manager/docs/story-context-1.1.2.xml` (Generated: 2025-10-16)
+- `/home/taylor/projects/printfarm-manager/docs/story-context-1.1.2.xml` (Generated: 2025-10-16, Updated: 2025-10-17)
 
 ### Agent Model Used
 

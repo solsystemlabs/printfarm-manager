@@ -3,8 +3,8 @@
     <epicId>1</epicId>
     <storyId>1.2</storyId>
     <title>Set Up Xata Database with Branching</title>
-    <status>Draft</status>
-    <generatedAt>2025-10-16</generatedAt>
+    <status>Done</status>
+    <generatedAt>2025-10-17</generatedAt>
     <generator>BMAD Story Context Workflow</generator>
     <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-1.2.md</sourceStoryPath>
   </metadata>
@@ -53,15 +53,27 @@
       </doc>
     </docs>
     <code>
-      <artifact path="wrangler.jsonc" kind="config" lines="1-54" reason="Main Cloudflare Workers configuration showing environment structure (dev/staging/production) where XATA_BRANCH variables must be added per Story 1.2 requirements">
-        Current wrangler.jsonc defines three environments with ENVIRONMENT variables. Story 1.2 requires adding XATA_BRANCH variables to staging and production env blocks.
+      <artifact path="wrangler.jsonc" kind="config" lines="24-56" reason="Cloudflare Workers environment configuration with XATA_BRANCH variables successfully added for all environments (dev/staging/production)">
+        Configuration includes XATA_BRANCH variable in development vars (line 26), staging vars (line 40), and production vars (line 53). Story 1.2 implementation complete.
+      </artifact>
+      <artifact path="prisma/schema.prisma" kind="schema" lines="1-16" reason="Prisma database schema with PostgreSQL datasource configuration for Xata/local databases">
+        Initial schema infrastructure with datasource provider set to "postgresql", client generator configured. Table definitions deferred to Epic 2, Story 2.1 as documented in line 14.
+      </artifact>
+      <artifact path="src/lib/db.ts" kind="library" lines="1-30" reason="Database client factory implementing Prisma adapter pattern for Cloudflare Workers edge runtime">
+        Implements getPrismaClient factory function that creates PostgreSQL connection pool with Prisma adapter (PrismaPg) for edge runtime compatibility. Includes documentation noting future Hyperdrive optimization.
+      </artifact>
+      <artifact path="src/routes/api/health.ts" kind="api-route" lines="1-31" reason="Health check API endpoint verifying environment configuration and database setup">
+        Server-side API route that validates ENVIRONMENT, XATA_BRANCH, and DATABASE_URL environment variables are correctly configured. Returns JSON response with environment status. Database connection testing deferred to Epic 2.
       </artifact>
     </code>
     <dependencies>
       <ecosystem name="node">
         <package name="@xata.io/cli" version="latest" scope="global">Xata CLI for project initialization, authentication, branch management</package>
-        <package name="prisma" version="^6.1.0" scope="devDependencies">Database ORM and schema management</package>
-        <package name="@prisma/client" version="latest" scope="dependencies">Prisma client for database access (generated from schema)</package>
+        <package name="prisma" version="^6.17.1" scope="devDependencies">Database ORM and schema management tool</package>
+        <package name="@prisma/client" version="^6.17.1" scope="dependencies">Prisma client for type-safe database access</package>
+        <package name="@prisma/adapter-pg" version="^6.17.1" scope="dependencies">Prisma PostgreSQL driver adapter for Cloudflare Workers edge runtime compatibility</package>
+        <package name="pg" version="^8.16.3" scope="dependencies">PostgreSQL client for Node.js (connection pooling)</package>
+        <package name="@types/pg" version="^8.15.5" scope="devDependencies">TypeScript type definitions for pg</package>
       </ecosystem>
     </dependencies>
   </artifacts>
