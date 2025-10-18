@@ -1,14 +1,15 @@
+import type { Client as MinIOClient } from 'minio'
 import type { StorageClient, UploadOptions } from './types'
 
 /**
  * MinIO storage client implementation for local development
  */
 class MinIOStorageClient implements StorageClient {
-  private client: any
+  private client: MinIOClient
   private bucket: string
   private environment: string
 
-  constructor(client: any, bucket: string, environment: string) {
+  constructor(client: MinIOClient, bucket: string, environment: string) {
     this.client = client
     this.bucket = bucket
     this.environment = environment
@@ -76,10 +77,10 @@ class MinIOStorageClient implements StorageClient {
  * R2 storage client implementation for staging/production
  */
 class R2StorageClient implements StorageClient {
-  private bucket: any
+  private bucket: R2Bucket
   private environment: string
 
-  constructor(bucket: any, environment: string) {
+  constructor(bucket: R2Bucket, environment: string) {
     this.bucket = bucket
     this.environment = environment
   }
