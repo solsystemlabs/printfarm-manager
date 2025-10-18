@@ -1,0 +1,179 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>4</storyId>
+    <title>Implement Cloudflare Workers Builds CI/CD</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-17</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-1.4.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>automated deployments via Cloudflare Workers Builds</iWant>
+    <soThat>pushing to master/production branches automatically deploys to staging/production</soThat>
+    <tasks>
+      - Connect GitHub repository to Cloudflare Workers Builds (AC: #1)
+      - Configure build settings (AC: #2)
+      - Configure branch-based deployments (AC: #3, #4)
+      - Set environment variables for builds (AC: #3, #4)
+      - Test PR preview workflow (AC: #5, #6)
+      - Test staging deployment (AC: #3, #7)
+      - Test production deployment (AC: #4, #7)
+      - Test failed build handling (AC: #8)
+      - Create deployment documentation (AC: #1-8)
+      - Create smoke test script (Testing)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    1. GitHub repository connected to Cloudflare Workers Builds
+    2. Build configuration set: `npm run build` command
+    3. Staging deployment configured for `master` branch using `npx wrangler deploy --env staging`
+    4. Production deployment configured for `production` branch using `npx wrangler deploy --env production`
+    5. PR preview builds configured to generate isolated preview URLs
+    6. Preview builds use `npx wrangler versions upload --env staging` (no impact on live staging)
+    7. Deployment completes in ≤5 minutes from git push (per NFR-10)
+    8. Failed builds prevent deployment and notify via Cloudflare Dashboard
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>CLOUDFLARE_SETUP.md</path>
+        <title>Cloudflare Workers Builds Setup</title>
+        <section>Complete Setup Instructions</section>
+        <snippet>Comprehensive guide for connecting GitHub repository to Cloudflare Workers Builds. Covers Preview URL enablement (required first), repository connection, branch control configuration, environment variable setup (CLOUDFLARE_ENV), and deployment workflow explanations. Key insight: CLOUDFLARE_ENV must be set at build time (not deploy time) because TanStack Start/Vite generates wrangler.json during build.</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Technical Specification: Epic 1 - Deployment &amp; Operations Foundation</title>
+        <section>Story 1.4: Implement Cloudflare Workers Builds CI/CD (lines 479-670)</section>
+        <snippet>Detailed technical requirements, implementation steps, acceptance criteria, testing strategy, and code examples. Covers branch-based deployment strategy, environment variable injection, PR preview isolation, build process flow, deployment timeline breakdown (3-5 minutes), smoke test procedures, and rollback workflow.</snippet>
+      </doc>
+      <doc>
+        <path>CLAUDE.md</path>
+        <title>Project Instructions for Claude Code</title>
+        <section>Cloudflare Workers Deployment</section>
+        <snippet>Deployment architecture using Cloudflare Workers Builds (native Git integration). Three environments configured (development, staging, production). CLOUDFLARE_ENV variable controls which environment configuration Vite uses during build. Pull requests generate isolated preview URLs that do NOT affect staging. Branch deployment mapping: master → pm-staging, production → pm.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>printfarm-manager - Epic Breakdown</title>
+        <section>Story 1.4 (lines 106-128)</section>
+        <snippet>User story: Developer wants automated deployments via Cloudflare Workers Builds so pushing to master/production automatically deploys. Prerequisites: Stories 1.1, 1.2, 1.3. Key technical notes: Cloudflare builds run in isolated environment, preview URLs format: &lt;branch-name&gt;-pm-staging.&lt;subdomain&gt;.workers.dev, see CLOUDFLARE_SETUP.md for configuration.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>wrangler.jsonc</path>
+        <kind>configuration</kind>
+        <symbol>N/A</symbol>
+        <lines>1-70</lines>
+        <reason>Primary Cloudflare Workers configuration file defining three environments (pm-dev, pm-staging, pm). Contains observability settings (100% head sampling), smart placement configuration, environment-specific variables (ENVIRONMENT, XATA_BRANCH), R2 bucket bindings, and custom domain routes. This configuration is used by TanStack Start/Vite during build to generate dist/server/wrangler.json based on CLOUDFLARE_ENV variable.</reason>
+      </artifact>
+      <artifact>
+        <path>vite.config.ts</path>
+        <kind>configuration</kind>
+        <symbol>N/A</symbol>
+        <lines>1-19</lines>
+        <reason>Vite build configuration that integrates TanStack Start (@tanstack/react-start/plugin/vite) and Cloudflare Workers plugin (@cloudflare/vite-plugin). During npm run build, Vite reads CLOUDFLARE_ENV environment variable to determine which wrangler.jsonc environment section to use when generating dist/server/wrangler.json. This is why CLOUDFLARE_ENV must be set at build time, not deploy time.</reason>
+      </artifact>
+      <artifact>
+        <path>package.json</path>
+        <kind>configuration</kind>
+        <symbol>scripts</symbol>
+        <lines>6-19</lines>
+        <reason>NPM scripts for building, deploying, and testing. Key scripts: "build" (vite build && tsc --noEmit) runs TanStack Start build and type-checking, "deploy:staging" and "deploy:production" for manual deployments, "test" and "test:run" for Vitest-based testing. Cloudflare Workers Builds will execute "build" command during automated deployments.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <buildTools>
+          <package name="vite" version="^7.1.7" />
+          <package name="@tanstack/react-start" version="^1.132.36" />
+          <package name="@cloudflare/vite-plugin" version="^1.13.10" />
+          <package name="wrangler" version="^4.42.0" />
+          <package name="typescript" version="^5.7.2" />
+        </buildTools>
+        <testing>
+          <package name="vitest" version="^3.2.4" />
+          <package name="@testing-library/react" version="^16.3.0" />
+          <package name="@testing-library/jest-dom" version="^6.9.1" />
+        </testing>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    - Cloudflare Workers Builds requires CLOUDFLARE_ENV environment variable set at build time (not deploy time) because TanStack Start/Vite generates wrangler.json during build process
+    - Build command must be "npm run build" which runs "vite build && tsc --noEmit"
+    - Deploy command for staging: "npx wrangler deploy --config dist/server/wrangler.json"
+    - Deploy command for production: "npx wrangler deploy --config dist/server/wrangler.json"
+    - PR preview command: "npx wrangler versions upload --config dist/server/wrangler.json --env staging" (creates isolated Worker version)
+    - Preview URLs must be enabled in Cloudflare Dashboard before PR previews will work (Settings → Domains &amp; Routes → Preview URLs → Enable)
+    - Deployment must complete within 5 minutes (NFR-10 requirement)
+    - Failed builds must prevent deployment (safety requirement)
+    - Two separate worker configurations required: pm-staging (for master branch and PR previews) and pm (for production branch)
+    - PR previews must be completely isolated from live staging environment (no impact on pm-staging.solsystemlabs.com)
+    - All infrastructure configuration is manual (Cloudflare Dashboard), not code-based
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>Cloudflare Workers Builds API</name>
+      <kind>External Service</kind>
+      <signature>GitHub Push/PR → Cloudflare Build Trigger → npm install → npm run build → wrangler deploy/versions upload</signature>
+      <path>Cloudflare Dashboard → Workers &amp; Pages → [worker] → Settings → Build</path>
+    </interface>
+    <interface>
+      <name>wrangler CLI</name>
+      <kind>CLI Tool</kind>
+      <signature>
+        npx wrangler deploy --config dist/server/wrangler.json
+        npx wrangler versions upload --config dist/server/wrangler.json --env staging
+        npx wrangler deployments list --env [staging|production]
+      </signature>
+      <path>node_modules/.bin/wrangler</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing for this infrastructure story is primarily manual verification and smoke testing. The project uses Vitest with React Testing Library for component/route testing (see src/__tests__/routes/index.test.tsx). For CI/CD validation, manual testing includes: (1) Creating test PRs to verify preview URL generation, (2) Pushing to master to verify staging deployment, (3) Merging to production to verify production deployment, (4) Introducing TypeScript errors to verify failed build prevention, (5) Running smoke tests on deployed environments to verify health endpoints, environment indicators, and R2 operations.
+    </standards>
+    <locations>
+      - src/__tests__/ (existing unit/integration tests)
+      - Manual testing via Cloudflare Dashboard (build logs, deployment status)
+      - Post-deployment smoke tests: /scripts/smoke-test.sh (to be created)
+      - GitHub PR comments (automated preview URL posting)
+    </locations>
+    <ideas>
+      <test ac="1,2">
+        <description>Manual: Connect GitHub repository and verify build configuration in Cloudflare Dashboard</description>
+        <approach>Navigate to Workers &amp; Pages → pm-staging → Settings → Build. Verify repository connected, build command set to "npm run build", CLOUDFLARE_ENV=staging set. Repeat for pm (production) worker.</approach>
+      </test>
+      <test ac="3,5,6,7">
+        <description>Manual: Test PR preview workflow end-to-end</description>
+        <approach>Create test branch with minor change (e.g., update README). Push to GitHub and create PR. Monitor Cloudflare Dashboard for build status. Verify preview URL generated and posted as PR comment. Access preview URL and verify environment indicator shows "STAGING". Confirm live staging at pm-staging.solsystemlabs.com is unaffected. Verify deployment completes in ≤5 minutes. Merge PR and verify preview URL deleted.</approach>
+      </test>
+      <test ac="3,7">
+        <description>Manual: Test staging deployment</description>
+        <approach>Push minor change to master branch. Monitor Cloudflare build. Verify deployment completes in ≤5 minutes. Access https://pm-staging.solsystemlabs.com and verify changes deployed. Run smoke test script to verify health endpoint, environment API, and R2 operations.</approach>
+      </test>
+      <test ac="4,7">
+        <description>Manual: Test production deployment</description>
+        <approach>Merge master into production branch. Monitor Cloudflare build. Verify deployment completes in ≤5 minutes. Access https://pm.solsystemlabs.com and verify changes deployed. Run smoke test script to verify health endpoint and environment indicator shows "PRODUCTION".</approach>
+      </test>
+      <test ac="8">
+        <description>Manual: Test failed build handling</description>
+        <approach>Create test branch with intentional TypeScript error (e.g., remove type annotation causing error). Push to GitHub and create PR. Verify build fails in Cloudflare Dashboard. Verify deployment does NOT occur (no preview URL generated). Verify error notification visible in Dashboard and GitHub PR status check shows failure.</approach>
+      </test>
+      <test ac="1-8">
+        <description>Automated: Create smoke test script for post-deployment verification</description>
+        <approach>Create /scripts/smoke-test.sh that accepts environment (dev/staging/production) and base URL parameters. Script should test: (1) Health check endpoint (/api/health), (2) Environment API endpoint (/api/environment), (3) R2 operations (/api/test-r2, dev/staging only). Script outputs pass/fail for each test. Make executable and document usage in DEPLOYMENT.md.</approach>
+      </test>
+    </ideas>
+  </tests>
+</story-context>

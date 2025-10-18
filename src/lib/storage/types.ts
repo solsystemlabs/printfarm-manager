@@ -1,25 +1,6 @@
 // Storage client types and interfaces
 
 /**
- * R2 bucket binding interface
- * Matches Cloudflare R2 API methods used in this application
- */
-export interface R2Bucket {
-  put(
-    key: string,
-    value: string | ReadableStream | ArrayBuffer,
-    options?: {
-      httpMetadata?: {
-        contentType?: string
-        contentDisposition?: string
-      }
-    }
-  ): Promise<void>
-  get(key: string): Promise<{ text(): Promise<string> } | null>
-  delete(key: string): Promise<void>
-}
-
-/**
  * Unified storage client interface
  * Abstracts differences between MinIO (dev) and R2 (staging/prod)
  */
@@ -53,7 +34,28 @@ export type CloudflareEnv = {
 }
 
 declare global {
+  // Augment NodeJS ProcessEnv with Cloudflare environment variables
+  // Using namespace is required for global type augmentation in Node.js
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
-    interface ProcessEnv extends CloudflareEnv {}
+    interface ProcessEnv {
+      // Database configuration
+      DATABASE_URL?: string
+
+      // Cloudflare R2 binding (injected by TanStack Start Cloudflare adapter)
+      FILES_BUCKET?: R2Bucket
+
+      // R2 / MinIO configuration
+      MINIO_ENDPOINT?: string
+      MINIO_PORT?: string
+      MINIO_USE_SSL?: string
+      MINIO_ACCESS_KEY?: string
+      MINIO_SECRET_KEY?: string
+      MINIO_BUCKET?: string
+
+      // Environment settings
+      ENVIRONMENT?: string
+      XATA_BRANCH?: string
+    }
   }
 }
