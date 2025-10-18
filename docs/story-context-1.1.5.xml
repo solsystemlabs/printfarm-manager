@@ -1,0 +1,201 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.5</storyId>
+    <title>Implement Logging and Observability</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-17</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-1.5.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>comprehensive logging for all API requests and errors</iWant>
+    <soThat>I can debug issues in staging/production environments</soThat>
+    <tasks>
+      <task id="1" ac="2,3,4,5">Create logger utility with structured JSON format
+        <subtask id="1.1">Create /src/lib/utils/logger.ts with log(), logError(), and logPerformance() functions</subtask>
+        <subtask id="1.2">Implement structured JSON schema with timestamp, event, environment, and custom data fields</subtask>
+        <subtask id="1.3">Ensure environment is retrieved from Cloudflare context (getContext('cloudflare').env.ENVIRONMENT)</subtask>
+        <subtask id="1.4">Add TypeScript types for LogEvent interface</subtask>
+      </task>
+      <task id="2" ac="3">Create error response utility
+        <subtask id="2.1">Create /src/lib/utils/errors.ts with createErrorResponse() function</subtask>
+        <subtask id="2.2">Define ApiError interface with code, message, field, details</subtask>
+        <subtask id="2.3">Log full error details (including stack trace) to console only</subtask>
+        <subtask id="2.4">Return sanitized error response to client (no stack traces exposed)</subtask>
+      </task>
+      <task id="3" ac="2,5,7">Update health check endpoint with logging
+        <subtask id="3.1">Modify /src/routes/api/health.ts to use logger utility</subtask>
+        <subtask id="3.2">Log health check events with environment context</subtask>
+        <subtask id="3.3">Verify structured JSON logs appear in console</subtask>
+      </task>
+      <task id="4" ac="1,6,7">Test logging in all environments
+        <subtask id="4.1">Test local development: verify console output shows structured JSON</subtask>
+        <subtask id="4.2">Deploy to staging: verify logs accessible in Cloudflare Dashboard</subtask>
+        <subtask id="4.3">Test real-time tailing: npx wrangler tail --env staging</subtask>
+        <subtask id="4.4">Verify logs filterable by environment, time range in Dashboard</subtask>
+        <subtask id="4.5">Confirm 100% request sampling operational (from Story 1.1 observability config)</subtask>
+      </task>
+      <task id="5" ac="1,2,3,4,5,6">Create logging documentation
+        <subtask id="5.1">Create /docs/LOGGING.md with logging standards</subtask>
+        <subtask id="5.2">Document JSON log format and event types</subtask>
+        <subtask id="5.3">Document how to access logs (Dashboard and CLI)</subtask>
+        <subtask id="5.4">Document log retention (24 hours free tier, 7 days paid)</subtask>
+        <subtask id="5.5">Include examples of structured logs for common events</subtask>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Cloudflare Workers logs accessible in Dashboard for all environments</criterion>
+    <criterion id="2">All API route handlers log request method, path, status code, duration</criterion>
+    <criterion id="3">Error responses logged with descriptive messages (never stack traces per NFR-6)</criterion>
+    <criterion id="4">Performance metrics logged: upload times, extraction times, search query times (per NFR-9)</criterion>
+    <criterion id="5">Environment indicator (dev/staging/production) logged with each request</criterion>
+    <criterion id="6">Logs filterable by environment, status code, time range in Cloudflare Dashboard</criterion>
+    <criterion id="7">100% request sampling confirmed operational (observability config from Story 1.1)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/tech-spec-epic-1.md</path>
+        <title>Technical Specification: Epic 1 - Deployment &amp; Operations Foundation</title>
+        <section>Story 1.5: Implement Logging and Observability</section>
+        <snippet>Lines 673-967: Complete technical specification for logging implementation including structured JSON format, request logging patterns, error handling, performance metrics, log access methods, and code examples for logger utility, error response utility, health check endpoint integration, and logging standards documentation.</snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/CLAUDE.md</path>
+        <title>Project Instructions</title>
+        <section>Working with Cloudflare Workers Context</section>
+        <snippet>Lines 171-232: Details on accessing Cloudflare environment variables using getContext('cloudflare') pattern, accessing environment bindings, observability configuration (100% head sampling), and Smart Placement. Notes that environment detection uses process.env (works in both local and Workers runtime).</snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/CLAUDE.md</path>
+        <title>Project Instructions</title>
+        <section>Observability &amp; Logging</section>
+        <snippet>Lines 214-228: Observability enabled with 100% request sampling in wrangler.jsonc. All console.log(), console.error() automatically captured. Logs accessible via local terminal (npm run dev), Cloudflare Dashboard (Workers &amp; Pages → Logs), with limitations on SSR loaders noted.</snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/solution-architecture.md</path>
+        <title>Solution Architecture</title>
+        <section>Cross-Cutting Concerns: Logging &amp; Observability (NFR-9)</section>
+        <snippet>Lines 740-769: Structured logging pattern with JSON format for machine readability. Log all API operations with event, filename, environment, timestamp. Log performance metrics with duration_ms. Log errors with descriptive messages but never expose stack traces to users (log to console only).</snippet>
+      </doc>
+    </docs>
+    <code>
+      <code-ref>
+        <path>/home/taylor/projects/printfarm-manager/src/routes/api/health.ts</path>
+        <kind>api-route</kind>
+        <symbol>Route</symbol>
+        <lines>1-31</lines>
+        <reason>Existing API route demonstrating environment variable access pattern using process.env (works in both local dev and Workers runtime). Shows health check endpoint structure that will be enhanced with logging utility in this story.</reason>
+      </code-ref>
+      <code-ref>
+        <path>/home/taylor/projects/printfarm-manager/src/lib/db.ts</path>
+        <kind>utility</kind>
+        <symbol>getPrismaClient</symbol>
+        <lines>1-30</lines>
+        <reason>Database client factory pattern for Cloudflare Workers edge runtime. Demonstrates proper resource management patterns that should be followed in logger utility to avoid memory leaks.</reason>
+      </code-ref>
+      <code-ref>
+        <path>/home/taylor/projects/printfarm-manager/wrangler.jsonc</path>
+        <kind>configuration</kind>
+        <symbol>observability</symbol>
+        <lines>8-12</lines>
+        <reason>Observability configuration with enabled: true and head_sampling_rate: 1 (100% request sampling) already implemented from Story 1.1. Logger utility will leverage this automatic log capture.</reason>
+      </code-ref>
+      <code-ref>
+        <path>/home/taylor/projects/printfarm-manager/wrangler.jsonc</path>
+        <kind>configuration</kind>
+        <symbol>vars</symbol>
+        <lines>24-27, 38-41, 57-60</lines>
+        <reason>Environment-specific ENVIRONMENT variable configuration (development/staging/production) that logger utility must read to include environment context in all log entries.</reason>
+      </code-ref>
+    </code>
+    <dependencies>
+      <node>
+        <dependency name="@tanstack/react-router" version="^1.132.33">File-based routing framework, used to create API route handlers</dependency>
+        <dependency name="@tanstack/react-start" version="^1.132.36">Server-side framework providing json() response helper for API routes</dependency>
+        <dependency name="vitest" version="^3.2.4">Testing framework for unit tests of logger utility</dependency>
+        <dependency name="@tanstack/react-query" version="^5.66.0">Not directly used by logger but available for future observability dashboards</dependency>
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="1" source="NFR-6">Error responses must never expose stack traces to users. Stack traces should only be logged to console for debugging purposes.</constraint>
+    <constraint id="2" source="NFR-9">All API requests must log method, path, status code, and duration. Performance metrics required for operations like uploads, extractions, and searches.</constraint>
+    <constraint id="3" source="Story 1.5 Tech Spec">Use structured JSON format for all logs with consistent schema: timestamp, event, environment, and custom data fields.</constraint>
+    <constraint id="4" source="CLAUDE.md">Environment detection must use process.env.ENVIRONMENT (works in both local dev with .dev.vars and Workers runtime from wrangler.jsonc vars).</constraint>
+    <constraint id="5" source="Solution Architecture">Never log sensitive data (passwords, tokens, PII). Use event-based naming (e.g., request_complete, not just "request").</constraint>
+    <constraint id="6" source="Story 1.1 Implementation">Observability already enabled with head_sampling_rate: 1 in wrangler.jsonc. Logger utility must leverage automatic console.log() capture.</constraint>
+    <constraint id="7" source="Project Pattern">Follow existing patterns from src/routes/api/health.ts and src/lib/db.ts for environment variable access and error handling.</constraint>
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>LogEvent</name>
+      <kind>type</kind>
+      <signature>interface LogEvent { timestamp: string; event: string; environment: string; [key: string]: unknown }</signature>
+      <path>/src/lib/utils/logger.ts</path>
+      <description>Core log entry structure with required fields (timestamp, event, environment) and flexible additional data</description>
+    </interface>
+    <interface>
+      <name>log</name>
+      <kind>function</kind>
+      <signature>export function log(event: string, data?: Record&lt;string, unknown&gt;): void</signature>
+      <path>/src/lib/utils/logger.ts</path>
+      <description>General-purpose logging function for informational events. Outputs structured JSON to console.log().</description>
+    </interface>
+    <interface>
+      <name>logError</name>
+      <kind>function</kind>
+      <signature>export function logError(event: string, error: Error, data?: Record&lt;string, unknown&gt;): void</signature>
+      <path>/src/lib/utils/logger.ts</path>
+      <description>Error logging function that logs full error details (including stack trace) to console only, never exposed to users.</description>
+    </interface>
+    <interface>
+      <name>logPerformance</name>
+      <kind>function</kind>
+      <signature>export function logPerformance(event: string, durationMs: number, data?: Record&lt;string, unknown&gt;): void</signature>
+      <path>/src/lib/utils/logger.ts</path>
+      <description>Performance metric logging for operations like uploads, extractions, queries. Logs event with duration_ms field.</description>
+    </interface>
+    <interface>
+      <name>ApiError</name>
+      <kind>type</kind>
+      <signature>interface ApiError { code: string; message: string; field?: string; details?: unknown }</signature>
+      <path>/src/lib/utils/errors.ts</path>
+      <description>Sanitized error response structure returned to clients. Never includes stack traces.</description>
+    </interface>
+    <interface>
+      <name>createErrorResponse</name>
+      <kind>function</kind>
+      <signature>export function createErrorResponse(error: Error, statusCode: number, errorCode: string, field?: string): Response</signature>
+      <path>/src/lib/utils/errors.ts</path>
+      <description>Creates sanitized error response for clients while logging full error details (including stack) to console.</description>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Testing uses Vitest with React Testing Library per project configuration. Unit tests required for logger utility functions (log, logError, logPerformance) to verify correct JSON structure, environment detection, and error handling. Integration tests verify health check endpoint logging and log accessibility in all environments (local, staging, production). Manual testing with real-time log tailing (npx wrangler tail --env staging) required to verify Cloudflare Dashboard integration. Target: &gt;80% test coverage per NFR-8.
+    </standards>
+    <locations>
+      <location>/tests/unit/logger.test.ts</location>
+      <location>/tests/unit/errors.test.ts</location>
+      <location>/tests/integration/logging.test.ts</location>
+    </locations>
+    <ideas>
+      <test-idea ac="2,5">Test log() function outputs correct JSON structure with timestamp, event, environment, and custom data fields</test-idea>
+      <test-idea ac="3">Test logError() logs error message, name, and stack to console but createErrorResponse() never includes stack in client response</test-idea>
+      <test-idea ac="4">Test logPerformance() appends "_performance" to event name and includes duration_ms field</test-idea>
+      <test-idea ac="5">Test environment detection: mock process.env.ENVIRONMENT with different values (development/staging/production) and verify logs include correct environment</test-idea>
+      <test-idea ac="2">Test health check endpoint updated with logger utility: verify structured JSON logs appear in console when endpoint called</test-idea>
+      <test-idea ac="1,6,7">Integration test: deploy to staging, call API endpoints, verify logs accessible in Cloudflare Dashboard with correct filtering by environment and time range</test-idea>
+      <test-idea ac="7">Integration test: verify 100% request sampling operational by checking multiple requests all appear in logs</test-idea>
+      <test-idea ac="3">Test error response utility: throw error in API route, verify console logs stack trace but client response only gets sanitized error message</test-idea>
+    </ideas>
+  </tests>
+</story-context>
