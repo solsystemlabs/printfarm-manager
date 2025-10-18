@@ -1,22 +1,22 @@
-import { json } from '@tanstack/react-start'
-import { logError } from './logger'
+import { json } from "@tanstack/react-start";
+import { logError } from "./logger";
 
 /**
  * API error response structure
  * Never includes stack traces (per NFR-6)
  */
 export interface ApiError {
-  code: string
-  message: string
-  field?: string
-  details?: Record<string, unknown>
+  code: string;
+  message: string;
+  field?: string;
+  details?: Record<string, unknown>;
 }
 
 /**
  * API error response wrapper
  */
 export interface ApiErrorResponse {
-  error: ApiError
+  error: ApiError;
 }
 
 /**
@@ -43,26 +43,26 @@ export function createErrorResponse(
   message: string,
   statusCode: number = 500,
   options?: {
-    field?: string
-    details?: Record<string, unknown>
-    originalError?: Error | unknown
-  }
+    field?: string;
+    details?: Record<string, unknown>;
+    originalError?: Error | unknown;
+  },
 ) {
   // Log full error details to console (including stack trace if available)
   if (options?.originalError) {
-    logError('api_error', options.originalError as Error, {
+    logError("api_error", options.originalError as Error, {
       code,
       statusCode,
       field: options.field,
       details: options.details,
-    })
+    });
   } else {
-    logError('api_error', message, {
+    logError("api_error", message, {
       code,
       statusCode,
       field: options?.field,
       details: options?.details,
-    })
+    });
   }
 
   // Return sanitized error response to client (no stack traces)
@@ -73,7 +73,7 @@ export function createErrorResponse(
       ...(options?.field && { field: options.field }),
       ...(options?.details && { details: options.details }),
     },
-  }
+  };
 
-  return json(errorResponse, { status: statusCode })
+  return json(errorResponse, { status: statusCode });
 }

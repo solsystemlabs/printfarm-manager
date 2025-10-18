@@ -2,29 +2,29 @@
  * Structured log event types
  */
 export type LogEventType =
-  | 'request_start'
-  | 'request_complete'
-  | 'request_error'
-  | 'health_check'
-  | 'api_error'
-  | string // Allow custom event types for performance metrics
+  | "request_start"
+  | "request_complete"
+  | "request_error"
+  | "health_check"
+  | "api_error"
+  | string; // Allow custom event types for performance metrics
 
 /**
  * Structured log data interface
  */
 export interface LogEvent {
-  timestamp: string
-  event: LogEventType
-  environment: string
-  [key: string]: unknown
+  timestamp: string;
+  event: LogEventType;
+  environment: string;
+  [key: string]: unknown;
 }
 
 /**
  * Performance metric data
  */
 export interface PerformanceMetric {
-  durationMs: number
-  [key: string]: unknown
+  durationMs: number;
+  [key: string]: unknown;
 }
 
 /**
@@ -33,17 +33,17 @@ export interface PerformanceMetric {
  */
 function getEnvironment(): string {
   // In test environment or when vinxi/http is not available, use process.env or default
-  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
-    return 'development'
+  if (typeof process !== "undefined" && process.env?.NODE_ENV === "test") {
+    return "development";
   }
 
   // Try to use environment from process.env first (works in all environments)
-  if (typeof process !== 'undefined' && process.env?.ENVIRONMENT) {
-    return process.env.ENVIRONMENT
+  if (typeof process !== "undefined" && process.env?.ENVIRONMENT) {
+    return process.env.ENVIRONMENT;
   }
 
   // Fall back to development (this is safe for all environments)
-  return 'development'
+  return "development";
 }
 
 /**
@@ -61,9 +61,9 @@ export function log(event: LogEventType, data?: Record<string, unknown>): void {
     event,
     environment: getEnvironment(),
     ...data,
-  }
+  };
 
-  console.log(JSON.stringify(logEvent))
+  console.log(JSON.stringify(logEvent));
 }
 
 /**
@@ -80,10 +80,10 @@ export function log(event: LogEventType, data?: Record<string, unknown>): void {
 export function logError(
   event: LogEventType,
   error: Error | string,
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
 ): void {
-  const errorMessage = error instanceof Error ? error.message : error
-  const stack = error instanceof Error ? error.stack : undefined
+  const errorMessage = error instanceof Error ? error.message : error;
+  const stack = error instanceof Error ? error.stack : undefined;
 
   const logEvent: LogEvent = {
     timestamp: new Date().toISOString(),
@@ -92,9 +92,9 @@ export function logError(
     error: errorMessage,
     stack, // Stack trace logged to console only, never exposed to client
     ...data,
-  }
+  };
 
-  console.error(JSON.stringify(logEvent))
+  console.error(JSON.stringify(logEvent));
 }
 
 /**
@@ -113,7 +113,7 @@ export function logError(
 export function logPerformance(
   event: string,
   durationMs: number,
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
 ): void {
   const logEvent: LogEvent & PerformanceMetric = {
     timestamp: new Date().toISOString(),
@@ -121,7 +121,7 @@ export function logPerformance(
     environment: getEnvironment(),
     durationMs,
     ...data,
-  }
+  };
 
-  console.log(JSON.stringify(logEvent))
+  console.log(JSON.stringify(logEvent));
 }

@@ -189,11 +189,14 @@ All core logging infrastructure implemented and tested:
 - src/lib/utils/errors.ts
 - src/lib/utils/__tests__/logger.test.ts
 - src/lib/utils/__tests__/errors.test.ts
-- src/routes/api/__tests__/health.test.ts
+- src/__tests__/api/health.test.ts
 - docs/LOGGING.md
+- .github/workflows/ci.yml
 
 **Modified:**
 - src/routes/api/health.ts
+- tsconfig.json
+- src/__tests__/routes/index.test.tsx (fixed import path)
 
 ## Change Log
 
@@ -204,3 +207,7 @@ All core logging infrastructure implemented and tested:
 - Added comprehensive test suite (23 tests, all passing)
 - Created logging documentation at `/docs/LOGGING.md`
 - Verified local development logging with structured JSON output
+- Added GitHub Actions CI workflow (lint, type-check, test, build, format-check)
+- Updated tsconfig.json to exclude test files from type checking
+- Fixed pre-existing test import path issue in index.test.tsx
+- Applied Prettier formatting to all source files

@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { createMemoryHistory, createRouter } from "@tanstack/react-router";
 import { RouterProvider } from "@tanstack/react-router";
 import { QueryClient } from "@tanstack/react-query";
-import { routeTree } from "~/routeTree.gen";
+import { routeTree } from "../../routeTree.gen";
 
 describe("Home Route", () => {
   it("should render welcome message", async () => {

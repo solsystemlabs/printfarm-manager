@@ -5,19 +5,23 @@
  * Abstracts differences between MinIO (dev) and R2 (staging/prod)
  */
 export interface StorageClient {
-  put(key: string, content: string | Buffer, options?: UploadOptions): Promise<void>
-  get(key: string): Promise<string | null>
-  delete(key: string): Promise<void>
-  getEnvironment(): string
-  getStorageType(): 'MinIO' | 'Cloudflare R2'
+  put(
+    key: string,
+    content: string | Buffer,
+    options?: UploadOptions,
+  ): Promise<void>;
+  get(key: string): Promise<string | null>;
+  delete(key: string): Promise<void>;
+  getEnvironment(): string;
+  getStorageType(): "MinIO" | "Cloudflare R2";
 }
 
 /**
  * Upload options for storage operations
  */
 export interface UploadOptions {
-  contentType?: string
-  contentDisposition?: string
+  contentType?: string;
+  contentDisposition?: string;
 }
 
 /**
@@ -25,13 +29,13 @@ export interface UploadOptions {
  * In Workers runtime, bindings are injected into process.env by TanStack Start adapter
  */
 export type CloudflareEnv = {
-  FILES_BUCKET?: R2Bucket
-  MINIO_ACCESS_KEY?: string
-  MINIO_SECRET_KEY?: string
-  MINIO_BUCKET?: string
-  ENVIRONMENT?: string
-  XATA_BRANCH?: string
-}
+  FILES_BUCKET?: R2Bucket;
+  MINIO_ACCESS_KEY?: string;
+  MINIO_SECRET_KEY?: string;
+  MINIO_BUCKET?: string;
+  ENVIRONMENT?: string;
+  XATA_BRANCH?: string;
+};
 
 declare global {
   // Augment NodeJS ProcessEnv with Cloudflare environment variables
@@ -40,22 +44,22 @@ declare global {
   namespace NodeJS {
     interface ProcessEnv {
       // Database configuration
-      DATABASE_URL?: string
+      DATABASE_URL?: string;
 
       // Cloudflare R2 binding (injected by TanStack Start Cloudflare adapter)
-      FILES_BUCKET?: R2Bucket
+      FILES_BUCKET?: R2Bucket;
 
       // R2 / MinIO configuration
-      MINIO_ENDPOINT?: string
-      MINIO_PORT?: string
-      MINIO_USE_SSL?: string
-      MINIO_ACCESS_KEY?: string
-      MINIO_SECRET_KEY?: string
-      MINIO_BUCKET?: string
+      MINIO_ENDPOINT?: string;
+      MINIO_PORT?: string;
+      MINIO_USE_SSL?: string;
+      MINIO_ACCESS_KEY?: string;
+      MINIO_SECRET_KEY?: string;
+      MINIO_BUCKET?: string;
 
       // Environment settings
-      ENVIRONMENT?: string
-      XATA_BRANCH?: string
+      ENVIRONMENT?: string;
+      XATA_BRANCH?: string;
     }
   }
 }
