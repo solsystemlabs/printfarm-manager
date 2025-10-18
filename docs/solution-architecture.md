@@ -88,11 +88,10 @@ Product-centric architecture where physical inventory items are first-class enti
 
 ### Epic Structure (5 Epics, ~32 Stories)
 
-**Epic 1: Deployment & Operations Foundation** (6-8 stories, CRITICAL)
+**Epic 1: Deployment & Operations Foundation** (6 stories, CRITICAL)
 - Establish 3 environments (dev/staging/production) with Cloudflare Workers Builds
 - Configure Xata database branching and R2 buckets per environment
 - Implement logging, monitoring, observability (100% head sampling)
-- Environment indicator UI component
 - Storage usage visibility dashboard
 - **Rationale**: Infrastructure foundation required before feature development
 
@@ -187,7 +186,7 @@ Product-centric architecture where physical inventory items are first-class enti
 ### PRD-UX Alignment Check
 
 ✅ **All epics have corresponding UX flows**:
-- Epic 1 → Environment indicator UI (footer component)
+- Epic 1 → Logging and observability (dashboard, storage monitoring)
 - Epic 2 → Upload workflows (zip extraction, file selection)
 - Epic 3 → Metadata wizard (filament matching, curated display)
 - Epic 4 → Product/variant management, recipe cards
@@ -376,7 +375,7 @@ Based on epic analysis, the system decomposes into the following logical compone
 - **Environment Configuration**: `wrangler.jsonc` with environment-specific settings
 - **Database Branching**: Xata branch-per-environment (dev/staging/production + PR previews)
 - **Storage Buckets**: R2 buckets per environment (`pm-dev-files`, `pm-staging-files`, `pm-files`)
-- **Observability Layer**: Structured logging, performance metrics, environment indicator UI
+- **Observability Layer**: Structured logging, performance metrics, storage monitoring
 
 **Epic Mapping**: Epic 1 (Stories 1.1-1.7)
 
@@ -2053,8 +2052,7 @@ printfarm-manager/
 3. Create R2 buckets per environment (Story 1.3)
 4. Connect GitHub to Cloudflare Workers Builds (Story 1.4)
 5. Implement logging infrastructure (Story 1.5)
-6. Build environment indicator component (Story 1.6)
-7. Create storage dashboard (Story 1.7)
+6. Create storage dashboard (Story 1.7)
 
 **Key Milestone**: All three environments operational with independent resources
 

@@ -1,0 +1,204 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.1</storyId>
+    <title>Design Database Schema</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-18</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-2.1.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>database schema defined for models, slices, products, variants, filaments</iWant>
+    <soThat>we have proper data structure before building features</soThat>
+    <tasks>
+      <task id="1" status="pending">Create Prisma Schema (AC: #1, #2, #3, #4, #5, #6)</task>
+      <task id="1.1" status="pending">Define datasource and generator blocks</task>
+      <task id="1.2" status="pending">Create Model entity with fields and indexes</task>
+      <task id="1.3" status="pending">Create Slice entity with metadata fields</task>
+      <task id="1.4" status="pending">Create Filament entity with unique constraint</task>
+      <task id="1.5" status="pending">Create Product and ProductVariant entities</task>
+      <task id="1.6" status="pending">Create junction tables: SliceModel, SliceFilament, SliceVariant</task>
+      <task id="1.7" status="pending">Add relationship annotations (@relation)</task>
+      <task id="1.8" status="pending">Add indexes for search and foreign keys</task>
+      <task id="2" status="pending">Create Prisma Client Singleton (AC: #8)</task>
+      <task id="2.1" status="pending">Create /src/lib/db/client.ts with singleton pattern</task>
+      <task id="2.2" status="pending">Configure logging based on NODE_ENV</task>
+      <task id="2.3" status="pending">Prevent multiple Prisma Client instances</task>
+      <task id="3" status="pending">Generate and Test Migration (AC: #7)</task>
+      <task id="3.1" status="pending">Run npx prisma generate to create Prisma Client</task>
+      <task id="3.2" status="pending">Run npx prisma migrate dev --name init_schema</task>
+      <task id="3.3" status="pending">Verify migration creates all tables in local database</task>
+      <task id="3.4" status="pending">Verify indexes created correctly</task>
+      <task id="3.5" status="pending">Test basic CRUD queries with Prisma Client</task>
+      <task id="4" status="pending">Document Schema (AC: #9)</task>
+      <task id="4.1" status="pending">Create or update ER diagram showing entity relationships</task>
+      <task id="4.2" status="pending">Document in solution-architecture.md if exists</task>
+      <task id="4.3" status="pending">Add inline schema comments documenting purpose of key fields</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Prisma schema created with all tables (models, slices, products, product_variants, filaments, slice_filaments, slice_models, slice_variants)</criterion>
+    <criterion id="2">Multi-tenant support via tenant_id (nullable in MVP, enforced in Phase 3)</criterion>
+    <criterion id="3">Foreign keys and relationships properly defined with correct cascade behavior</criterion>
+    <criterion id="4">Unique constraints applied: product names, (brand+color+material+type) for filaments, variant names within product</criterion>
+    <criterion id="5">UUID primary keys for all tables</criterion>
+    <criterion id="6">Indexes created for search (filename, name) and relationship queries (tenantId, foreign keys)</criterion>
+    <criterion id="7">Migration generated and tested in dev environment</criterion>
+    <criterion id="8">Prisma Client generated successfully</criterion>
+    <criterion id="9">ER diagram documented (reference in solution-architecture.md)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/tech-spec-epic-2.md" title="Technical Specification: Epic 2 - Core File Management" section="Story 2.1: Design Database Schema">
+        <snippet>Lines 63-312: Complete Prisma schema definition, migration commands, Prisma Client setup, and acceptance criteria</snippet>
+        <relevance>Primary technical specification for this story. Contains complete database schema code, migration workflow, and all implementation details.</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/tech-spec-epic-2.md" title="Database Schema (Prisma)" section="Lines 78-266">
+        <snippet>Complete Prisma schema with all entities: Model, Slice, Filament, Product, ProductVariant, SliceModel, SliceFilament, SliceVariant. Includes datasource/generator blocks, relationships, indexes, and unique constraints.</snippet>
+        <relevance>Full schema code to implement in /prisma/schema.prisma</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/solution-architecture.md" title="PrintFarm Manager Solution Architecture" section="Data Architecture">
+        <snippet>Lines 1215-1517: Database schema design, ER diagram, indexes strategy, multi-tenancy planning, migration strategy, and data seeding instructions.</snippet>
+        <relevance>Architecture rationale for schema design decisions. Explains entity relationships, cascade behaviors, and future multi-tenant support.</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/PRD.md" title="Product Requirements Document" section="FR-7: Product Entity Management">
+        <snippet>Lines 176-187: Product/variant requirements including unique constraints, many-to-many relationships, and deletion constraints.</snippet>
+        <relevance>Business requirements informing schema design for products and variants.</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/PRD.md" title="Product Requirements Document" section="FR-5: Smart Filament Matching">
+        <snippet>Lines 152-161: Filament matching requirements including unique constraint on (brand, color, material, type) combination.</snippet>
+        <relevance>Defines unique filament constraint requirements for schema.</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/PRD.md" title="Product Requirements Document" section="FR-9: Multi-Model Slice Support">
+        <snippet>Lines 189-198: Many-to-many relationships between models and slices via junction tables.</snippet>
+        <relevance>Defines junction table requirements for SliceModel.</relevance>
+      </doc>
+    </docs>
+    <code>
+      <artifact path="/home/taylor/projects/printfarm-manager/CLAUDE.md" kind="documentation" section="Architecture">
+        <snippet>Lines 26-45: TanStack Start project structure showing routes/, components/, lib/ organization and file-based routing patterns.</snippet>
+        <reason>Establishes project structure conventions for where to place Prisma schema and client files.</reason>
+      </artifact>
+      <artifact path="/home/taylor/projects/printfarm-manager/CLAUDE.md" kind="documentation" section="Cloudflare Workers Context">
+        <snippet>Lines 48-79: How to access Cloudflare environment variables and bindings using getContext('cloudflare') in server routes.</snippet>
+        <reason>Database URL will be accessed via Cloudflare environment bindings in production.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="@prisma/client" version="^6.1.0">Prisma Client for type-safe database queries</package>
+        <package name="prisma" version="^6.1.0" dev="true">Prisma CLI for schema management and migrations</package>
+        <package name="zod" version="^3.23.8">Runtime schema validation (used for metadata, but relevant for type safety)</package>
+      </ecosystem>
+      <database>
+        <provider name="Xata" type="PostgreSQL">Serverless Postgres database with automatic branching per environment</provider>
+        <connection>DATABASE_URL environment variable (set via Cloudflare secrets)</connection>
+      </database>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="technical">
+      <name>TypeScript Strict Mode</name>
+      <description>All code must use TypeScript strict mode for type safety (NFR-8)</description>
+      <enforcement>tsconfig.json has "strict": true</enforcement>
+    </constraint>
+    <constraint type="technical">
+      <name>Database Provider</name>
+      <description>Must use PostgreSQL-compatible database. Project uses Xata (serverless Postgres)</description>
+      <enforcement>Prisma datasource provider = "postgresql"</enforcement>
+    </constraint>
+    <constraint type="technical">
+      <name>UUID Primary Keys</name>
+      <description>All entities must use UUID primary keys for globally unique identifiers and future distributed system compatibility (tech spec lines 95, 114, 154)</description>
+      <enforcement>All @id fields use @default(uuid())</enforcement>
+    </constraint>
+    <constraint type="technical">
+      <name>Multi-Tenant Field Pattern</name>
+      <description>All tables must include tenant_id field (nullable in MVP, enforced in Phase 3) for future SaaS transformation (NFR-11)</description>
+      <enforcement>Every model includes: tenantId String? @map("tenant_id")</enforcement>
+    </constraint>
+    <constraint type="technical">
+      <name>Field Name Mapping</name>
+      <description>Prisma fields use camelCase, database columns use snake_case via @map() directive</description>
+      <enforcement>Example: r2Key String @map("r2_key")</enforcement>
+    </constraint>
+    <constraint type="data-integrity">
+      <name>Unique Constraints</name>
+      <description>Enforce business rules via database constraints: product names globally unique, filament combinations unique, variant names unique per product (AC #4)</description>
+      <enforcement>@@unique directives in schema</enforcement>
+    </constraint>
+    <constraint type="data-integrity">
+      <name>Cascade Behavior</name>
+      <description>Junction tables cascade on delete (prevent orphaned relationships). Filaments use onDelete: Restrict to prevent deletion when in use (AC #3)</description>
+      <enforcement>@relation onDelete directives in schema</enforcement>
+    </constraint>
+    <constraint type="performance">
+      <name>Search Indexes</name>
+      <description>Index all search fields (filename, name) and foreign keys for query performance (AC #6)</description>
+      <enforcement>@@index directives in schema</enforcement>
+    </constraint>
+    <constraint type="workflow">
+      <name>Migration Strategy</name>
+      <description>Local dev uses "npx prisma migrate dev" (interactive). Staging/production use "npx prisma migrate deploy" (automated in CI/CD). Per tech spec lines 270-282.</description>
+      <enforcement>Documented in tech spec and solution architecture</enforcement>
+    </constraint>
+    <constraint type="environment">
+      <name>Database Connection</name>
+      <description>DATABASE_URL provided via environment variable (Cloudflare secrets in production, .dev.vars locally)</description>
+      <enforcement>Prisma datasource url = env("DATABASE_URL")</enforcement>
+    </constraint>
+  </constraints>
+  <interfaces>
+    <interface name="PrismaClient" kind="database-client" path="@prisma/client">
+      <signature>Generated client with type-safe query methods for all models</signature>
+      <usage>Import from @prisma/client after running npx prisma generate</usage>
+      <example>
+        import { PrismaClient } from '@prisma/client'
+        const prisma = new PrismaClient()
+        const models = await prisma.model.findMany()
+      </example>
+    </interface>
+    <interface name="Singleton Pattern for Prisma Client" kind="utility" path="/src/lib/db/client.ts">
+      <signature>
+        export const prisma: PrismaClient
+        - Singleton instance preventing multiple client connections
+        - Configures logging based on NODE_ENV
+      </signature>
+      <usage>Import singleton instance in all server routes and API handlers</usage>
+      <example>
+        import { prisma } from '~/lib/db/client'
+        const slice = await prisma.slice.create({ data: {...} })
+      </example>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      Per NFR-8, maintain &gt;80% test coverage for critical business logic. Story 2.1 focuses on schema definition (declarative Prisma code), so testing emphasizes migration validation and Prisma Client generation rather than unit tests. Integration tests verify database operations work correctly with the schema. Use Vitest as testing framework (configured in project). Tests should validate schema constraints (unique indexes, foreign keys, cascade behavior) and Prisma Client type safety.
+    </standards>
+    <locations>
+      <location>/tests/unit/</location>
+      <location>/tests/integration/</location>
+      <location>Schema validation happens via Prisma CLI (npx prisma validate)</location>
+    </locations>
+    <ideas>
+      <idea ac="1,5">Verify migration creates all tables with correct column types and UUID primary keys</idea>
+      <idea ac="2">Verify tenantId field exists on all tables and is nullable</idea>
+      <idea ac="3">Test cascade deletion: deleting slice cascades to junction tables (SliceModel, SliceFilament)</idea>
+      <idea ac="3">Test restrict deletion: deleting filament used in slice fails with foreign key error</idea>
+      <idea ac="4">Test unique constraint: creating duplicate product name throws unique violation error</idea>
+      <idea ac="4">Test unique filament constraint: duplicate (brand, colorHex, materialType, filamentType) throws error</idea>
+      <idea ac="4">Test unique variant constraint: duplicate (productId, name) throws error</idea>
+      <idea ac="6">Verify indexes created: check database for indexes on filename, name, tenantId, foreign keys</idea>
+      <idea ac="7">Run migration in dev environment and verify success via Prisma Studio or database inspector</idea>
+      <idea ac="8">Test Prisma Client generation: npx prisma generate succeeds and types are available in IDE</idea>
+      <idea ac="8">Test basic CRUD operations using Prisma Client (create model, find slice, update product, delete filament)</idea>
+      <idea ac="9">Validate ER diagram exists in solution-architecture.md and matches implemented schema</idea>
+    </ideas>
+  </tests>
+</story-context>

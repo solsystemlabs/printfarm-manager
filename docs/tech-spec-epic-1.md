@@ -49,7 +49,6 @@ Establish production-ready deployment pipeline and observability infrastructure 
 - ✅ Automated deployments working via Cloudflare Workers Builds
 - ✅ PR preview URLs generating automatically without affecting staging
 - ✅ Logs accessible in Cloudflare Dashboard with 100% request sampling
-- ✅ Environment indicator visible in UI footer
 - ✅ Storage dashboard showing usage against free tier limits
 
 ### Dependencies
@@ -967,205 +966,6 @@ curl http://localhost:3000/api/error-test
 
 ---
 
-### Story 1.6: Create Environment Indicator UI Component
-
-**Priority:** MEDIUM
-**Complexity:** Low
-**Estimated Effort:** 2-3 hours
-
-#### User Story
-**As a** user
-**I want** to see which environment I'm using (dev/staging/production)
-**So that** I don't accidentally test in production or confuse environments
-
-#### Technical Requirements
-
-1. **Footer Component**
-   - Always visible at bottom of page
-   - Non-intrusive (small, fixed position)
-   - Shows environment name
-
-2. **Visual Differentiation**
-   - Development: Gray background
-   - Staging: Yellow/amber background
-   - Production: Green background
-
-3. **Environment Detection**
-   - Fetch from API endpoint that reads Cloudflare context
-   - Client-side caching (no need to refetch per page)
-
-4. **Additional Info (Optional)**
-   - Click to expand: worker name, deployment time
-   - Copy environment info button
-
-5. **Responsive Design**
-   - Mobile: Remains visible but smaller
-   - Desktop: Fixed bottom-right corner
-
-#### Implementation Details
-
-**Step 1: Create Environment API Endpoint**
-
-**File:** `/src/routes/api/environment.ts`
-```typescript
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-import { getContext } from 'vinxi/http'
-
-export const Route = createFileRoute('/api/environment')({
-  server: {
-    handlers: {
-      GET: async () => {
-        const cf = getContext('cloudflare')
-        const environment = cf.env.ENVIRONMENT || 'unknown'
-
-        return json({
-          environment,
-          workerName: cf.env.name || 'unknown',
-          timestamp: new Date().toISOString(),
-        })
-      },
-    },
-  },
-})
-```
-
-**Step 2: Create Environment Indicator Component**
-
-**File:** `/src/components/shared/EnvironmentIndicator.tsx`
-```typescript
-import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
-
-interface EnvironmentInfo {
-  environment: string
-  workerName: string
-  timestamp: string
-}
-
-export function EnvironmentIndicator() {
-  const [expanded, setExpanded] = useState(false)
-
-  const { data } = useQuery<EnvironmentInfo>({
-    queryKey: ['environment'],
-    queryFn: () => fetch('/api/environment').then((r) => r.json()),
-    staleTime: Infinity, // Never refetch (doesn't change during session)
-  })
-
-  if (!data) return null
-
-  const colors = {
-    development: 'bg-gray-600 text-white',
-    staging: 'bg-yellow-500 text-black',
-    production: 'bg-green-600 text-white',
-    unknown: 'bg-red-600 text-white',
-  }
-
-  const bgColor = colors[data.environment as keyof typeof colors] || colors.unknown
-
-  return (
-    <div className="fixed bottom-4 right-4 z-50">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className={`rounded-lg px-3 py-1.5 text-sm font-medium shadow-lg transition-all hover:shadow-xl ${bgColor}`}
-        aria-label={`Environment: ${data.environment}`}
-      >
-        {data.environment.toUpperCase()}
-      </button>
-
-      {expanded && (
-        <div
-          className={`absolute bottom-full right-0 mb-2 rounded-lg p-3 shadow-xl ${bgColor}`}
-        >
-          <div className="text-xs space-y-1">
-            <div>
-              <strong>Worker:</strong> {data.workerName}
-            </div>
-            <div>
-              <strong>Deployed:</strong>{' '}
-              {new Date(data.timestamp).toLocaleString()}
-            </div>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  `Environment: ${data.environment}\nWorker: ${data.workerName}`
-                )
-              }}
-              className="mt-2 w-full rounded bg-white bg-opacity-20 px-2 py-1 text-xs hover:bg-opacity-30"
-            >
-              Copy Info
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-```
-
-**Step 3: Add to Root Layout**
-
-**File:** `/src/routes/__root.tsx`
-```typescript
-import { Outlet, createRootRoute } from '@tanstack/react-router'
-import { EnvironmentIndicator } from '~/components/shared/EnvironmentIndicator'
-
-export const Route = createRootRoute({
-  component: RootComponent,
-})
-
-function RootComponent() {
-  return (
-    <>
-      <div className="min-h-screen">
-        <Outlet />
-      </div>
-      <EnvironmentIndicator />
-    </>
-  )
-}
-```
-
-#### Acceptance Criteria
-- [x] Environment API endpoint returns environment info
-- [x] EnvironmentIndicator component created
-- [x] Component displays environment name in footer
-- [x] Visual colors: development (gray), staging (yellow), production (green)
-- [x] Click to expand shows worker name and timestamp
-- [x] Copy info button works
-- [x] Component added to root layout (visible on all pages)
-- [x] Mobile-responsive (remains visible, non-intrusive)
-
-#### Testing
-```bash
-# Test 1: Development Environment
-npm run dev
-# Visit: http://localhost:3000
-# Verify: Gray badge "DEVELOPMENT" in bottom-right corner
-# Click badge → Verify: Shows worker name "pm-dev"
-
-# Test 2: Staging Environment
-# Deploy to staging
-# Visit: https://pm-staging.solsystemlabs.com
-# Verify: Yellow badge "STAGING" in bottom-right corner
-
-# Test 3: Production Environment
-# Deploy to production
-# Visit: https://pm.solsystemlabs.com
-# Verify: Green badge "PRODUCTION" in bottom-right corner
-
-# Test 4: Copy Functionality
-# Click badge → Click "Copy Info"
-# Paste into text editor
-# Verify: Contains environment and worker name
-
-# Test 5: Mobile Responsiveness
-# Open dev tools → Toggle device toolbar → iPhone view
-# Verify: Badge still visible, appropriately sized
-```
-
----
-
 ### Story 1.7: Implement Storage Usage Visibility Dashboard
 
 **Priority:** MEDIUM
@@ -1523,12 +1323,10 @@ function StorageCard({
 
 **Milestone:** Automated deployments working, comprehensive logging operational
 
-### Phase 3: UI Components (Stories 1.6-1.7)
+### Phase 3: UI Components (Story 1.7)
 **Duration:** 1 day
-**Parallel Work:** Stories 1.6 and 1.7 can be done simultaneously
 
-6. Story 1.6: Environment indicator (2-3 hours)
-7. Story 1.7: Storage dashboard (4-6 hours, deferred implementation until Epic 2)
+6. Story 1.7: Storage dashboard (4-6 hours, deferred implementation until Epic 2)
 
 **Milestone:** Epic 1 complete, ready for Epic 2
 
@@ -1596,17 +1394,6 @@ function StorageCard({
 4. **Log performance metrics** (identify slow operations)
 5. **Use event-based naming** (e.g., `request_complete`, not just "request")
 
-### Environment Indicator Strategy
-
-**Client-Side Component with API:**
-- API endpoint reads Cloudflare context (server-side)
-- Client fetches once, caches indefinitely
-- No performance impact (single fetch per session)
-
-**Visual Safety:**
-- Color-coded by environment (yellow staging, green production)
-- Always visible (fixed position footer)
-- Prevents accidental production operations
 
 ---
 
@@ -1637,8 +1424,6 @@ Epic 1 is considered complete when:
    - [ ] Real-time tailing works with `wrangler tail`
 
 4. **UI Components Functional**
-   - [ ] Environment indicator visible on all pages
-   - [ ] Indicator shows correct environment per deployment
    - [ ] Storage dashboard accessible at `/admin/storage` (implementation deferred to Epic 2)
 
 5. **Documentation Complete**
@@ -2021,7 +1806,6 @@ if (isProduction()) {
 - [ ] `/src/routes/api/health.ts` - Health check endpoint
 - [ ] `/src/routes/api/environment.ts` - Environment info endpoint
 - [ ] `/src/routes/api/test-r2.ts` - R2 test endpoint
-- [ ] `/src/components/shared/EnvironmentIndicator.tsx` - Environment badge
 - [ ] `/src/routes/admin/storage.tsx` - Storage dashboard (defer implementation)
 - [ ] `/src/lib/storage/usage.ts` - Storage calculation utility (defer implementation)
 
@@ -2041,7 +1825,7 @@ if (isProduction()) {
 
 Epic 1 is **DONE** when:
 
-1. ✅ All 7 stories completed (1.1-1.7)
+1. ✅ All 6 stories completed (1.1-1.5, 1.7)
 2. ✅ All acceptance criteria met per story
 3. ✅ Three environments deployed and accessible
 4. ✅ Smoke tests passing in all environments

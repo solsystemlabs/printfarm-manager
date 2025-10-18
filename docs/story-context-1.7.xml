@@ -1,0 +1,278 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.7</storyId>
+    <title>Implement Storage Usage Visibility Dashboard</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-18</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-1.7.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an owner</asA>
+    <iWant>to see total R2 storage consumed and file counts</iWant>
+    <soThat>I can monitor usage against free tier limits and plan for overages</soThat>
+    <tasks>
+      <task id="1">
+        <title>Create Storage Calculation Utility</title>
+        <acs>2, 3, 4</acs>
+        <subtasks>
+          <subtask>Create /src/lib/storage/usage.ts</subtask>
+          <subtask>Implement calculateStorageUsage() function to query Prisma for all file records</subtask>
+          <subtask>Implement formatBytes() helper for human-readable format</subtask>
+          <subtask>Calculate breakdown by models, slices, images</subtask>
+          <subtask>Calculate percentage of 10GB free tier limit</subtask>
+        </subtasks>
+      </task>
+      <task id="2">
+        <title>Create Storage API Endpoint</title>
+        <acs>2, 6</acs>
+        <subtasks>
+          <subtask>Create /src/routes/api/admin/storage.ts</subtask>
+          <subtask>Use storage utility to calculate usage</subtask>
+          <subtask>Log calculation performance metrics</subtask>
+          <subtask>Return JSON with total bytes, file counts, breakdown, percentage</subtask>
+        </subtasks>
+      </task>
+      <task id="3">
+        <title>Create Storage Dashboard Page</title>
+        <acs>1, 3, 4, 5, 6, 7, 8, 9</acs>
+        <subtasks>
+          <subtask>Create /src/routes/admin/storage.tsx</subtask>
+          <subtask>Implement React Query to fetch storage data with 5-minute stale time</subtask>
+          <subtask>Display total storage in large, prominent card</subtask>
+          <subtask>Render progress bar showing percentage of free tier</subtask>
+          <subtask>Color-code progress bar: green (&lt;80%), red (≥80%)</subtask>
+          <subtask>Show warning message when approaching limit (≥80%)</subtask>
+          <subtask>Render breakdown cards for models, slices, images</subtask>
+          <subtask>Add "Refresh" button to manually recalculate</subtask>
+          <subtask>Add link to Cloudflare Dashboard R2 page</subtask>
+          <subtask>Display last calculated timestamp</subtask>
+        </subtasks>
+      </task>
+      <task id="4">
+        <title>Test Storage Dashboard</title>
+        <acs>1, 2, 3, 4, 5, 6, 7, 8</acs>
+        <subtasks>
+          <subtask>Test with empty database (0 files, 0 bytes)</subtask>
+          <subtask>Test refresh button triggers recalculation</subtask>
+          <subtask>Test warning displays correctly at ≥80% threshold</subtask>
+          <subtask>Test Cloudflare Dashboard link opens correctly</subtask>
+          <subtask>Verify human-readable format (GB/MB/KB)</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">/admin/storage page accessible (no auth in MVP, but dedicated URL)</criterion>
+    <criterion id="2">Dashboard displays total bytes stored across all file types</criterion>
+    <criterion id="3">File counts broken down by type: models (.stl, .3mf), slices (.gcode.3mf, .gcode), images (.png, .jpg)</criterion>
+    <criterion id="4">Storage displayed in human-readable format (GB/MB)</criterion>
+    <criterion id="5">Visual indicator showing percentage of free tier limit (10GB)</criterion>
+    <criterion id="6">Refresh button to recalculate storage usage on demand</criterion>
+    <criterion id="7">Link to Cloudflare Dashboard for detailed usage analytics</criterion>
+    <criterion id="8">Warning shown when &gt;80% of limit</criterion>
+    <criterion id="9">Last calculated timestamp displayed</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/tech-spec-epic-1.md</path>
+        <title>Technical Specification: Epic 1 - Story 1.7</title>
+        <section>Story 1.7: Implement Storage Usage Visibility Dashboard (lines 1169-1502)</section>
+        <snippet>
+Complete technical specification including:
+- Storage calculation strategy: Query database (Prisma) for all file records, sum fileSize fields
+- Caching strategy: React Query with 5-minute staleTime to prevent excessive recalculation
+- Free tier limits: 10GB storage, warning threshold at 80%
+- Implementation dependencies: Requires Epic 2 Story 2.1 (database schema with models/slices tables)
+- Code examples provided for storage utility (/src/lib/storage/usage.ts, lines 1212-1281), API endpoint (/src/routes/api/admin/storage.ts, lines 1286-1316), and dashboard page (/src/routes/admin/storage.tsx, lines 1321-1462)
+- Testing procedures (lines 1476-1501) note: deferred until after Story 2.1 completes
+        </snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/solution-architecture.md</path>
+        <title>Solution Architecture - Data Models</title>
+        <section>Database Schema (lines 1217-1398)</section>
+        <snippet>
+Prisma schema defines Model and Slice entities with fileSize tracking:
+- Model entity: id, tenantId, filename, r2Key, r2Url, fileSize (Int bytes), contentType, thumbnailUrl, timestamps
+- Slice entity: Same structure plus metadataExtracted, metadataJson, curated metadata fields
+- Both entities indexed on tenantId for future multi-tenant support
+- fileSize field in bytes enables storage calculation via database queries
+        </snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/CLAUDE.md</path>
+        <title>Project Configuration - Tech Stack</title>
+        <section>Architecture section</section>
+        <snippet>
+TanStack Start application with:
+- React Query for server state management, SSR integration via setupRouterSsrQueryIntegration()
+- File-based routing: src/routes/ for pages, src/routes/api/ for server-side API handlers
+- Cloudflare Workers deployment with R2 storage and database
+- TypeScript strict mode with path aliases (~/* → src/*)
+        </snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>/home/taylor/projects/printfarm-manager/src/lib/utils/logger.ts</path>
+        <kind>utility</kind>
+        <symbol>log, logPerformance</symbol>
+        <lines>1-128</lines>
+        <reason>Existing logging infrastructure for storage calculation performance metrics (Story 1.7 AC#2: log calculation performance)</reason>
+      </artifact>
+      <artifact>
+        <path>/home/taylor/projects/printfarm-manager/src/lib/storage/index.ts</path>
+        <kind>utility</kind>
+        <symbol>getStorageClient</symbol>
+        <lines>1-4</lines>
+        <reason>Existing storage client exports; Story 1.7 adds usage calculation utility to this module</reason>
+      </artifact>
+      <artifact>
+        <path>/home/taylor/projects/printfarm-manager/prisma/schema.prisma</path>
+        <kind>schema</kind>
+        <symbol>N/A (infrastructure only)</symbol>
+        <lines>1-15</lines>
+        <reason>Database schema currently empty (Story 2.1 will define Model/Slice tables required for storage calculation)</reason>
+      </artifact>
+      <artifact>
+        <path>/home/taylor/projects/printfarm-manager/src/lib/db.ts</path>
+        <kind>database-client</kind>
+        <symbol>Prisma client singleton</symbol>
+        <lines>N/A (exists but not read - standard Prisma setup)</lines>
+        <reason>Database client for querying file records in storage calculation</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <dependency name="@prisma/client" version="^6.17.1" reason="Database queries for file size aggregation" />
+        <dependency name="@tanstack/react-query" version="^5.66.0" reason="Client-side caching with 5-minute staleTime" />
+        <dependency name="@tanstack/react-start" version="^1.132.36" reason="Server-side API route handlers" />
+        <dependency name="react" version="^19.0.0" reason="Dashboard UI components" />
+        <dependency name="tailwind-merge" version="^2.6.0" reason="Styling utility for dashboard components" />
+      </node>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="implementation-dependency">
+Per tech spec lines 1478-1501, this story requires database schema from Epic 2, Story 2.1. Implementation is partially deferred:
+1. Story 1.7 can be CREATED now with placeholder implementation
+2. Full testing requires Story 2.1 complete (models/slices tables with fileSize fields)
+3. Story 2.2+ complete (actual file uploads to test against)
+    </constraint>
+    <constraint type="architecture">
+TanStack Start patterns (per CLAUDE.md):
+- API routes use createFileRoute with server.handlers object
+- Access Cloudflare context via getContext('cloudflare') from vinxi/http
+- Use json() from @tanstack/react-start for response formatting
+    </constraint>
+    <constraint type="caching">
+Per tech spec line 1335: React Query with 5-minute staleTime to prevent excessive recalculation of expensive storage queries
+    </constraint>
+    <constraint type="performance">
+Per tech spec lines 1855-1858, if storage calculation becomes too slow at scale:
+- Implement background calculation via Cloudflare Workers Cron
+- Cache results in database table
+- Continue using 5-minute stale time on client
+    </constraint>
+    <constraint type="file-structure">
+Files to create (per story Dev Notes):
+- /src/lib/storage/usage.ts - Storage calculation utility with TypeScript interfaces
+- /src/routes/api/admin/storage.ts - API endpoint for storage data
+- /src/routes/admin/storage.tsx - Dashboard page with React Query integration
+    </constraint>
+    <constraint type="logging">
+Per tech spec line 1302: Log calculation performance metrics (duration_ms, total_bytes, total_files)
+    </constraint>
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>StorageUsage (return type)</name>
+      <kind>TypeScript interface</kind>
+      <signature>
+interface StorageUsage {
+  totalBytes: number
+  totalFiles: number
+  breakdown: {
+    models: { count: number; bytes: number }
+    slices: { count: number; bytes: number }
+    images: { count: number; bytes: number }
+  }
+  percentOfLimit: number
+  lastCalculated: Date
+}
+      </signature>
+      <path>/src/lib/storage/usage.ts (to be created)</path>
+      <reason>Expected return type from calculateStorageUsage() function and API endpoint</reason>
+    </interface>
+    <interface>
+      <name>calculateStorageUsage</name>
+      <kind>function</kind>
+      <signature>
+async function calculateStorageUsage(prisma: PrismaClient): Promise&lt;StorageUsage&gt;
+      </signature>
+      <path>/src/lib/storage/usage.ts (to be created)</path>
+      <reason>Core utility function that queries Prisma for all file records and calculates totals</reason>
+    </interface>
+    <interface>
+      <name>formatBytes</name>
+      <kind>function</kind>
+      <signature>
+function formatBytes(bytes: number): string
+      </signature>
+      <path>/src/lib/storage/usage.ts (to be created)</path>
+      <reason>Human-readable formatting utility (per tech spec lines 1273-1281)</reason>
+    </interface>
+    <interface>
+      <name>log, logPerformance (existing)</name>
+      <kind>function</kind>
+      <signature>
+function log(event: LogEventType, data?: Record&lt;string, unknown&gt;): void
+function logPerformance(event: string, durationMs: number, data?: Record&lt;string, unknown&gt;): void
+      </signature>
+      <path>/src/lib/utils/logger.ts</path>
+      <reason>Must use existing logging infrastructure for performance metrics</reason>
+    </interface>
+    <interface>
+      <name>createFileRoute (TanStack Router)</name>
+      <kind>framework function</kind>
+      <signature>
+createFileRoute(path)({ server: { handlers: { GET: async () =&gt; Response } } })
+      </signature>
+      <path>@tanstack/react-router</path>
+      <reason>Required pattern for API route creation per CLAUDE.md</reason>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+Testing framework: Vitest with React Testing Library (per package.json)
+- Unit tests: Test storage calculation logic, formatBytes utility
+- Integration tests: Test API endpoint returns correct data structure
+- Component tests: Test dashboard renders correctly with mock data
+- Testing deferred: Full E2E testing requires Story 2.1 completion (database schema)
+    </standards>
+    <locations>
+      <location>src/__tests__/</location>
+      <location>src/lib/storage/__tests__/</location>
+      <location>src/routes/__tests__/</location>
+    </locations>
+    <ideas>
+      <test ac="2" idea="Test calculateStorageUsage with empty database returns 0 bytes, 0 files" />
+      <test ac="2,3" idea="Test calculateStorageUsage correctly sums fileSize from models and slices tables" />
+      <test ac="4" idea="Test formatBytes converts bytes to GB/MB/KB with correct precision" />
+      <test ac="5" idea="Test percentOfLimit calculation against 10GB free tier constant" />
+      <test ac="6" idea="Test API endpoint logs performance metrics (duration_ms)" />
+      <test ac="8" idea="Test warning threshold logic: should warn when percentOfLimit &gt;= 80" />
+      <test ac="9" idea="Test lastCalculated timestamp is current Date" />
+      <test ac="1,4,5,8" idea="Test dashboard component renders storage metrics with correct formatting and warning display" />
+      <test ac="6" idea="Test refresh button triggers React Query refetch" />
+      <test ac="7" idea="Test Cloudflare Dashboard link has correct href and target attributes" />
+    </ideas>
+  </tests>
+</story-context>

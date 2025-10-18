@@ -1,0 +1,658 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.2</storyId>
+    <title>Implement Model File Upload API</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-18</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-2.2.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an owner</asA>
+    <iWant>to upload individual .stl and .3mf files via web interface</iWant>
+    <soThat>I can add new models to my catalog</soThat>
+    <tasks>
+      <task id="1" status="pending" activeForm="Creating API endpoint for model upload">Create API Endpoint for Model Upload (AC: #1, #2, #3, #4, #5, #9, #10)</task>
+      <task id="1.1" status="pending" activeForm="Creating /src/routes/api/models/upload.ts">Create /src/routes/api/models/upload.ts</task>
+      <task id="1.2" status="pending" activeForm="Defining POST handler with file upload processing">Define POST handler with file upload processing</task>
+      <task id="1.3" status="pending" activeForm="Validating file type against ALLOWED_EXTENSIONS">Validate file type against ALLOWED_EXTENSIONS ['.stl', '.3mf']</task>
+      <task id="1.4" status="pending" activeForm="Validating file size">Validate file size (MAX_FILE_SIZE = 500MB)</task>
+      <task id="1.5" status="pending" activeForm="Generating UUID-based R2 key">Generate UUID-based R2 key: models/${crypto.randomUUID()}${extension}</task>
+      <task id="1.6" status="pending" activeForm="Uploading to R2 with headers">Upload to R2 with content-type and content-disposition headers</task>
+      <task id="1.7" status="pending" activeForm="Implementing cleanup on database failure">Implement cleanup on database failure (atomic operation)</task>
+      <task id="1.8" status="pending" activeForm="Adding structured logging">Add structured logging for upload start/complete/error</task>
+      <task id="2" status="pending" activeForm="Creating database record">Create Database Record (AC: #6, #9)</task>
+      <task id="2.1" status="pending" activeForm="Using Prisma client to create Model record">Use Prisma client to create Model record</task>
+      <task id="2.2" status="pending" activeForm="Storing metadata">Store: filename, r2Key, r2Url, fileSize, contentType</task>
+      <task id="2.3" status="pending" activeForm="Wrapping in try-catch for cleanup">Wrap in try-catch for cleanup on failure</task>
+      <task id="3" status="pending" activeForm="Implementing error response handler">Implement Error Response Handler (AC: #7, #8)</task>
+      <task id="3.1" status="pending" activeForm="Creating error response utility">Create error response utility if not exists</task>
+      <task id="3.2" status="pending" activeForm="Returning success response">Return 201 on success with model details</task>
+      <task id="3.3" status="pending" activeForm="Returning validation errors">Return 400 for missing file or invalid type</task>
+      <task id="3.4" status="pending" activeForm="Returning size error">Return 413 for file too large</task>
+      <task id="3.5" status="pending" activeForm="Returning server errors">Return 500 for R2 or database failures</task>
+      <task id="4" status="pending" activeForm="Adding performance logging">Add Performance Logging (AC: #10)</task>
+      <task id="4.1" status="pending" activeForm="Logging upload_start">Log upload_start with filename, size, content_type</task>
+      <task id="4.2" status="pending" activeForm="Logging upload_complete">Log upload_complete with model_id, duration_ms</task>
+      <task id="4.3" status="pending" activeForm="Logging upload_error">Log upload_error with duration_ms and error details</task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1" priority="critical">API endpoint /api/models/upload accepts POST requests</criterion>
+    <criterion id="2" priority="critical">Validates file type (only .stl, .3mf allowed per FR-1)</criterion>
+    <criterion id="3" priority="critical">Validates file size (≤500MB per NFR-2, though individual models typically smaller)</criterion>
+    <criterion id="4" priority="critical">Uploads file to R2 bucket with unique filename (UUID-based)</criterion>
+    <criterion id="5" priority="critical">Sets proper content-type and content-disposition headers when uploading to R2 (per FR-16)</criterion>
+    <criterion id="6" priority="critical">Creates database record with metadata: filename, size, content-type, R2 URL</criterion>
+    <criterion id="7" priority="high">Returns upload success response with model ID and URL</criterion>
+    <criterion id="8" priority="high">Handles errors gracefully: file too large, invalid type, R2 upload failure</criterion>
+    <criterion id="9" priority="critical">Cleans up R2 file if database creation fails (atomic operation per NFR-4)</criterion>
+    <criterion id="10" priority="medium">Logs upload operation per NFR-9 (filename, size, outcome, duration)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/epics.md" title="Epic Breakdown" section="Story 2.2: Implement Model File Upload API">
+        <snippet>Lines 218-239: User story and acceptance criteria for model file upload API</snippet>
+        <relevance>Original story definition from epic breakdown document</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/tech-spec-epic-2.md" title="Technical Specification: Epic 2 - Core File Management" section="Story 2.2: Implement Model File Upload API">
+        <snippet>Lines 315-470: Complete implementation specification including API endpoint code, validation strategy, R2 header configuration, error handling patterns, and acceptance criteria</snippet>
+        <relevance>Primary technical specification for this story. Contains complete implementation code and all technical details.</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/tech-spec-epic-2.md" title="API Endpoint Implementation" section="Lines 330-456">
+        <snippet>Complete TypeScript code for /src/routes/api/models/upload.ts including file validation, R2 upload with headers, database record creation, atomic cleanup, error handling, and logging</snippet>
+        <relevance>Full implementation code to be created in the codebase</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/PRD.md" title="Product Requirements Document" section="FR-1: File Type Support">
+        <snippet>Lines 93-99: Supported file types including .stl and .3mf for model files with whitelisting enforcement</snippet>
+        <relevance>Defines file type validation requirements for upload endpoint</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/PRD.md" title="Product Requirements Document" section="FR-16: File Download Headers">
+        <snippet>Lines 250-253: Requirements for proper content-disposition headers to force downloads with correct filenames</snippet>
+        <relevance>Defines R2 header requirements for file uploads</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/PRD.md" title="Product Requirements Document" section="NFR-2: Storage Limits">
+        <snippet>Lines 269-273: 500MB maximum file size for uploads with automatic validation</snippet>
+        <relevance>Defines maximum file size validation requirement</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/PRD.md" title="Product Requirements Document" section="NFR-4: Data Integrity">
+        <snippet>Lines 277-282: Atomic operations pattern - R2 upload first, database second, cleanup on failure</snippet>
+        <relevance>Defines atomic operation pattern for upload workflow</relevance>
+      </doc>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/PRD.md" title="Product Requirements Document" section="NFR-9: Logging and Monitoring">
+        <snippet>Lines 300-304: Structured logging requirements for upload operations with performance metrics</snippet>
+        <relevance>Defines logging requirements for upload workflow</relevance>
+      </doc>
+    </docs>
+    <code>
+      <artifact path="/home/taylor/projects/printfarm-manager/CLAUDE.md" kind="documentation" section="Architecture - File-Based Routing">
+        <snippet>Lines 26-45: File-based routing patterns with server.handlers object for API routes. Routes in src/routes/api/ directory use createFileRoute() with server.handlers.POST for POST endpoints.</snippet>
+        <reason>Establishes routing pattern conventions for implementing /api/models/upload endpoint</reason>
+      </artifact>
+      <artifact path="/home/taylor/projects/printfarm-manager/CLAUDE.md" kind="documentation" section="Cloudflare Workers Context">
+        <snippet>Lines 113-150: Accessing Cloudflare R2 bucket bindings via getContext('cloudflare').env.FILES_BUCKET. Environment-specific bucket names: pm-dev-files (dev), pm-staging-files (staging), pm-files (production).</snippet>
+        <reason>Shows how to access R2 bucket binding in API route handler</reason>
+      </artifact>
+      <artifact path="/home/taylor/projects/printfarm-manager/docs/story-context-2.1.xml" kind="context" section="Database Schema">
+        <snippet>Lines 12-40: Prisma schema for Model entity with fields: id, tenantId, filename, r2Key, r2Url, fileSize, contentType, thumbnailUrl, timestamps</snippet>
+        <reason>Defines database schema that upload endpoint will populate</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <ecosystem name="node">
+        <package name="@tanstack/react-router" version="latest">File-based routing with createFileRoute()</package>
+        <package name="@tanstack/react-start" version="latest">SSR framework with json() helper for responses</package>
+        <package name="@prisma/client" version="^6.1.0">Database client for creating Model records</package>
+        <package name="zod" version="^3.23.8">Runtime schema validation (optional for request validation)</package>
+      </ecosystem>
+      <cloudflare>
+        <binding name="FILES_BUCKET" type="r2">Cloudflare R2 bucket for file storage. Environment-specific bucket names configured in wrangler.jsonc.</binding>
+      </cloudflare>
+      <utilities>
+        <utility path="/src/lib/utils/logger.ts">Structured logging utility for log(), logError() functions (may need to be created if not exists from Epic 1)</utility>
+        <utility path="/src/lib/utils/errors.ts">Error response utility for createErrorResponse() function (may need to be created if not exists from Epic 1)</utility>
+        <utility path="/src/lib/db/client.ts">Prisma Client singleton instance (created in Story 2.1)</utility>
+      </utilities>
+      <story-dependencies>
+        <dependency storyId="2.1" status="required">Database schema must be deployed before implementing upload endpoint</dependency>
+        <dependency epicId="1" status="required">R2 buckets and environment configuration must be operational</dependency>
+      </story-dependencies>
+    </dependencies>
+  </artifacts>
+
+  <technical-approach>
+    <section name="File Upload Strategy">
+      <description>
+        This story implements the foundation for all file storage in PrintFarm Manager. The implementation follows the atomic operation pattern established in NFR-4.
+      </description>
+      <workflow>
+        <step order="1">Upload to R2 first - Store file in object storage</step>
+        <step order="2">Create database record second - Link metadata to R2 object</step>
+        <step order="3">Cleanup on failure - Delete R2 file if database creation fails</step>
+      </workflow>
+      <rationale>
+        This ordering ensures that we never have orphaned database records pointing to missing files. Orphaned R2 files (no database record) can be cleaned up via background job in Phase 2.
+      </rationale>
+      <reference>Tech spec lines 59-65, NFR-4</reference>
+    </section>
+
+    <section name="Validation Strategy">
+      <description>
+        Per tech spec lines 339-383, validation occurs in two stages before R2 upload.
+      </description>
+      <validations>
+        <validation type="file-size">Reject files &gt;500MB immediately (before R2 upload). MAX_FILE_SIZE = 500 * 1024 * 1024 bytes.</validation>
+        <validation type="file-extension">Check against whitelist ['.stl', '.3mf']. Case-insensitive matching via .toLowerCase().endsWith(ext).</validation>
+        <validation type="content-type">Lenient validation - accept multiple MIME types since .stl files may have inconsistent content-type headers across different sources: 'model/stl', 'application/sla', 'application/octet-stream'</validation>
+      </validations>
+      <reference>Tech spec lines 339-383, FR-1, NFR-2</reference>
+    </section>
+
+    <section name="R2 Header Configuration">
+      <description>
+        Per FR-16 and tech spec lines 397-400, we must set explicit headers when uploading to R2 to ensure downloads work correctly with proper filename preservation.
+      </description>
+      <headers>
+        <header name="contentType">file.type || 'application/octet-stream'</header>
+        <header name="contentDisposition">attachment; filename="${file.name}"</header>
+      </headers>
+      <code-example>
+        await bucket.put(r2Key, file, {
+          httpMetadata: {
+            contentType: file.type || 'application/octet-stream',
+            contentDisposition: `attachment; filename="${file.name}"`,
+          },
+        })
+      </code-example>
+      <reference>Tech spec lines 397-400, FR-16</reference>
+    </section>
+
+    <section name="Error Handling">
+      <description>
+        Per tech spec lines 437-451, all errors are caught and returned via createErrorResponse utility.
+      </description>
+      <error-responses>
+        <error httpStatus="400" errorCode="MISSING_FILE">No file provided in form data</error>
+        <error httpStatus="400" errorCode="INVALID_FILE_TYPE">File extension not in whitelist ['.stl', '.3mf']</error>
+        <error httpStatus="413" errorCode="FILE_TOO_LARGE">File size exceeds 500MB limit</error>
+        <error httpStatus="500" errorCode="UPLOAD_FAILED">R2 upload failure or database error</error>
+      </error-responses>
+      <error-format>
+        {
+          "error": {
+            "code": "ERROR_CODE",
+            "message": "Descriptive error message"
+          }
+        }
+      </error-format>
+      <reference>Tech spec lines 437-451</reference>
+    </section>
+
+    <section name="Atomic Cleanup on Failure">
+      <description>
+        Per tech spec lines 437-441, if database creation fails after R2 upload, we must delete the R2 file to maintain atomicity.
+      </description>
+      <code-example>
+        try {
+          const model = await prisma.model.create({ data })
+          return json({ ...model }, { status: 201 })
+        } catch (dbError) {
+          await bucket.delete(r2Key) // Cleanup R2 on DB failure
+          throw dbError
+        }
+      </code-example>
+      <reference>Tech spec lines 437-441, NFR-4</reference>
+    </section>
+
+    <section name="Performance Logging">
+      <description>
+        Per tech spec lines 385-389, 418-424, 442-445, all upload operations are logged with structured events and performance metrics.
+      </description>
+      <log-events>
+        <event name="model_upload_start" data="filename, size, content_type" timing="before R2 upload"/>
+        <event name="model_upload_complete" data="model_id, filename, size, duration_ms" timing="after database creation"/>
+        <event name="model_upload_error" data="error details, duration_ms" timing="on any error"/>
+      </log-events>
+      <reference>Tech spec lines 385-389, 418-424, 442-445, NFR-9</reference>
+    </section>
+  </technical-approach>
+
+  <constraints>
+    <constraint type="technical">
+      <name>File Type Whitelist</name>
+      <description>Only .stl and .3mf files are allowed for model uploads per FR-1</description>
+      <enforcement>ALLOWED_EXTENSIONS = ['.stl', '.3mf'] constant with case-insensitive validation</enforcement>
+      <reference>Tech spec lines 340-341, FR-1</reference>
+    </constraint>
+    <constraint type="technical">
+      <name>Maximum File Size</name>
+      <description>Individual model files must be ≤500MB per NFR-2 (though individual models typically much smaller)</description>
+      <enforcement>MAX_FILE_SIZE = 500 * 1024 * 1024 bytes constant with validation before R2 upload</enforcement>
+      <reference>Tech spec line 339, NFR-2</reference>
+    </constraint>
+    <constraint type="technical">
+      <name>UUID-Based R2 Keys</name>
+      <description>All R2 files must use UUID-based keys to prevent naming collisions and ensure uniqueness</description>
+      <enforcement>r2Key = `models/${crypto.randomUUID()}${extension}`</enforcement>
+      <reference>Tech spec line 393</reference>
+    </constraint>
+    <constraint type="technical">
+      <name>Atomic Operation Pattern</name>
+      <description>R2 upload and database creation must be atomic - cleanup R2 on database failure per NFR-4</description>
+      <enforcement>Try-catch around database creation with await bucket.delete(r2Key) in catch block</enforcement>
+      <reference>Tech spec lines 437-440, NFR-4</reference>
+    </constraint>
+    <constraint type="technical">
+      <name>Content-Disposition Header</name>
+      <description>All R2 uploads must set content-disposition: attachment with original filename per FR-16</description>
+      <enforcement>httpMetadata.contentDisposition = `attachment; filename="${file.name}"`</enforcement>
+      <reference>Tech spec line 399, FR-16</reference>
+    </constraint>
+    <constraint type="operational">
+      <name>Structured Logging with Performance Metrics</name>
+      <description>All upload operations must log start, complete, and error events with duration_ms per NFR-9</description>
+      <enforcement>log() and logError() calls with consistent event names and data structure</enforcement>
+      <reference>Tech spec lines 385-389, 418-424, NFR-9</reference>
+    </constraint>
+    <constraint type="environment">
+      <name>R2 Bucket Binding</name>
+      <description>R2 bucket accessed via Cloudflare environment binding, with environment-specific bucket names</description>
+      <enforcement>
+        const cf = getContext('cloudflare')
+        const bucket = cf.env.FILES_BUCKET
+        // Bucket names: pm-dev-files (dev), pm-staging-files (staging), pm-files (production)
+      </enforcement>
+      <reference>Tech spec lines 129-138</reference>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="POST /api/models/upload" kind="api-endpoint" method="POST">
+      <request>
+        <content-type>multipart/form-data</content-type>
+        <body>
+          {
+            "file": File // .stl or .3mf file, max 500MB
+          }
+        </body>
+      </request>
+      <response status="201">
+        <description>Upload successful, model created</description>
+        <body>
+          {
+            "id": "uuid",
+            "filename": "original-name.stl",
+            "r2Url": "https://bucket.r2.cloudflarestorage.com/models/uuid.stl",
+            "thumbnailUrl": null,
+            "fileSize": 1234567,
+            "createdAt": "2025-10-18T..."
+          }
+        </body>
+      </response>
+      <response status="400">
+        <description>Missing file or invalid file type</description>
+        <body>
+          {
+            "error": {
+              "code": "MISSING_FILE" | "INVALID_FILE_TYPE",
+              "message": "Descriptive error message"
+            }
+          }
+        </body>
+      </response>
+      <response status="413">
+        <description>File too large</description>
+        <body>
+          {
+            "error": {
+              "code": "FILE_TOO_LARGE",
+              "message": "File too large (max 500MB)"
+            }
+          }
+        </body>
+      </response>
+      <response status="500">
+        <description>R2 upload failure or database error</description>
+        <body>
+          {
+            "error": {
+              "code": "UPLOAD_FAILED",
+              "message": "Internal server error details"
+            }
+          }
+        </body>
+      </response>
+      <reference>Tech spec lines 426-435 (success), lines 437-451 (errors)</reference>
+    </interface>
+
+    <interface name="createErrorResponse()" kind="utility-function" path="/src/lib/utils/errors.ts">
+      <signature>
+        function createErrorResponse(
+          error: Error,
+          httpStatus: number,
+          errorCode: string
+        ): Response
+      </signature>
+      <description>Creates standardized error response with HTTP status code, error code constant, and descriptive message</description>
+      <usage>Return from API handlers for consistent error format across all endpoints</usage>
+      <example>
+        return createErrorResponse(
+          new Error('No file provided'),
+          400,
+          'MISSING_FILE'
+        )
+      </example>
+      <reference>Tech spec lines 437-451</reference>
+    </interface>
+
+    <interface name="log() / logError()" kind="utility-function" path="/src/lib/utils/logger.ts">
+      <signature>
+        function log(event: string, data: Record&lt;string, unknown&gt;): void
+        function logError(event: string, error: Error, data?: Record&lt;string, unknown&gt;): void
+      </signature>
+      <description>Structured logging functions for application events and errors with performance metrics</description>
+      <usage>Call at key workflow points with consistent event names and data structure</usage>
+      <example>
+        log('model_upload_start', {
+          filename: file.name,
+          size: file.size,
+          content_type: file.type,
+        })
+
+        logError('model_upload_error', error as Error, {
+          duration_ms: Date.now() - startTime,
+        })
+      </example>
+      <reference>Tech spec lines 385-389, 418-424, 442-445</reference>
+    </interface>
+
+    <interface name="prisma.model.create()" kind="database-operation" path="@prisma/client">
+      <signature>
+        await prisma.model.create({
+          data: {
+            filename: string,
+            r2Key: string,
+            r2Url: string,
+            fileSize: number,
+            contentType: string,
+          }
+        })
+      </signature>
+      <description>Creates Model record in database with metadata from uploaded file</description>
+      <usage>Called after successful R2 upload to link file metadata to database</usage>
+      <reference>Tech spec lines 408-416, Story 2.1 database schema</reference>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Per NFR-8, maintain &gt;80% test coverage for critical business logic. Story 2.2 implements core file upload workflow with validation, atomic operations, and error handling - all critical paths requiring comprehensive testing. Use Vitest as testing framework (configured in project). Tests should cover validation logic, R2+database atomicity, error scenarios, and logging behavior.
+    </standards>
+    <locations>
+      <location>/tests/unit/api/models/upload.test.ts</location>
+      <location>/tests/integration/file-upload.test.ts</location>
+    </locations>
+    <scenarios>
+      <scenario ac="1,2,3,4,5,6,7" priority="critical">
+        <name>Successful Model Upload - Valid .stl File</name>
+        <given>A valid .stl file (5MB, filename: test-model.stl)</given>
+        <when>POST /api/models/upload with file in multipart form data</when>
+        <then>
+          - Returns HTTP 201
+          - Response includes model ID, filename, r2Url, fileSize, createdAt
+          - File uploaded to R2 bucket with UUID-based key (models/{uuid}.stl)
+          - R2 headers set: contentType, contentDisposition with original filename
+          - Database record created with matching metadata
+          - thumbnailUrl is null (no thumbnail for models in Story 2.2)
+        </then>
+        <validation>
+          - Verify file exists in R2 bucket at r2Key
+          - Verify database record exists with returned ID
+          - Verify r2Url is accessible (download test)
+          - Verify content-disposition header preserves original filename
+        </validation>
+      </scenario>
+
+      <scenario ac="1,2,3,4,5,6,7" priority="critical">
+        <name>Successful Model Upload - Valid .3mf File</name>
+        <given>A valid .3mf file (10MB, filename: complex-model.3mf)</given>
+        <when>POST /api/models/upload with file in multipart form data</when>
+        <then>
+          - Returns HTTP 201
+          - Response includes model ID with .3mf extension in r2Key
+          - File uploaded to R2 with proper headers
+          - Database record created with contentType for .3mf
+        </then>
+      </scenario>
+
+      <scenario ac="2,8" priority="critical">
+        <name>Validation Error - Invalid File Type</name>
+        <given>A .txt file (filename: readme.txt)</given>
+        <when>POST /api/models/upload with .txt file</when>
+        <then>
+          - Returns HTTP 400
+          - Error code: INVALID_FILE_TYPE
+          - Error message: "Invalid file type. Allowed: .stl, .3mf"
+          - No R2 upload attempted
+          - No database record created
+        </then>
+      </scenario>
+
+      <scenario ac="3,8" priority="critical">
+        <name>Validation Error - File Too Large</name>
+        <given>A valid .stl file exceeding 500MB (501MB)</given>
+        <when>POST /api/models/upload with oversized file</when>
+        <then>
+          - Returns HTTP 413
+          - Error code: FILE_TOO_LARGE
+          - Error message: "File too large (max 500MB)"
+          - No R2 upload attempted
+          - No database record created
+        </then>
+      </scenario>
+
+      <scenario ac="1,8" priority="high">
+        <name>Validation Error - Missing File</name>
+        <given>Empty form data with no file field</given>
+        <when>POST /api/models/upload with empty form data</when>
+        <then>
+          - Returns HTTP 400
+          - Error code: MISSING_FILE
+          - Error message: "No file provided"
+        </then>
+      </scenario>
+
+      <scenario ac="2" priority="high">
+        <name>File Extension Validation - Case Insensitive</name>
+        <given>A valid file with uppercase extension (TEST.STL)</given>
+        <when>POST /api/models/upload with .STL file</when>
+        <then>
+          - Returns HTTP 201
+          - Validation passes (case-insensitive matching)
+          - File uploaded successfully
+        </then>
+      </scenario>
+
+      <scenario ac="9" priority="critical">
+        <name>Atomic Operation - Database Failure Cleanup</name>
+        <given>
+          - Valid .stl file
+          - Database connection fails or unique constraint violation occurs
+        </given>
+        <when>POST /api/models/upload with database configured to fail</when>
+        <then>
+          - R2 upload succeeds initially
+          - Database creation fails
+          - R2 file is deleted in catch block (cleanup)
+          - Returns HTTP 500 with UPLOAD_FAILED error
+        </then>
+        <validation>
+          - Verify R2 file does NOT exist after error (cleanup successful)
+          - Verify no orphaned database record
+        </validation>
+      </scenario>
+
+      <scenario ac="8" priority="high">
+        <name>R2 Upload Failure - Error Handling</name>
+        <given>
+          - Valid .stl file
+          - R2 bucket is unavailable or network error occurs
+        </given>
+        <when>POST /api/models/upload with R2 configured to fail</when>
+        <then>
+          - Returns HTTP 500
+          - Error code: UPLOAD_FAILED
+          - No database record created
+          - Error logged with upload_error event
+        </then>
+      </scenario>
+
+      <scenario ac="4,5" priority="high">
+        <name>UUID-Based R2 Key Generation</name>
+        <given>Two uploads of files with same filename (test.stl)</given>
+        <when>POST /api/models/upload twice with identical filenames</when>
+        <then>
+          - Both uploads succeed
+          - R2 keys are unique (different UUIDs)
+          - No naming collision in R2 bucket
+          - Database records have unique r2Key values
+        </then>
+      </scenario>
+
+      <scenario ac="5" priority="high">
+        <name>R2 Headers - Content-Disposition</name>
+        <given>A valid .stl file (filename: my-awesome-model.stl)</given>
+        <when>POST /api/models/upload and then download from r2Url</when>
+        <then>
+          - R2 file has content-disposition header: attachment; filename="my-awesome-model.stl"
+          - Browser download uses original filename (not UUID)
+          - Content-Type header set to file.type or 'application/octet-stream'
+        </then>
+      </scenario>
+
+      <scenario ac="10" priority="medium">
+        <name>Performance Logging - Successful Upload</name>
+        <given>A valid .stl file</given>
+        <when>POST /api/models/upload with successful completion</when>
+        <then>
+          - Log event: model_upload_start (filename, size, content_type)
+          - Log event: model_upload_complete (model_id, filename, size, duration_ms)
+          - duration_ms calculated from start to completion
+        </then>
+      </scenario>
+
+      <scenario ac="10" priority="medium">
+        <name>Performance Logging - Failed Upload</name>
+        <given>A valid .stl file with database failure configured</given>
+        <when>POST /api/models/upload with database error</when>
+        <then>
+          - Log event: model_upload_start
+          - Log event: model_upload_error (error details, duration_ms)
+          - No model_upload_complete event
+        </then>
+      </scenario>
+
+      <scenario ac="6,7" priority="high">
+        <name>Response Format - Success</name>
+        <given>A valid .stl file uploaded successfully</given>
+        <when>POST /api/models/upload returns success</when>
+        <then>
+          Response JSON structure:
+          {
+            "id": "[uuid]",
+            "filename": "[original filename]",
+            "r2Url": "https://[bucket].r2.cloudflarestorage.com/models/[uuid].stl",
+            "thumbnailUrl": null,
+            "fileSize": [bytes as number],
+            "createdAt": "[ISO timestamp]"
+          }
+        </then>
+      </scenario>
+
+      <scenario priority="high">
+        <name>Content-Type Lenient Validation</name>
+        <given>.stl files with different content-type headers: model/stl, application/sla, application/octet-stream</given>
+        <when>POST /api/models/upload with each content-type</when>
+        <then>
+          - All uploads succeed (lenient content-type validation)
+          - Extension validation is primary check (.stl required)
+          - Content-type stored as-is in database
+        </then>
+      </scenario>
+
+      <scenario priority="medium">
+        <name>File Size Boundary Testing</name>
+        <given>Files at size boundaries: 499MB, 500MB exactly, 501MB</given>
+        <when>POST /api/models/upload with each file</when>
+        <then>
+          - 499MB: Success (HTTP 201)
+          - 500MB exactly: Success (HTTP 201)
+          - 501MB: Rejected (HTTP 413, FILE_TOO_LARGE)
+        </then>
+      </scenario>
+    </scenarios>
+    <ideas>
+      <idea ac="1">Test API route exists at /api/models/upload and accepts POST requests</idea>
+      <idea ac="2,3">Test validation order: file size checked before R2 upload for performance</idea>
+      <idea ac="4">Test UUID generation creates unique keys across multiple uploads</idea>
+      <idea ac="5">Test R2 headers are properly set by downloading file and inspecting headers</idea>
+      <idea ac="6">Test database record matches uploaded file metadata exactly</idea>
+      <idea ac="7">Test response format matches expected JSON structure with all required fields</idea>
+      <idea ac="8">Test all error scenarios return proper HTTP status codes and error messages</idea>
+      <idea ac="9">Test atomic operation: mock database failure and verify R2 cleanup occurs</idea>
+      <idea ac="10">Test logging events are emitted with correct event names and data structure</idea>
+      <idea>Integration test: end-to-end upload workflow from form submission to file download</idea>
+      <idea>Performance test: measure upload time for files at various sizes (1MB, 10MB, 50MB, 500MB)</idea>
+      <idea>Error recovery test: verify system state after partial failures (R2 uploaded but DB failed)</idea>
+    </ideas>
+  </tests>
+
+  <references>
+    <source-documents>
+      <document path="/home/taylor/projects/printfarm-manager/docs/epics.md" section="Story 2.2">
+        <line-range>241-263</line-range>
+        <description>User story and acceptance criteria</description>
+      </document>
+      <document path="/home/taylor/projects/printfarm-manager/docs/tech-spec-epic-2.md" section="Story 2.2">
+        <line-range>315-470</line-range>
+        <description>Complete implementation specification with code examples</description>
+      </document>
+    </source-documents>
+    <technical-standards>
+      <standard name="Atomic Operations Pattern" reference="Tech spec line 437-440, NFR-4"/>
+      <standard name="Max File Size" reference="Tech spec line 339, NFR-2" value="500MB"/>
+      <standard name="Allowed File Types" reference="Tech spec lines 340-341, FR-1" value=".stl, .3mf"/>
+      <standard name="UUID-Based R2 Keys" reference="Tech spec line 393"/>
+      <standard name="Structured Logging with Performance Metrics" reference="Tech spec lines 385-389, 418-424, NFR-9"/>
+      <standard name="Content-Disposition Header" reference="Tech spec line 399, FR-16" value="attachment; filename=&quot;...&quot;"/>
+    </technical-standards>
+    <api-response-formats>
+      <success-response status="201">
+        {
+          "id": "uuid",
+          "filename": "original-name.stl",
+          "r2Url": "https://bucket.r2.cloudflarestorage.com/models/uuid.stl",
+          "thumbnailUrl": null,
+          "fileSize": 1234567,
+          "createdAt": "2025-10-18T..."
+        }
+      </success-response>
+      <error-response-codes>
+        <error status="400" code="MISSING_FILE">No file provided</error>
+        <error status="400" code="INVALID_FILE_TYPE">File extension not in whitelist</error>
+        <error status="413" code="FILE_TOO_LARGE">File exceeds 500MB limit</error>
+        <error status="500" code="UPLOAD_FAILED">R2 or database failure</error>
+      </error-response-codes>
+    </api-response-formats>
+    <logging-events>
+      <event name="model_upload_start" data="filename, size, content_type" reference="Tech spec lines 385-389"/>
+      <event name="model_upload_complete" data="model_id, filename, size, duration_ms" reference="Tech spec lines 418-424"/>
+      <event name="model_upload_error" data="error details, duration_ms" reference="Tech spec lines 442-445"/>
+    </logging-events>
+  </references>
+</story-context>

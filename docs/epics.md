@@ -13,7 +13,7 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 
 ### Delivery Timeline: 6-8 Weeks
 
-**Epic 1: Deployment & Operations Foundation** (6-8 stories, Weeks 1-2, CRITICAL)
+**Epic 1: Deployment & Operations Foundation** (6 stories, Weeks 1-2, CRITICAL)
 **Epic 2: Core File Management** (7-9 stories, Weeks 3-4, HIGH)
 **Epic 3: Metadata Extraction & Filament Matching** (6-8 stories, Weeks 4-5, HIGH)
 **Epic 4: Product & Recipe System** (8-10 stories, Weeks 6-7, HIGH)
@@ -32,7 +32,6 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 - Automated deployments working via Cloudflare Workers Builds
 - PR preview URLs generating automatically
 - Logs accessible in Cloudflare Dashboard with 100% request sampling
-- Environment indicator visible in UI footer
 
 ### Story 1.1: Configure Cloudflare Workers Environments
 
@@ -149,29 +148,6 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 - Use `console.log()`, `console.error()` - automatically captured by Cloudflare
 - Structured logging preferred: `console.log(JSON.stringify({ event, data }))`
 - Cloudflare retains logs for 24 hours on free tier
-
----
-
-### Story 1.6: Create Environment Indicator UI Component
-
-**As a** user
-**I want** to see which environment I'm using (dev/staging/production)
-**So that** I don't accidentally test in production or confuse environments
-
-**Prerequisites:** Story 1.1
-
-**Acceptance Criteria:**
-1. Footer component displays current environment name
-2. Environment fetched from Cloudflare context via `getContext('cloudflare').env.ENVIRONMENT`
-3. Visual differentiation: development (gray), staging (yellow), production (green)
-4. Environment indicator always visible on all pages
-5. Clicking indicator shows additional info: worker name, deployment time (if available)
-6. Mobile-responsive: indicator remains visible but non-intrusive
-
-**Technical Notes:**
-- Access Cloudflare env in API routes: `getContext('cloudflare').env.ENVIRONMENT`
-- Pass to client via API response or server-side props
-- See CLAUDE.md for `getContext` usage examples
 
 ---
 
@@ -979,9 +955,9 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 
 ## Summary
 
-### Total Story Count: 32 Stories
+### Total Story Count: 31 Stories
 
-- **Epic 1:** 7 stories (Deployment & Operations)
+- **Epic 1:** 6 stories (Deployment & Operations)
 - **Epic 2:** 8 stories (Core File Management)
 - **Epic 3:** 7 stories (Metadata Extraction & Filament Matching)
 - **Epic 4:** 8 stories (Product & Recipe System)
