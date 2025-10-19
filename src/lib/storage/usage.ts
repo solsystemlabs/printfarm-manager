@@ -1,28 +1,28 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from "@prisma/client";
 
 /**
  * Storage usage breakdown by file type
  */
 export interface StorageUsage {
-  totalBytes: number
-  totalFiles: number
+  totalBytes: number;
+  totalFiles: number;
   breakdown: {
-    models: { count: number; bytes: number }
-    slices: { count: number; bytes: number }
-    images: { count: number; bytes: number }
-  }
-  percentOfLimit: number
-  lastCalculated: Date
-  source: 'r2' | 'database' | 'hybrid'
+    models: { count: number; bytes: number };
+    slices: { count: number; bytes: number };
+    images: { count: number; bytes: number };
+  };
+  percentOfLimit: number;
+  lastCalculated: Date;
+  source: "r2" | "database" | "hybrid";
 }
 
 /**
  * Cloudflare account configuration for R2 API access
  */
 export interface CloudflareConfig {
-  accountId: string
-  apiToken: string
-  bucketName: string
+  accountId: string;
+  apiToken: string;
+  bucketName: string;
 }
 
 /**
@@ -35,22 +35,23 @@ export interface R2StorageMetricsResponse {
       accounts?: Array<{
         r2StorageAdaptiveGroups?: Array<{
           max?: {
-            payloadSize?: number
-            metadataSize?: number
-            objectCount?: number
-          }
-        }>
-      }>
-    }
-  }
+            payloadSize?: number;
+            metadataSize?: number;
+            objectCount?: number;
+          };
+        }>;
+      }>;
+    };
+  };
   errors?: Array<{
-    message: string
-    extensions?: Record<string, unknown>
-  }>
+    message: string;
+    extensions?: Record<string, unknown>;
+  }>;
 }
 
-// Cloudflare R2 free tier limit: 10GB
-const FREE_TIER_LIMIT_BYTES = 10 * 1024 * 1024 * 1024
+// Cloudflare R2 free tier limit: 10GB (configurable via R2_STORAGE_LIMIT_BYTES env var)
+const FREE_TIER_LIMIT_BYTES =
+  Number(process.env.R2_STORAGE_LIMIT_BYTES) || 10 * 1024 * 1024 * 1024;
 
 /**
  * Query R2 storage metrics via Cloudflare GraphQL Analytics API
@@ -65,7 +66,7 @@ const FREE_TIER_LIMIT_BYTES = 10 * 1024 * 1024 * 1024
  * @see https://developers.cloudflare.com/r2/platform/metrics-analytics/
  */
 async function queryR2StorageMetrics(
-  config: CloudflareConfig
+  config: CloudflareConfig,
 ): Promise<{ totalBytes: number; totalFiles: number } | null> {
   try {
     const query = `
@@ -86,47 +87,55 @@ async function queryR2StorageMetrics(
           }
         }
       }
-    `
+    `;
 
-    const response = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${config.apiToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query,
-        variables: {
-          accountTag: config.accountId,
-          bucketName: config.bucketName,
+    const response = await fetch(
+      "https://api.cloudflare.com/client/v4/graphql",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.apiToken}`,
+          "Content-Type": "application/json",
         },
-      }),
-    })
+        body: JSON.stringify({
+          query,
+          variables: {
+            accountTag: config.accountId,
+            bucketName: config.bucketName,
+          },
+        }),
+      },
+    );
 
     if (!response.ok) {
-      console.error('R2 GraphQL API error:', response.status, response.statusText)
-      return null
+      console.error(
+        "R2 GraphQL API error:",
+        response.status,
+        response.statusText,
+      );
+      return null;
     }
 
-    const result = (await response.json()) as R2StorageMetricsResponse
-    const storageData = result?.data?.viewer?.accounts?.[0]?.r2StorageAdaptiveGroups?.[0]
+    const result = (await response.json()) as R2StorageMetricsResponse;
+    const storageData =
+      result?.data?.viewer?.accounts?.[0]?.r2StorageAdaptiveGroups?.[0];
 
     if (!storageData) {
       // No data returned (bucket might be empty or newly created)
-      return { totalBytes: 0, totalFiles: 0 }
+      return { totalBytes: 0, totalFiles: 0 };
     }
 
-    const payloadSize = storageData.max?.payloadSize || 0
-    const metadataSize = storageData.max?.metadataSize || 0
-    const objectCount = storageData.max?.objectCount || 0
+    const payloadSize = storageData.max?.payloadSize || 0;
+    const metadataSize = storageData.max?.metadataSize || 0;
+    const objectCount = storageData.max?.objectCount || 0;
 
     return {
       totalBytes: payloadSize + metadataSize,
       totalFiles: objectCount,
-    }
+    };
   } catch (error) {
-    console.error('Failed to query R2 storage metrics:', error)
-    return null
+    console.error("Failed to query R2 storage metrics:", error);
+    return null;
   }
 }
 
@@ -137,48 +146,56 @@ async function queryR2StorageMetrics(
  * @returns Breakdown of storage by models, slices, and images
  */
 async function calculateDatabaseBreakdown(prisma: PrismaClient): Promise<{
-  models: { count: number; bytes: number }
-  slices: { count: number; bytes: number }
-  images: { count: number; bytes: number }
+  models: { count: number; bytes: number };
+  slices: { count: number; bytes: number };
+  images: { count: number; bytes: number };
 }> {
-  let modelsTotal = 0
-  let modelsCount = 0
-  let slicesTotal = 0
-  let slicesCount = 0
+  let modelsTotal = 0;
+  let modelsCount = 0;
+  let slicesTotal = 0;
+  let slicesCount = 0;
 
   try {
     // Query models table if it exists
+    // TODO(Story-2.1): Remove @ts-expect-error once Model table exists
     // @ts-expect-error - model table doesn't exist yet, will be added in Story 2.1
     const models = await prisma.model.findMany({
       select: { fileSize: true },
-    })
-    modelsTotal = models.reduce((sum: number, m: { fileSize: number }) => sum + m.fileSize, 0)
-    modelsCount = models.length
+    });
+    modelsTotal = models.reduce(
+      (sum: number, m: { fileSize: number }) => sum + m.fileSize,
+      0,
+    );
+    modelsCount = models.length;
   } catch {
     // Table doesn't exist yet - expected until Story 2.1
   }
 
   try {
     // Query slices table if it exists
+    // TODO(Story-2.1): Remove @ts-expect-error once Slice table exists
     // @ts-expect-error - slice table doesn't exist yet, will be added in Story 2.1
     const slices = await prisma.slice.findMany({
       select: { fileSize: true },
-    })
-    slicesTotal = slices.reduce((sum: number, s: { fileSize: number }) => sum + s.fileSize, 0)
-    slicesCount = slices.length
+    });
+    slicesTotal = slices.reduce(
+      (sum: number, s: { fileSize: number }) => sum + s.fileSize,
+      0,
+    );
+    slicesCount = slices.length;
   } catch {
     // Table doesn't exist yet - expected until Story 2.1
   }
 
   // Images will be tracked separately in future stories
-  const imagesCount = 0
-  const imagesTotal = 0
+  const imagesCount = 0;
+  const imagesTotal = 0;
 
   return {
     models: { count: modelsCount, bytes: modelsTotal },
     slices: { count: slicesCount, bytes: slicesTotal },
     images: { count: imagesCount, bytes: imagesTotal },
-  }
+  };
 }
 
 /**
@@ -218,38 +235,46 @@ async function calculateDatabaseBreakdown(prisma: PrismaClient): Promise<{
  */
 export async function calculateStorageUsage(
   prisma: PrismaClient,
-  cloudflareConfig?: CloudflareConfig
+  cloudflareConfig?: CloudflareConfig,
 ): Promise<StorageUsage> {
   // Get breakdown from database
-  const breakdown = await calculateDatabaseBreakdown(prisma)
+  const breakdown = await calculateDatabaseBreakdown(prisma);
 
   // Try to get authoritative totals from R2
-  let totalBytes = 0
-  let totalFiles = 0
-  let source: 'r2' | 'database' | 'hybrid' = 'database'
+  let totalBytes = 0;
+  let totalFiles = 0;
+  let source: "r2" | "database" | "hybrid" = "database";
 
   if (cloudflareConfig) {
-    const r2Metrics = await queryR2StorageMetrics(cloudflareConfig)
+    const r2Metrics = await queryR2StorageMetrics(cloudflareConfig);
 
     if (r2Metrics !== null) {
       // Use R2 as source of truth for totals
-      totalBytes = r2Metrics.totalBytes
-      totalFiles = r2Metrics.totalFiles
-      source = 'hybrid'
+      totalBytes = r2Metrics.totalBytes;
+      totalFiles = r2Metrics.totalFiles;
+      source = "hybrid";
     } else {
       // Fallback to database totals
-      totalBytes = breakdown.models.bytes + breakdown.slices.bytes + breakdown.images.bytes
-      totalFiles = breakdown.models.count + breakdown.slices.count + breakdown.images.count
-      source = 'database'
+      totalBytes =
+        breakdown.models.bytes +
+        breakdown.slices.bytes +
+        breakdown.images.bytes;
+      totalFiles =
+        breakdown.models.count +
+        breakdown.slices.count +
+        breakdown.images.count;
+      source = "database";
     }
   } else {
     // No R2 config provided, use database only
-    totalBytes = breakdown.models.bytes + breakdown.slices.bytes + breakdown.images.bytes
-    totalFiles = breakdown.models.count + breakdown.slices.count + breakdown.images.count
-    source = 'database'
+    totalBytes =
+      breakdown.models.bytes + breakdown.slices.bytes + breakdown.images.bytes;
+    totalFiles =
+      breakdown.models.count + breakdown.slices.count + breakdown.images.count;
+    source = "database";
   }
 
-  const percentOfLimit = (totalBytes / FREE_TIER_LIMIT_BYTES) * 100
+  const percentOfLimit = (totalBytes / FREE_TIER_LIMIT_BYTES) * 100;
 
   return {
     totalBytes,
@@ -258,7 +283,7 @@ export async function calculateStorageUsage(
     percentOfLimit,
     lastCalculated: new Date(),
     source,
-  }
+  };
 }
 
 /**
@@ -274,11 +299,11 @@ export async function calculateStorageUsage(
  * formatBytes(10737418240) // "10.00 GB"
  */
 export function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes'
+  if (bytes === 0) return "0 Bytes";
 
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }

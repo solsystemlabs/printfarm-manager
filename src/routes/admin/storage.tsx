@@ -1,49 +1,49 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useSuspenseQuery } from '@tanstack/react-query'
-import { formatBytes } from '~/lib/storage/usage'
-import type { StorageUsage } from '~/lib/storage/usage'
+import { createFileRoute } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { formatBytes } from "~/lib/storage/usage";
+import type { StorageUsage } from "~/lib/storage/usage";
 
-export const Route = createFileRoute('/admin/storage')({
+export const Route = createFileRoute("/admin/storage")({
   component: StorageDashboard,
-})
+});
 
 // Query function to fetch storage data
 /**
  * Error response from storage API
  */
 interface StorageApiError {
-  error: string
-  message: string
+  error: string;
+  message: string;
 }
 
 async function fetchStorageUsage(): Promise<StorageUsage> {
-  const response = await fetch('/api/admin/storage')
+  const response = await fetch("/api/admin/storage");
 
   if (!response.ok) {
-    const error = (await response.json()) as StorageApiError
-    throw new Error(error.message || 'Failed to fetch storage usage')
+    const error = (await response.json()) as StorageApiError;
+    throw new Error(error.message || "Failed to fetch storage usage");
   }
 
-  return response.json() as Promise<StorageUsage>
+  return response.json() as Promise<StorageUsage>;
 }
 
 function StorageDashboard() {
   // Use React Query with 5-minute stale time to avoid excessive recalculation
   const { data, refetch, isFetching } = useSuspenseQuery({
-    queryKey: ['storage-usage'],
+    queryKey: ["storage-usage"],
     queryFn: fetchStorageUsage,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
-  })
+  });
 
   const handleRefresh = () => {
-    refetch()
-  }
+    refetch();
+  };
 
   // Determine progress bar color based on percentage
-  const isWarning = data.percentOfLimit >= 80
-  const progressColor = isWarning ? 'bg-red-500' : 'bg-green-500'
-  const progressBgColor = isWarning ? 'bg-red-100' : 'bg-green-100'
+  const isWarning = data.percentOfLimit >= 80;
+  const progressColor = isWarning ? "bg-red-500" : "bg-green-500";
+  const progressBgColor = isWarning ? "bg-red-100" : "bg-green-100";
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
@@ -109,18 +109,18 @@ function StorageDashboard() {
       <div className="mb-4">
         <span
           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-            data.source === 'hybrid'
-              ? 'bg-blue-100 text-blue-800'
-              : data.source === 'r2'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-gray-100 text-gray-800'
+            data.source === "hybrid"
+              ? "bg-blue-100 text-blue-800"
+              : data.source === "r2"
+                ? "bg-green-100 text-green-800"
+                : "bg-gray-100 text-gray-800"
           }`}
         >
-          {data.source === 'hybrid'
-            ? '📊 Hybrid (R2 totals + Database breakdown)'
-            : data.source === 'r2'
-              ? '☁️ R2 Direct'
-              : '💾 Database Only'}
+          {data.source === "hybrid"
+            ? "📊 Hybrid (R2 totals + Database breakdown)"
+            : data.source === "r2"
+              ? "☁️ R2 Direct"
+              : "💾 Database Only"}
         </span>
       </div>
 
@@ -141,10 +141,13 @@ function StorageDashboard() {
               />
             </svg>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Storage Limit Warning</h3>
+              <h3 className="text-sm font-medium text-red-800">
+                Storage Limit Warning
+              </h3>
               <p className="mt-1 text-sm text-red-700">
-                You&apos;re using {data.percentOfLimit.toFixed(1)}% of your 10GB free tier limit.
-                Consider upgrading or cleaning up unused files to avoid service interruption.
+                You&apos;re using {data.percentOfLimit.toFixed(1)}% of your 10GB
+                free tier limit. Consider upgrading or cleaning up unused files
+                to avoid service interruption.
               </p>
             </div>
           </div>
@@ -153,12 +156,15 @@ function StorageDashboard() {
 
       {/* Total Storage Card */}
       <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-700">Total Storage Used</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-700">
+          Total Storage Used
+        </h2>
         <div className="text-5xl font-bold mb-4 text-gray-900">
           {formatBytes(data.totalBytes)}
         </div>
         <div className="text-lg text-gray-600 mb-4">
-          {data.totalFiles.toLocaleString()} {data.totalFiles === 1 ? 'file' : 'files'} stored
+          {data.totalFiles.toLocaleString()}{" "}
+          {data.totalFiles === 1 ? "file" : "files"} stored
         </div>
 
         {/* Progress Bar */}
@@ -167,7 +173,9 @@ function StorageDashboard() {
             <span>{data.percentOfLimit.toFixed(2)}% of 10GB free tier</span>
             <span>{formatBytes(10 * 1024 * 1024 * 1024)}</span>
           </div>
-          <div className={`w-full h-4 ${progressBgColor} rounded-full overflow-hidden`}>
+          <div
+            className={`w-full h-4 ${progressBgColor} rounded-full overflow-hidden`}
+          >
             <div
               className={`h-full ${progressColor} transition-all duration-500`}
               style={{ width: `${Math.min(data.percentOfLimit, 100)}%` }}
@@ -203,10 +211,12 @@ function StorageDashboard() {
 
       {/* External Links */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-        <h3 className="text-lg font-semibold mb-2 text-blue-900">Need More Details?</h3>
+        <h3 className="text-lg font-semibold mb-2 text-blue-900">
+          Need More Details?
+        </h3>
         <p className="text-sm text-blue-800 mb-4">
-          View detailed storage analytics, billing information, and historical usage trends in
-          the Cloudflare Dashboard.
+          View detailed storage analytics, billing information, and historical
+          usage trends in the Cloudflare Dashboard.
         </p>
         <a
           href="https://dash.cloudflare.com/r2"
@@ -237,7 +247,7 @@ function StorageDashboard() {
         Last calculated: {new Date(data.lastCalculated).toLocaleString()}
       </div>
     </div>
-  )
+  );
 }
 
 function StorageCard({
@@ -247,11 +257,11 @@ function StorageCard({
   bytes,
   icon,
 }: {
-  title: string
-  subtitle: string
-  count: number
-  bytes: number
-  icon: string
+  title: string;
+  subtitle: string;
+  count: number;
+  bytes: number;
+  icon: string;
 }) {
   return (
     <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
@@ -260,10 +270,12 @@ function StorageCard({
         <span className="text-3xl">{icon}</span>
       </div>
       <p className="text-xs text-gray-500 mb-3">{subtitle}</p>
-      <div className="text-3xl font-bold mb-2 text-gray-900">{formatBytes(bytes)}</div>
+      <div className="text-3xl font-bold mb-2 text-gray-900">
+        {formatBytes(bytes)}
+      </div>
       <div className="text-sm text-gray-600">
-        {count.toLocaleString()} {count === 1 ? 'file' : 'files'}
+        {count.toLocaleString()} {count === 1 ? "file" : "files"}
       </div>
     </div>
-  )
+  );
 }
