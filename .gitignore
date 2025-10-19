@@ -22,3 +22,4 @@ BMAD-METHOD/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/prisma/generated/

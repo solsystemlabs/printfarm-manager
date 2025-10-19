@@ -156,9 +156,7 @@ async function calculateDatabaseBreakdown(prisma: PrismaClient): Promise<{
   let slicesCount = 0;
 
   try {
-    // Query models table if it exists
-    // TODO(Story-2.1): Remove @ts-expect-error once Model table exists
-    // @ts-expect-error - model table doesn't exist yet, will be added in Story 2.1
+    // Query models table
     const models = await prisma.model.findMany({
       select: { fileSize: true },
     });
@@ -168,13 +166,11 @@ async function calculateDatabaseBreakdown(prisma: PrismaClient): Promise<{
     );
     modelsCount = models.length;
   } catch {
-    // Table doesn't exist yet - expected until Story 2.1
+    // Handle any database errors gracefully
   }
 
   try {
-    // Query slices table if it exists
-    // TODO(Story-2.1): Remove @ts-expect-error once Slice table exists
-    // @ts-expect-error - slice table doesn't exist yet, will be added in Story 2.1
+    // Query slices table
     const slices = await prisma.slice.findMany({
       select: { fileSize: true },
     });
@@ -184,7 +180,7 @@ async function calculateDatabaseBreakdown(prisma: PrismaClient): Promise<{
     );
     slicesCount = slices.length;
   } catch {
-    // Table doesn't exist yet - expected until Story 2.1
+    // Handle any database errors gracefully
   }
 
   // Images will be tracked separately in future stories
