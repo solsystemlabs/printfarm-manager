@@ -17,6 +17,6 @@ describe("Home Route", () => {
 
     render(<RouterProvider router={router} />);
 
-    expect(await screen.findByText("You're a dummy!!!")).toBeInTheDocument();
+    expect(await screen.findByText("This is great!!!")).toBeInTheDocument();
   });
 });

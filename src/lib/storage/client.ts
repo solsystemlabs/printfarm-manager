@@ -1,160 +1,8 @@
-import type { Client as MinIOClient } from "minio";
-import type { StorageClient, UploadOptions } from "./types";
+import type { StorageClient } from "./types";
+import { R2StorageClient } from "./r2-client";
 
-/**
- * MinIO storage client implementation for local development
- */
-class MinIOStorageClient implements StorageClient {
-  private client: MinIOClient;
-  private bucket: string;
-  private environment: string;
-
-  constructor(client: MinIOClient, bucket: string, environment: string) {
-    this.client = client;
-    this.bucket = bucket;
-    this.environment = environment;
-  }
-
-  async put(
-    key: string,
-    content: string | Buffer,
-    options?: UploadOptions,
-  ): Promise<void> {
-    const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
-    const metadata: Record<string, string> = {};
-
-    if (options?.contentType) {
-      metadata["Content-Type"] = options.contentType;
-    }
-
-    console.log(`[MinIO] Uploading to bucket: ${this.bucket}, key: ${key}`);
-
-    await this.client.putObject(
-      this.bucket,
-      key,
-      buffer,
-      buffer.length,
-      metadata,
-    );
-
-    console.log(`[MinIO] Upload successful`);
-  }
-
-  async get(key: string): Promise<string | null> {
-    try {
-      console.log(
-        `[MinIO] Downloading from bucket: ${this.bucket}, key: ${key}`,
-      );
-
-      const stream = await this.client.getObject(this.bucket, key);
-      const chunks: Buffer[] = [];
-
-      await new Promise<void>((resolve, reject) => {
-        stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-        stream.on("end", () => resolve());
-        stream.on("error", (err: Error) => reject(err));
-      });
-
-      const content = Buffer.concat(chunks).toString("utf-8");
-
-      console.log(`[MinIO] Download successful, size: ${content.length} bytes`);
-
-      return content;
-    } catch (error) {
-      if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "NoSuchKey"
-      ) {
-        return null;
-      }
-      throw error;
-    }
-  }
-
-  async delete(key: string): Promise<void> {
-    console.log(`[MinIO] Deleting from bucket: ${this.bucket}, key: ${key}`);
-
-    await this.client.removeObject(this.bucket, key);
-
-    console.log(`[MinIO] Delete successful`);
-  }
-
-  getEnvironment(): string {
-    return this.environment;
-  }
-
-  getStorageType(): "MinIO" | "Cloudflare R2" {
-    return "MinIO";
-  }
-}
-
-/**
- * R2 storage client implementation for staging/production
- */
-class R2StorageClient implements StorageClient {
-  private bucket: R2Bucket;
-  private environment: string;
-
-  constructor(bucket: R2Bucket, environment: string) {
-    this.bucket = bucket;
-    this.environment = environment;
-  }
-
-  async put(
-    key: string,
-    content: string | Buffer,
-    options?: UploadOptions,
-  ): Promise<void> {
-    const contentStr = Buffer.isBuffer(content)
-      ? content.toString("utf-8")
-      : content;
-
-    console.log(`[R2] Uploading key: ${key}`);
-
-    await this.bucket.put(key, contentStr, {
-      httpMetadata: {
-        contentType: options?.contentType,
-        contentDisposition: options?.contentDisposition,
-      },
-    });
-
-    console.log(`[R2] Upload successful`);
-  }
-
-  async get(key: string): Promise<string | null> {
-    console.log(`[R2] Downloading key: ${key}`);
-
-    const object = await this.bucket.get(key);
-
-    if (!object) {
-      return null;
-    }
-
-    const content = await object.text();
-
-    console.log(`[R2] Download successful, size: ${content.length} bytes`);
-
-    return content;
-  }
-
-  async delete(key: string): Promise<void> {
-    console.log(`[R2] Deleting key: ${key}`);
-
-    await this.bucket.delete(key);
-
-    console.log(`[R2] Delete successful`);
-  }
-
-  getEnvironment(): string {
-    return this.environment;
-  }
-
-  getStorageType(): "MinIO" | "Cloudflare R2" {
-    return "Cloudflare R2";
-  }
-}
+// Global constant replaced at build time by Vite
+declare const __IS_CLOUDFLARE__: boolean;
 
 /**
  * Storage client factory - returns environment-appropriate storage client
@@ -166,8 +14,12 @@ class R2StorageClient implements StorageClient {
 export async function getStorageClient(): Promise<StorageClient> {
   const environment = process.env.ENVIRONMENT || "development";
 
-  if (environment === "development") {
-    // Use MinIO for local development
+  // Use build-time constant for tree-shaking
+  // When building for Cloudflare, the development branch will be removed entirely
+  if (!__IS_CLOUDFLARE__ && environment === "development") {
+    // Dynamically import MinIO client ONLY in development
+    // This prevents the minio package from being bundled in production
+    const { MinIOStorageClient } = await import("./minio-client");
     const { Client: MinioClient } = await import("minio");
 
     const accessKey = process.env.MINIO_ACCESS_KEY || "minioadmin";
