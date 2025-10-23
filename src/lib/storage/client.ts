@@ -1,9 +1,6 @@
 import type { StorageClient } from "./types";
 import { R2StorageClient } from "./r2-client";
 
-// Global constant replaced at build time by Vite
-declare const __IS_CLOUDFLARE__: boolean;
-
 /**
  * Storage client factory - returns environment-appropriate storage client
  * Follows the same pattern as src/lib/db.ts getPrismaClient()
@@ -14,11 +11,7 @@ declare const __IS_CLOUDFLARE__: boolean;
 export async function getStorageClient(): Promise<StorageClient> {
   const environment = process.env.ENVIRONMENT || "development";
 
-  // Use build-time constant for tree-shaking
-  // When building for Cloudflare, the development branch will be removed entirely
-  if (!__IS_CLOUDFLARE__ && environment === "development") {
-    // Dynamically import MinIO client ONLY in development
-    // This prevents the minio package from being bundled in production
+  if (environment === "development") {
     const { MinIOStorageClient } = await import("./minio-client");
     const { Client: MinioClient } = await import("minio");
 

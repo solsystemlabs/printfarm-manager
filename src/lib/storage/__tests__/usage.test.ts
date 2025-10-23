@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { calculateStorageUsage, formatBytes } from "../usage";
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "../../../../prisma/generated/client";
 
 // Mock Prisma client
 const mockPrismaModel = {

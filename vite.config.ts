@@ -5,9 +5,6 @@ import tsConfigPaths from "vite-tsconfig-paths";
 import viteReact from "@vitejs/plugin-react";
 
 export default defineConfig(() => {
-  // Determine if we're building for Cloudflare (production/staging) or local dev
-  const isCloudflare = process.env.CLOUDFLARE_ENV === "staging" || process.env.CLOUDFLARE_ENV === "production";
-
   return {
     server: {
       port: 3000,
@@ -20,9 +17,5 @@ export default defineConfig(() => {
       tanstackStart(),
       viteReact(),
     ],
-    define: {
-      // Replace __IS_CLOUDFLARE__ with true/false at build time for tree-shaking
-      '__IS_CLOUDFLARE__': isCloudflare,
-    },
   };
 });

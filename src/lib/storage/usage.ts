@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../../../prisma/generated/client";
 
 /**
  * Storage usage breakdown by file type
