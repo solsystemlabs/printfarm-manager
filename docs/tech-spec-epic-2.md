@@ -2713,6 +2713,27 @@ Epic 2 is **DONE** when:
 
 ---
 
+## Post-Review Follow-ups
+
+**Story 2.1 Review (2025-10-23):**
+
+### 🔴 Critical Issues (Blocker)
+- **[CRITICAL-1]** Fix Prisma Client Adapter Initialization - Schema configured with `engineType = "client"` and `runtime = "workerd"` but client initialization missing required @prisma/adapter-pg. All database tests failing. File: `src/lib/db/client.ts`
+- **[CRITICAL-2]** Verify Tests Pass - After adapter fix, run tests and update story completion notes with accurate results. Currently showing "23 passing" but tests actually fail.
+
+### 🟡 Medium Priority
+- **[Med-1]** Document Cloudflare Workers Adapter - Create `docs/CLOUDFLARE_PRISMA_SETUP.md` explaining adapter requirement for Workers deployment
+- **[Med-3]** Environment-Aware Adapter Selection - Implement different connection logic for local dev vs Workers in `src/lib/db/client.ts`
+- **[Low-2]** Add Inline Schema Comments - Document FR-10 SetNull behavior rationale at `prisma/schema.prisma:110`
+
+### 🟢 Low Priority
+- **[Low-1]** Evaluate Custom Prisma Output Path - Consider using default location vs `./generated`
+- **[Low-3]** Simplify Test Cleanup Logic - Refactor `src/lib/db/__tests__/schema.test.ts:330-344`
+
+**Review Outcome:** Changes Requested (Blocked) - Do not merge until CRITICAL-1 and CRITICAL-2 resolved. Schema design excellent, but adapter initialization must be fixed for Cloudflare Workers compatibility.
+
+---
+
 ## Next Steps
 
 1. **Begin Story 2.1:** Database schema design and migration

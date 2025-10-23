@@ -4,6 +4,14 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
+  resolve: {
+    alias: {
+      // Alias cloudflare generator to local generator for tests
+      // This allows tests to run without WASM dependencies
+      '../../../prisma/generated/cloudflare/client': '../../../prisma/generated/local',
+      '../../prisma/generated/cloudflare/client': '../../prisma/generated/local',
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

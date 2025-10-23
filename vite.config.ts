@@ -17,5 +17,7 @@ export default defineConfig(() => {
       tanstackStart(),
       viteReact(),
     ],
+    // Include WASM files as assets for Cloudflare Workers
+    assetsInclude: ["**/*.wasm"],
   };
 });

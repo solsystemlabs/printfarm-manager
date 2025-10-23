@@ -7,11 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-generator client {
+// Generator for Cloudflare Workers (WASM-based, used in production)
+generator cloudflare {
   provider   = "prisma-client"
-  output     = "./generated"
+  output     = "./generated/cloudflare"
   engineType = "client"
   runtime    = "workerd"
+}
+
+// Generator for local development and tests (binary engine, works with Node.js)
+generator local {
+  provider = "prisma-client-js"
+  output   = "./generated/local"
 }
 
 // ============================================================================

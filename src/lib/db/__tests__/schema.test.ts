@@ -21,7 +21,7 @@ describe("Database Schema", () => {
   describe("Table Creation", () => {
     it("should have all required tables", async () => {
       const tables = await prisma.$queryRaw<Array<{ table_name: string }>>`
-        SELECT table_name
+        SELECT table_name::text
         FROM information_schema.tables
         WHERE table_schema = 'public'
         AND table_name NOT LIKE '_prisma%'

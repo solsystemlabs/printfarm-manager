@@ -1,4 +1,6 @@
-import { PrismaClient } from "../../prisma/generated/client";
+// Use cloudflare generator for Workers runtime (WASM engine)
+// Import from client.ts directly since cloudflare generator doesn't have package.json
+import { PrismaClient } from "../../prisma/generated/cloudflare/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
