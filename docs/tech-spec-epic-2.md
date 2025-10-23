@@ -83,8 +83,18 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client"   // Modern syntax (replaces prisma-client-js)
+  output     = "./generated"      // Custom output location for generated client
+  engineType = "client"           // REQUIRED: Use client engine (not binary) for Cloudflare Workers
+  runtime    = "workerd"          // CRITICAL: Cloudflare Workers V8 runtime compatibility
 }
+
+// IMPORTANT: Cloudflare Workers Compatibility Notes
+// - engineType = "client": Uses WebAssembly-based client instead of binary query engine
+//   Binary engines cannot run in Cloudflare Workers V8 isolates
+// - runtime = "workerd": Targets Cloudflare's workerd runtime (not Node.js)
+//   Without this, deployments will fail with 500 errors in production
+// - See docs/CLOUDFLARE_PRISMA_SETUP.md for detailed explanation
 
 // ============================================================================
 // Core File Entities (Epic 2)
@@ -173,19 +183,26 @@ model Filament {
 model SliceFilament {
   id           String   @id @default(uuid())
   sliceId      String   @map("slice_id")
-  filamentId   String   @map("filament_id")
+  filamentId   String?  @map("filament_id") // nullable to support filament deletion per FR-10
   amsSlotIndex Int      @map("ams_slot_index") // 1-based, non-contiguous OK
   createdAt    DateTime @default(now()) @map("created_at")
 
   // Relationships
-  slice    Slice    @relation(fields: [sliceId], references: [id], onDelete: Cascade)
-  filament Filament @relation(fields: [filamentId], references: [id], onDelete: Restrict) // prevent deletion if used
+  slice    Slice     @relation(fields: [sliceId], references: [id], onDelete: Cascade)
+  filament Filament? @relation(fields: [filamentId], references: [id], onDelete: SetNull) // Allow deletion, nullify references (per FR-10)
 
   @@unique([sliceId, amsSlotIndex]) // slot numbers unique per slice
   @@index([sliceId])
   @@index([filamentId])
   @@map("slice_filaments")
 }
+
+// DESIGN DECISION: Filament Deletion Behavior
+// Changed from onDelete: Restrict to onDelete: SetNull to match FR-10 requirements
+// - Allows users to delete filaments even when used in slices
+// - UI displays warning: "Missing filament for Slot X (was deleted)"
+// - More user-friendly than hard-blocking deletions
+// - See story-2.1.md Debug Log for brainstorming decision rationale
 
 // ============================================================================
 // Product & Recipe System (Epic 4)
