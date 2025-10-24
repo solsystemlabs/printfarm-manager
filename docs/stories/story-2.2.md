@@ -262,3 +262,235 @@ Successfully implemented model file upload API endpoint with dual-environment su
 - Added structured logging for upload lifecycle (start, complete, error, cleanup)
 - Verified dual-environment support (MinIO for dev, R2 for staging/prod)
 - All acceptance criteria met and validated
+
+**2025-10-23** - Senior Developer Review notes appended
+  - Review outcome: ✅ APPROVED (Ready to merge)
+  - All 10 acceptance criteria met with zero critical issues
+  - 4 low-priority enhancement suggestions documented for future phases
+  - Production-ready with comprehensive error handling and atomic operations
+
+---
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Taylor
+**Date:** 2025-10-23
+**Outcome:** ✅ **APPROVED**
+
+### Summary
+
+Story 2.2 successfully implements a production-ready model file upload API with exceptional attention to atomic operations, dual-environment support, and comprehensive error handling. The implementation demonstrates sophisticated architecture decisions including storage abstraction, per-request database connection management, and thorough logging infrastructure. All 10 acceptance criteria are met with zero critical issues identified.
+
+**Key Strengths:**
+- ✅ Atomic operations pattern flawlessly executed (upload → DB → cleanup on failure)
+- ✅ Storage abstraction enables seamless MinIO (dev) / R2 (staging/prod) switching
+- ✅ Per-request Prisma client with proper pool cleanup prevents connection leaks
+- ✅ 105 tests passing (24 upload-specific validation tests)
+- ✅ Comprehensive structured logging with performance metrics
+- ✅ Production build verified with WASM bundling for Cloudflare Workers
+
+**Recommendation:** Ready to merge. Minor suggestions for future enhancements documented below.
+
+### Key Findings
+
+#### ✅ **Critical Success Factors** (All Met)
+
+**1. Atomic Operations Pattern (AC #9) - EXCELLENT**
+- Upload sequence correctly ordered: storage first, database second, cleanup on DB failure
+- Prevents orphaned database records (which would cause user-facing 404 errors)
+- Cleanup logic includes comprehensive error logging for failed cleanups
+- Found at: `src/routes/api/models/upload.ts:156-220`
+
+**2. Dual-Environment Storage Support - INNOVATIVE**
+- Storage factory pattern abstracts MinIO (dev) vs R2 (staging/prod) differences
+- Uses `process.env` exclusively (not `getContext('cloudflare')`) for Node.js compatibility
+- TanStack Start adapter automatically injects R2 bindings into `process.env.FILES_BUCKET`
+- Found at: `src/lib/storage/index.ts` and `src/lib/storage/types.ts:1-82`
+
+**3. Database Connection Management - SOPHISTICATED**
+- Uses `getPrismaClient()` factory (not singleton) for per-request clients
+- Cloudflare WASM generator ensures production compatibility
+- Pool cleanup in `finally` block prevents connection leaks
+- Found at: `src/routes/api/models/upload.ts:27-28, 150-153, 239-253`
+
+**4. File Validation - COMPREHENSIVE**
+- Extension validation: Case-insensitive, whitelist-based (.stl, .3mf)
+- Size validation: 500MB limit enforced before storage upload (performance optimization)
+- Content-type fallback: `application/octet-stream` for browser compatibility
+- Found at: `src/routes/api/models/upload.ts:8-100`
+
+**5. Error Handling - PRODUCTION-GRADE**
+- Three-phase error handling: validation errors (400/413), storage errors (500), database errors (500)
+- Storage cleanup on database failure with fallback logging
+- No stack traces exposed to clients (per NFR-6)
+- Structured error responses with field-level details
+- Found at: `src/routes/api/models/upload.ts:38-237` and `src/lib/utils/errors.ts:1-80`
+
+#### 🟢 **Quality Highlights**
+
+**6. Structured Logging - EXEMPLARY**
+- Event-driven logging: `model_upload_start`, `model_upload_complete`, `model_upload_error`, `model_upload_cleanup_success/failed`
+- Performance metrics: Duration tracking on all operations
+- Context-rich metadata: Filename, size, content-type, storage type, error phase
+- Found at: `src/routes/api/models/upload.ts:52-56, 169-174, 192-220` and `src/lib/utils/logger.ts`
+
+**7. Test Coverage - STRONG**
+- 24 validation logic tests covering file extensions, size limits, storage keys, content-type, headers
+- 105 total tests passing across entire codebase
+- Validation edge cases well-covered (uppercase extensions, multiple dots, boundary sizes)
+- Integration tests documented (deferred due to TanStack Router complexity - acceptable for MVP)
+- Found at: `src/__tests__/api/models/upload.test.ts:1-199`
+
+**8. Storage Abstraction - REUSABLE**
+- `StorageClient` interface extended with `uploadFile()` and `getPublicUrl()` methods
+- Abstraction enables reuse across all file upload endpoints (models, slices, images)
+- MinIO uses buffer conversion (SDK requirement), R2 uses direct streaming (more efficient)
+- Found at: `src/lib/storage/types.ts:7-33` and implementations in `src/lib/storage/r2-client.ts`, `src/lib/storage/minio-client.ts`
+
+### Acceptance Criteria Coverage
+
+| AC | Description | Status | Evidence |
+|----|-------------|--------|----------|
+| 1 | API endpoint `/api/models/upload` accepts POST | ✅ Met | `upload.ts:22-24` |
+| 2 | Validates file type (only .stl, .3mf) | ✅ Met | `upload.ts:58-77` + tests |
+| 3 | Validates file size (≤500MB) | ✅ Met | `upload.ts:79-100` + tests |
+| 4 | Uploads to R2 with UUID-based key | ✅ Met | `upload.ts:103-126` |
+| 5 | Sets content-type and content-disposition | ✅ Met | `upload.ts:107-110` |
+| 6 | Creates database record with metadata | ✅ Met | `upload.ts:157-166` |
+| 7 | Returns success response with model ID/URL | ✅ Met | `upload.ts:177-187` |
+| 8 | Handles errors gracefully | ✅ Met | `upload.ts:38-237` |
+| 9 | Cleans up R2 on DB failure (atomic) | ✅ Met | `upload.ts:188-205` |
+| 10 | Logs upload operation with metrics | ✅ Met | `upload.ts:52-56, 169-174` |
+
+### Test Coverage and Gaps
+
+**Current Coverage: STRONG** (24 dedicated upload tests, 105 total tests passing)
+
+**Covered Scenarios:**
+- ✅ File extension validation (case-insensitive, multiple dots, invalid types)
+- ✅ File size validation (boundary testing: 500MB, 499MB, 501MB)
+- ✅ Storage key generation (UUID format, extension preservation)
+- ✅ Content-type handling (provided vs fallback)
+- ✅ Content-disposition header formatting
+
+**Gaps Identified (Non-Blocking):**
+- 🟡 E2E integration tests deferred (documented in `upload.test.ts:186-198`)
+- 🟡 No tests for zero-byte files (noted in `upload.test.ts:93-99`)
+- 🟡 No tests for concurrent uploads (acceptable for MVP single-user)
+
+**Test Quality Assessment:**
+- Test structure: Clear, descriptive test names following "should X when Y" pattern
+- Edge cases: Well-covered (uppercase extensions, filenames with spaces/special chars)
+- Validation logic: Matches implementation exactly (constants duplicated intentionally for test isolation)
+
+### Architectural Alignment
+
+**✅ Fully Aligned with Tech Spec and PRD**
+
+**Tech Spec Compliance:**
+- Follows atomic operations pattern (tech spec lines 437-440, NFR-4)
+- UUID-based R2 keys (tech spec line 393)
+- Content-disposition header format (tech spec line 399, FR-16)
+- Max file size 500MB (tech spec line 339, NFR-2)
+- Allowed extensions .stl, .3mf (tech spec lines 340-341, FR-1)
+- Structured logging events (tech spec lines 385-389, 418-424, NFR-9)
+
+**Architectural Patterns:**
+- ✅ TanStack Start API routes with `createFileRoute()` and `server.handlers.POST`
+- ✅ Environment-aware storage factory pattern
+- ✅ Per-request database client with pool management
+- ✅ Centralized error response utility
+- ✅ Structured logging with performance metrics
+
+**Design Decisions Rationale:**
+1. **Storage abstraction**: Reusable across Epic 2 stories (2.3, 2.5, 2.6)
+2. **`process.env` for bindings**: Ensures Node.js + Workers compatibility
+3. **Per-request Prisma client**: WASM generator requirement for Workers
+4. **Cleanup in finally block**: Prevents connection leaks on any error path
+
+### Security Notes
+
+**✅ No Critical Security Issues**
+
+**Security Controls Implemented:**
+- ✅ File type whitelist (prevents arbitrary file uploads)
+- ✅ File size limit (prevents DoS via large uploads)
+- ✅ UUID-based storage keys (prevents path traversal)
+- ✅ Content-disposition: attachment (prevents XSS via SVG uploads in future)
+- ✅ No stack traces in client responses (NFR-6 compliance)
+- ✅ Sanitized error messages (no internal paths/details exposed)
+
+**Recommendations for Future Phases:**
+- 🟡 **Low Priority:** Add file content validation (magic number checking) in Phase 2
+- 🟡 **Low Priority:** Implement rate limiting for uploads (acceptable for MVP single-user)
+- 🟡 **Low Priority:** Add virus scanning integration (Epic 6 or later)
+
+**OWASP Considerations:**
+- File upload risks: Mitigated via extension whitelist + size limits
+- Injection risks: N/A (binary file uploads, not processed)
+- Authentication: Deferred to Epic 7 (Multi-tenancy) per roadmap
+
+### Best-Practices and References
+
+**Framework Best Practices (TanStack Start):**
+- ✅ Uses `createFileRoute()` for type-safe routing
+- ✅ Server handlers in `server.handlers` object (not separate files)
+- ✅ Uses `@tanstack/react-start` `json()` helper for responses
+- ✅ Accesses bindings via `process.env` (adapter compatibility)
+
+**Cloudflare Workers Best Practices:**
+- ✅ WASM-compatible Prisma generator for Workers runtime
+- ✅ R2 streaming for large files (memory-efficient)
+- ✅ Per-request client pattern (no global singletons in Workers)
+- ✅ Environment-specific bucket naming convention
+
+**Prisma Best Practices:**
+- ✅ Connection pool cleanup in finally block
+- ✅ Dual generator approach (cloudflare + local) for dev/prod
+- ✅ Per-request client creation with `getPrismaClient()` factory
+- ✅ Database URL validation before client creation
+
+**Code Quality:**
+- ✅ Comprehensive inline documentation (JSDoc comments)
+- ✅ Descriptive variable names (storageKey, publicUrl, contentDisposition)
+- ✅ Clear error messages with context
+- ✅ Constants defined at file level (ALLOWED_EXTENSIONS, MAX_FILE_SIZE)
+
+**References:**
+- TanStack Start docs: File-based routing, server handlers (https://tanstack.com/start)
+- Cloudflare R2 docs: Streaming uploads, bucket bindings (https://developers.cloudflare.com/r2/)
+- Prisma Workers guide: WASM generator, connection management (https://www.prisma.io/docs/orm/prisma-client/deployment/edge/deploy-to-cloudflare)
+
+### Action Items
+
+#### 🟢 **Low Priority** (Future Enhancements)
+
+1. **[Low]** Add zero-byte file validation
+   - **Context:** Current validation accepts 0-byte files (passes size check)
+   - **Recommendation:** Add `if (file.size === 0)` check after size validation
+   - **File:** `src/routes/api/models/upload.ts:79` (after existing size check)
+   - **Rationale:** Prevents database clutter from accidentally uploaded empty files
+   - **Severity:** Low (edge case, no security impact)
+
+2. **[Low]** Extract validation constants to shared config
+   - **Context:** ALLOWED_EXTENSIONS and MAX_FILE_SIZE duplicated across upload.ts and tests
+   - **Recommendation:** Create `src/lib/config/file-upload.ts` with shared constants
+   - **Files:** `src/routes/api/models/upload.ts:9-10`, `src/__tests__/api/models/upload.test.ts:3-5`
+   - **Rationale:** DRY principle, easier to maintain consistent limits across stories 2.2, 2.5, 2.6
+   - **Severity:** Low (refactoring, no functional impact)
+
+3. **[Low]** Add content-type validation for future security hardening
+   - **Context:** Currently accepts any content-type, relies on extension validation only
+   - **Recommendation:** Defer to Phase 2 or Epic 6 (Security hardening)
+   - **Rationale:** Extension whitelist sufficient for MVP; magic number checking requires additional libraries
+   - **Severity:** Low (defense-in-depth, not critical for MVP)
+
+4. **[Low]** Document E2E testing approach for TanStack Router
+   - **Context:** E2E tests deferred due to routing complexity (documented in tests)
+   - **Recommendation:** Create `docs/TESTING.md` with E2E testing strategy for Epic 3
+   - **Rationale:** Systematic approach needed for slice upload (2.5) and future stories
+   - **Severity:** Low (process improvement)
+
+#### ✅ **No Critical or High Priority Issues**
+
+All blocking issues resolved. Implementation is production-ready.
