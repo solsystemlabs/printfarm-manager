@@ -86,6 +86,40 @@ export class MinIOStorageClient implements StorageClient {
     return this.environment;
   }
 
+  async uploadFile(
+    key: string,
+    file: File,
+    metadata: { contentType: string; contentDisposition: string },
+  ): Promise<void> {
+    // Convert File to Buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const minioMetadata: Record<string, string> = {
+      "Content-Type": metadata.contentType,
+      "Content-Disposition": metadata.contentDisposition,
+    };
+
+    console.log(
+      `[MinIO] Uploading file to bucket: ${this.bucket}, key: ${key}, size: ${buffer.length} bytes`,
+    );
+
+    await this.client.putObject(
+      this.bucket,
+      key,
+      buffer,
+      buffer.length,
+      minioMetadata,
+    );
+
+    console.log(`[MinIO] File upload successful`);
+  }
+
+  getPublicUrl(key: string): string {
+    // MinIO local development URL
+    return `http://localhost:9000/${this.bucket}/${key}`;
+  }
+
   getStorageType(): "MinIO" | "Cloudflare R2" {
     return "MinIO";
   }

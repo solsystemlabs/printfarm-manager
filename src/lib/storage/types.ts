@@ -12,6 +12,22 @@ export interface StorageClient {
   ): Promise<void>;
   get(key: string): Promise<string | null>;
   delete(key: string): Promise<void>;
+  /**
+   * Upload a file with metadata
+   * Handles File objects with proper streaming and metadata
+   */
+  uploadFile(
+    key: string,
+    file: File,
+    metadata: {
+      contentType: string;
+      contentDisposition: string;
+    },
+  ): Promise<void>;
+  /**
+   * Get public URL for a stored file
+   */
+  getPublicUrl(key: string): string;
   getEnvironment(): string;
   getStorageType(): "MinIO" | "Cloudflare R2";
 }

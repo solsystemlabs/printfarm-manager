@@ -61,6 +61,31 @@ export class R2StorageClient implements StorageClient {
     return this.environment;
   }
 
+  async uploadFile(
+    key: string,
+    file: File,
+    metadata: { contentType: string; contentDisposition: string },
+  ): Promise<void> {
+    console.log(`[R2] Uploading file key: ${key}, size: ${file.size} bytes`);
+
+    // R2 can handle File streams directly
+    await this.bucket.put(key, file.stream(), {
+      httpMetadata: {
+        contentType: metadata.contentType,
+        contentDisposition: metadata.contentDisposition,
+      },
+    });
+
+    console.log(`[R2] File upload successful`);
+  }
+
+  getPublicUrl(key: string): string {
+    // R2 public URL based on environment
+    const bucketName =
+      this.environment === "production" ? "pm-files" : "pm-staging-files";
+    return `https://${bucketName}.r2.cloudflarestorage.com/${key}`;
+  }
+
   getStorageType(): "MinIO" | "Cloudflare R2" {
     return "Cloudflare R2";
   }
