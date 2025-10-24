@@ -167,7 +167,25 @@
         <reason>Model entity schema for reference. Story 2.3 does not create records (deferred to Story 2.4), but extractor should prepare data compatible with this schema</reason>
       </artifact>
     </code>
-    <dependencies>{{dependencies_artifacts}}</dependencies>
+    <dependencies>
+      <node>
+        <toInstall>
+          <package name="jszip" version="^3.10.1" purpose="Zip file extraction in-memory, pure JavaScript, Cloudflare Workers compatible" />
+          <package name="@types/jszip" version="latest" purpose="TypeScript type definitions for JSZip" dev="true" />
+        </toInstall>
+        <existing>
+          <package name="@tanstack/react-start" version="^1.132.36" purpose="Server framework with API routes, SSR integration" />
+          <package name="@tanstack/react-router" version="^1.132.33" purpose="File-based routing with type safety" />
+          <package name="@prisma/client" version="^6.18.0" purpose="Database ORM (not used in Story 2.3, but needed for Story 2.4)" />
+          <package name="vitest" version="^3.2.4" purpose="Testing framework for unit tests" />
+          <package name="@testing-library/react" version="^16.3.0" purpose="React component testing utilities" />
+        </existing>
+      </node>
+      <cloudflare>
+        <binding name="FILES_BUCKET" type="R2Bucket" purpose="File storage binding (not used in Story 2.3 - extraction only)" />
+        <envVar name="ENVIRONMENT" values="development, staging, production" purpose="Environment detection for logging" />
+      </cloudflare>
+    </dependencies>
   </artifacts>
 
   <constraints>
@@ -256,8 +274,54 @@
     </interface>
   </interfaces>
   <tests>
-    <standards>{{test_standards}}</standards>
-    <locations>{{test_locations}}</locations>
-    <ideas>{{test_ideas}}</ideas>
+    <standards>
+      Testing framework: Vitest (^3.2.4) with React Testing Library (^16.3.0). Pattern from Story 2.2: Create unit tests for validation logic and business logic. Test validation constants, file filtering, edge cases (uppercase extensions, multiple dots, boundary sizes). Use describe/it blocks with clear test names following "should X when Y" pattern. E2E tests deferred due to TanStack Router complexity. Run tests with: npm test (watch mode) or npm run test:run (CI mode).
+    </standards>
+    <locations>
+      <location>src/__tests__/lib/zip/extractor.test.ts - Unit tests for zip extraction logic</location>
+      <location>src/__tests__/api/models/upload-zip.test.ts - Validation logic tests for zip upload endpoint (optional, can be combined with extractor tests)</location>
+    </locations>
+    <ideas>
+      <test ac="3,4,5">
+        <title>Valid zip extraction with models and images</title>
+        <description>Create test zip with .stl, .3mf, .png, .jpg files in nested directories. Verify extractZipFile() returns correct ExtractedFile[] with proper type classification</description>
+      </test>
+      <test ac="4">
+        <title>Nested directory scanning</title>
+        <description>Create zip with deeply nested folder structure (models/whale/variants/baby-whale.stl). Verify all files discovered regardless of depth</description>
+      </test>
+      <test ac="5,6">
+        <title>File type filtering (whitelist)</title>
+        <description>Create zip with mixed file types (.stl, .png, .obj, .txt, .exe). Verify only whitelisted extensions returned, unknown files silently ignored</description>
+      </test>
+      <test ac="6">
+        <title>Hidden file exclusion</title>
+        <description>Create zip with .DS_Store, .__MACOSX directory, and normal files. Verify hidden/system files excluded from results</description>
+      </test>
+      <test ac="5">
+        <title>Case-insensitive extension matching</title>
+        <description>Test files named model.STL, image.PNG, file.3MF (uppercase). Verify proper type classification regardless of case</description>
+      </test>
+      <test ac="10">
+        <title>Empty zip handling</title>
+        <description>Create valid but empty zip file. Verify extractZipFile() returns empty array without errors</description>
+      </test>
+      <test ac="10">
+        <title>Corrupted zip handling</title>
+        <description>Pass non-zip file or corrupted zip data to extractZipFile(). Verify JSZip throws error that can be caught and converted to 422 response</description>
+      </test>
+      <test ac="11">
+        <title>Performance logging verification</title>
+        <description>Mock log() function, call extractZipFile(), verify zip_extraction_start and zip_extraction_complete events logged with correct metadata (filename, size, duration_ms, files_found, models/images counts)</description>
+      </test>
+      <test ac="2">
+        <title>File size validation (500MB limit)</title>
+        <description>Test endpoint with files at 500MB (boundary), 499MB (valid), 501MB (invalid). Verify 413 response for oversized files</description>
+      </test>
+      <test ac="1">
+        <title>File extension validation (.zip only)</title>
+        <description>Test endpoint with .zip (valid), .rar, .tar.gz, .7z (invalid). Verify 400 response for non-zip files</description>
+      </test>
+    </ideas>
   </tests>
 </story-context>
