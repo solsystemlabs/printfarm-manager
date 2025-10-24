@@ -19,6 +19,7 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AdminStorageRouteImport } from './routes/admin/storage'
 import { Route as PathlessLayoutNestedLayoutRouteImport } from './routes/_pathlessLayout/_nested-layout'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users.$id'
+import { Route as ApiModelsUploadRouteImport } from './routes/api/models/upload'
 import { Route as ApiAdminStorageRouteImport } from './routes/api/admin/storage'
 import { Route as PathlessLayoutNestedLayoutRouteBRouteImport } from './routes/_pathlessLayout/_nested-layout/route-b'
 import { Route as PathlessLayoutNestedLayoutRouteARouteImport } from './routes/_pathlessLayout/_nested-layout/route-a'
@@ -72,6 +73,11 @@ const ApiUsersIdRoute = ApiUsersIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiUsersRoute,
 } as any)
+const ApiModelsUploadRoute = ApiModelsUploadRouteImport.update({
+  id: '/api/models/upload',
+  path: '/api/models/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminStorageRoute = ApiAdminStorageRouteImport.update({
   id: '/api/admin/storage',
   path: '/api/admin/storage',
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
   '/api/admin/storage': typeof ApiAdminStorageRoute
+  '/api/models/upload': typeof ApiModelsUploadRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
 export interface FileRoutesByTo {
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
   '/api/admin/storage': typeof ApiAdminStorageRoute
+  '/api/models/upload': typeof ApiModelsUploadRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
 export interface FileRoutesById {
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/_pathlessLayout/_nested-layout/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/_pathlessLayout/_nested-layout/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
   '/api/admin/storage': typeof ApiAdminStorageRoute
+  '/api/models/upload': typeof ApiModelsUploadRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
 export interface FileRouteTypes {
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/route-a'
     | '/route-b'
     | '/api/admin/storage'
+    | '/api/models/upload'
     | '/api/users/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/route-a'
     | '/route-b'
     | '/api/admin/storage'
+    | '/api/models/upload'
     | '/api/users/$id'
   id:
     | '__root__'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/_pathlessLayout/_nested-layout/route-a'
     | '/_pathlessLayout/_nested-layout/route-b'
     | '/api/admin/storage'
+    | '/api/models/upload'
     | '/api/users/$id'
   fileRoutesById: FileRoutesById
 }
@@ -186,6 +198,7 @@ export interface RootRouteChildren {
   ApiTestR2Route: typeof ApiTestR2Route
   ApiUsersRoute: typeof ApiUsersRouteWithChildren
   ApiAdminStorageRoute: typeof ApiAdminStorageRoute
+  ApiModelsUploadRoute: typeof ApiModelsUploadRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/users/$id'
       preLoaderRoute: typeof ApiUsersIdRouteImport
       parentRoute: typeof ApiUsersRoute
+    }
+    '/api/models/upload': {
+      id: '/api/models/upload'
+      path: '/api/models/upload'
+      fullPath: '/api/models/upload'
+      preLoaderRoute: typeof ApiModelsUploadRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/admin/storage': {
       id: '/api/admin/storage'
@@ -336,6 +356,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTestR2Route: ApiTestR2Route,
   ApiUsersRoute: ApiUsersRouteWithChildren,
   ApiAdminStorageRoute: ApiAdminStorageRoute,
+  ApiModelsUploadRoute: ApiModelsUploadRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

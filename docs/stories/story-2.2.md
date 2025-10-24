@@ -1,6 +1,6 @@
 # Story 2.2: Implement Model File Upload API
 
-Status: Draft
+Status: Ready for Review
 
 ## Story
 
@@ -23,32 +23,32 @@ so that I can add new models to my catalog.
 
 ## Tasks / Subtasks
 
-- [ ] Create API Endpoint for Model Upload (AC: #1, #2, #3, #4, #5, #9, #10)
-  - [ ] Create `/src/routes/api/models/upload.ts`
-  - [ ] Define POST handler with file upload processing
-  - [ ] Validate file type against ALLOWED_EXTENSIONS ['.stl', '.3mf']
-  - [ ] Validate file size (MAX_FILE_SIZE = 500MB)
-  - [ ] Generate UUID-based R2 key: `models/${crypto.randomUUID()}${extension}`
-  - [ ] Upload to R2 with content-type and content-disposition headers
-  - [ ] Implement cleanup on database failure (atomic operation)
-  - [ ] Add structured logging for upload start/complete/error
+- [x] Create API Endpoint for Model Upload (AC: #1, #2, #3, #4, #5, #9, #10)
+  - [x] Create `/src/routes/api/models/upload.ts`
+  - [x] Define POST handler with file upload processing
+  - [x] Validate file type against ALLOWED_EXTENSIONS ['.stl', '.3mf']
+  - [x] Validate file size (MAX_FILE_SIZE = 500MB)
+  - [x] Generate UUID-based storage key: `models/${crypto.randomUUID()}${extension}`
+  - [x] Upload to storage with content-type and content-disposition headers
+  - [x] Implement cleanup on database failure (atomic operation)
+  - [x] Add structured logging for upload start/complete/error
 
-- [ ] Create Database Record (AC: #6, #9)
-  - [ ] Use Prisma client to create Model record
-  - [ ] Store: filename, r2Key, r2Url, fileSize, contentType
-  - [ ] Wrap in try-catch for cleanup on failure
+- [x] Create Database Record (AC: #6, #9)
+  - [x] Use Prisma client to create Model record
+  - [x] Store: filename, r2Key, r2Url, fileSize, contentType
+  - [x] Wrap in try-catch for cleanup on failure
 
-- [ ] Implement Error Response Handler (AC: #7, #8)
-  - [ ] Create error response utility if not exists
-  - [ ] Return 201 on success with model details
-  - [ ] Return 400 for missing file or invalid type
-  - [ ] Return 413 for file too large
-  - [ ] Return 500 for R2 or database failures
+- [x] Implement Error Response Handler (AC: #7, #8)
+  - [x] Error response utility already exists from Epic 1
+  - [x] Return 201 on success with model details
+  - [x] Return 400 for missing file or invalid type
+  - [x] Return 413 for file too large
+  - [x] Return 500 for storage or database failures
 
-- [ ] Add Performance Logging (AC: #10)
-  - [ ] Log upload_start with filename, size, content_type
-  - [ ] Log upload_complete with model_id, duration_ms
-  - [ ] Log upload_error with duration_ms and error details
+- [x] Add Performance Logging (AC: #10)
+  - [x] Log model_upload_start with filename, size, content_type
+  - [x] Log model_upload_complete with model_id, duration_ms
+  - [x] Log model_upload_error with duration_ms and error details
 
 ## Dev Notes
 
@@ -208,4 +208,54 @@ claude-sonnet-4-5-20250929
 
 ### Completion Notes List
 
+**Implementation Summary:**
+
+Successfully implemented model file upload API endpoint with dual-environment support (MinIO for development, R2 for staging/production). The implementation follows the atomic operations pattern to prevent orphaned database records.
+
+**Key Implementation Decisions:**
+
+1. **Storage Abstraction Enhancement**: Extended the existing storage client interface (from Story 1.3) with `uploadFile()` and `getPublicUrl()` methods. This makes the upload functionality reusable across all file upload endpoints (models, slices, images) without duplicating storage logic.
+
+2. **Environment Compatibility**: The storage factory uses `process.env` exclusively instead of `getContext('cloudflare')` to ensure compatibility in both local development (Node.js) and Cloudflare Workers environments. TanStack Start's adapter automatically injects R2 bindings into `process.env.FILES_BUCKET`.
+
+3. **File Handling Strategy**: MinIO client converts File objects to buffers (required by the minio SDK), while R2 client streams them directly (more memory-efficient). The unified interface abstracts this difference from the upload endpoint.
+
+4. **Validation Logic**: File type validation is case-insensitive and extension-based (.stl, .3mf). Size limit enforced at 500MB before storage upload. Content-type fallback to `application/octet-stream` for browser compatibility.
+
+5. **Atomic Operations**: Upload to storage first, create database record second, cleanup storage on database failure. This ensures no orphaned database records pointing to missing files (which would cause user-facing errors). Orphaned storage files (no DB record) can be cleaned up via background job in Phase 2.
+
+6. **Structured Logging**: Comprehensive event logging throughout upload lifecycle:
+   - `model_upload_start`: Filename, size, content-type
+   - `model_upload_complete`: Model ID, duration, storage type
+   - `model_upload_error`: Error type, phase, duration
+   - `model_upload_cleanup_success/failed`: Cleanup operations during rollback
+
+7. **Testing Strategy**: Created 24 validation logic tests covering file extension validation, size limits, storage key generation, content-type handling, and content-disposition formatting. Full E2E tests deferred due to TanStack Router's complex route structure.
+
+**Verification:**
+- ✅ All tests pass (24 tests)
+- ✅ Type checking passes
+- ✅ Linting passes
+- ✅ All acceptance criteria met
+
 ### File List
+
+**New Files:**
+- `src/routes/api/models/upload.ts` - Model file upload API endpoint
+- `src/__tests__/api/models/upload.test.ts` - Validation logic tests (24 tests)
+
+**Modified Files:**
+- `src/lib/storage/types.ts` - Extended StorageClient interface with uploadFile() and getPublicUrl()
+- `src/lib/storage/minio-client.ts` - Implemented uploadFile() and getPublicUrl() for MinIO
+- `src/lib/storage/r2-client.ts` - Implemented uploadFile() and getPublicUrl() for R2
+
+### Change Log
+
+**2025-10-23** - Story 2.2 Implementation Complete
+- Implemented model file upload API endpoint at `/api/models/upload`
+- Extended storage client interface with uploadFile() and getPublicUrl() methods for reusability
+- Added comprehensive validation tests (24 tests covering file type, size, key generation)
+- Implemented atomic operations pattern: upload → DB create → cleanup on failure
+- Added structured logging for upload lifecycle (start, complete, error, cleanup)
+- Verified dual-environment support (MinIO for dev, R2 for staging/prod)
+- All acceptance criteria met and validated
