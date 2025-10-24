@@ -1,31 +1,28 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "pm-dev",
-  "compatibility_date": "2025-10-04",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2025-10-01",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "main": "@tanstack/react-start/server-entry",
-
   // Observability: Enable automatic logging and monitoring
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
   },
-
   // Smart Placement: Optimize worker location based on backend proximity
   "placement": {
     "mode": "smart"
   },
-
   // Development settings
   "workers_dev": false,
   "preview_urls": true,
-
   // Development environment variables (non-sensitive only)
   "vars": {
     "ENVIRONMENT": "development",
     "XATA_BRANCH": "dev"
   },
-
   "env": {
     "staging": {
       "name": "pm-staging",

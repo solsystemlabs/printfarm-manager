@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { calculateStorageUsage, formatBytes } from "../usage";
-import type { PrismaClient } from "@prisma/client";
+// Use local generator for tests (binary engine, Node.js compatible)
+import type { PrismaClient } from "../../../../prisma/generated/local";
 
 // Mock Prisma client
 const mockPrismaModel = {

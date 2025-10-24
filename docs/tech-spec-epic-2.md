@@ -83,8 +83,18 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client"   // Modern syntax (replaces prisma-client-js)
+  output     = "./generated"      // Custom output location for generated client
+  engineType = "client"           // REQUIRED: Use client engine (not binary) for Cloudflare Workers
+  runtime    = "workerd"          // CRITICAL: Cloudflare Workers V8 runtime compatibility
 }
+
+// IMPORTANT: Cloudflare Workers Compatibility Notes
+// - engineType = "client": Uses WebAssembly-based client instead of binary query engine
+//   Binary engines cannot run in Cloudflare Workers V8 isolates
+// - runtime = "workerd": Targets Cloudflare's workerd runtime (not Node.js)
+//   Without this, deployments will fail with 500 errors in production
+// - See docs/CLOUDFLARE_PRISMA_SETUP.md for detailed explanation
 
 // ============================================================================
 // Core File Entities (Epic 2)
@@ -173,19 +183,26 @@ model Filament {
 model SliceFilament {
   id           String   @id @default(uuid())
   sliceId      String   @map("slice_id")
-  filamentId   String   @map("filament_id")
+  filamentId   String?  @map("filament_id") // nullable to support filament deletion per FR-10
   amsSlotIndex Int      @map("ams_slot_index") // 1-based, non-contiguous OK
   createdAt    DateTime @default(now()) @map("created_at")
 
   // Relationships
-  slice    Slice    @relation(fields: [sliceId], references: [id], onDelete: Cascade)
-  filament Filament @relation(fields: [filamentId], references: [id], onDelete: Restrict) // prevent deletion if used
+  slice    Slice     @relation(fields: [sliceId], references: [id], onDelete: Cascade)
+  filament Filament? @relation(fields: [filamentId], references: [id], onDelete: SetNull) // Allow deletion, nullify references (per FR-10)
 
   @@unique([sliceId, amsSlotIndex]) // slot numbers unique per slice
   @@index([sliceId])
   @@index([filamentId])
   @@map("slice_filaments")
 }
+
+// DESIGN DECISION: Filament Deletion Behavior
+// Changed from onDelete: Restrict to onDelete: SetNull to match FR-10 requirements
+// - Allows users to delete filaments even when used in slices
+// - UI displays warning: "Missing filament for Slot X (was deleted)"
+// - More user-friendly than hard-blocking deletions
+// - See story-2.1.md Debug Log for brainstorming decision rationale
 
 // ============================================================================
 // Product & Recipe System (Epic 4)
@@ -2693,6 +2710,27 @@ Epic 2 is **DONE** when:
 - Developer (implementation complete)
 - Tech Lead (code review approved)
 - Product Owner (business value delivered)
+
+---
+
+## Post-Review Follow-ups
+
+**Story 2.1 Review (2025-10-23):**
+
+### 🔴 Critical Issues (Blocker)
+- **[CRITICAL-1]** Fix Prisma Client Adapter Initialization - Schema configured with `engineType = "client"` and `runtime = "workerd"` but client initialization missing required @prisma/adapter-pg. All database tests failing. File: `src/lib/db/client.ts`
+- **[CRITICAL-2]** Verify Tests Pass - After adapter fix, run tests and update story completion notes with accurate results. Currently showing "23 passing" but tests actually fail.
+
+### 🟡 Medium Priority
+- **[Med-1]** Document Cloudflare Workers Adapter - Create `docs/CLOUDFLARE_PRISMA_SETUP.md` explaining adapter requirement for Workers deployment
+- **[Med-3]** Environment-Aware Adapter Selection - Implement different connection logic for local dev vs Workers in `src/lib/db/client.ts`
+- **[Low-2]** Add Inline Schema Comments - Document FR-10 SetNull behavior rationale at `prisma/schema.prisma:110`
+
+### 🟢 Low Priority
+- **[Low-1]** Evaluate Custom Prisma Output Path - Consider using default location vs `./generated`
+- **[Low-3]** Simplify Test Cleanup Logic - Refactor `src/lib/db/__tests__/schema.test.ts:330-344`
+
+**Review Outcome:** Changes Requested (Blocked) - Do not merge until CRITICAL-1 and CRITICAL-2 resolved. Schema design excellent, but adapter initialization must be fixed for Cloudflare Workers compatibility.
 
 ---
 

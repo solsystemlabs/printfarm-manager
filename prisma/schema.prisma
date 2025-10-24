@@ -7,9 +7,194 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+// Generator for Cloudflare Workers (WASM-based, used in production)
+generator cloudflare {
+  provider   = "prisma-client"
+  output     = "./generated/cloudflare"
+  engineType = "client"
+  runtime    = "workerd"
 }
 
-// Schema tables will be defined in Epic 2, Story 2.1
-// This initial schema only sets up infrastructure
+// Generator for local development and tests (binary engine, works with Node.js)
+generator local {
+  provider = "prisma-client-js"
+  output   = "./generated/local"
+}
+
+// ============================================================================
+// Core File Entities (Epic 2)
+// ============================================================================
+
+model Model {
+  id           String   @id @default(uuid())
+  tenantId     String?  @map("tenant_id") // nullable in MVP, enforced in Phase 3
+  filename     String
+  r2Key        String   @map("r2_key")
+  r2Url        String   @map("r2_url")
+  fileSize     Int      @map("file_size") // bytes
+  contentType  String   @map("content_type")
+  thumbnailUrl String?  @map("thumbnail_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relationships (Epic 4)
+  sliceModels SliceModel[]
+
+  @@index([tenantId])
+  @@index([filename]) // for search (Epic 5)
+  @@map("models")
+}
+
+model Slice {
+  id                String  @id @default(uuid())
+  tenantId          String? @map("tenant_id")
+  filename          String
+  r2Key             String  @map("r2_key")
+  r2Url             String  @map("r2_url")
+  fileSize          Int     @map("file_size")
+  contentType       String  @map("content_type")
+  thumbnailUrl      String? @map("thumbnail_url")
+  metadataExtracted Boolean @default(false) @map("metadata_extracted")
+  metadataJson      Json?   @map("metadata_json") // complete extracted metadata (Epic 3)
+
+  // Curated metadata fields (denormalized for performance, Epic 3)
+  layerHeight      Float?   @map("layer_height")
+  nozzleTemp       Int?     @map("nozzle_temp")
+  bedTemp          Int?     @map("bed_temp")
+  printSpeed       Int?     @map("print_speed")
+  infillPercent    Int?     @map("infill_percent")
+  supportsEnabled  Boolean? @map("supports_enabled")
+  estimatedTimeSec Int?     @map("estimated_time_sec")
+  filamentUsedG    Float?   @map("filament_used_g")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relationships (Epic 3, 4)
+  sliceModels    SliceModel[]
+  sliceFilaments SliceFilament[]
+  sliceVariants  SliceVariant[]
+
+  @@index([tenantId])
+  @@index([metadataExtracted])
+  @@map("slices")
+}
+
+// ============================================================================
+// Filament & Matching (Epic 3)
+// ============================================================================
+
+model Filament {
+  id           String   @id @default(uuid())
+  tenantId     String?  @map("tenant_id")
+  brand        String // normalized during matching
+  colorHex     String   @map("color_hex") // e.g., "#FF5733"
+  colorName    String?  @map("color_name") // e.g., "Red"
+  materialType String   @map("material_type") // PLA, PETG, ABS, TPU
+  filamentType String   @map("filament_type") // Basic, Matte, Silk, Sparkle
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  sliceFilaments SliceFilament[]
+
+  @@unique([brand, colorHex, materialType, filamentType], name: "unique_filament")
+  @@index([tenantId])
+  @@index([brand])
+  @@index([materialType])
+  @@map("filaments")
+}
+
+model SliceFilament {
+  id           String   @id @default(uuid())
+  sliceId      String   @map("slice_id")
+  filamentId   String?  @map("filament_id") // nullable to support filament deletion per FR-10
+  amsSlotIndex Int      @map("ams_slot_index") // 1-based, non-contiguous OK
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  slice    Slice     @relation(fields: [sliceId], references: [id], onDelete: Cascade)
+  filament Filament? @relation(fields: [filamentId], references: [id], onDelete: SetNull) // Allow deletion, nullify references
+
+  @@unique([sliceId, amsSlotIndex]) // slot numbers unique per slice
+  @@index([sliceId])
+  @@index([filamentId])
+  @@map("slice_filaments")
+}
+
+// ============================================================================
+// Product & Recipe System (Epic 4)
+// ============================================================================
+
+model Product {
+  id           String   @id @default(uuid())
+  tenantId     String?  @map("tenant_id")
+  name         String   @unique // unique constraint for product names
+  description  String?
+  thumbnailUrl String?  @map("thumbnail_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  variants ProductVariant[]
+
+  @@index([tenantId])
+  @@index([name]) // for search (Epic 5)
+  @@map("products")
+}
+
+model ProductVariant {
+  id           String   @id @default(uuid())
+  productId    String   @map("product_id")
+  tenantId     String?  @map("tenant_id")
+  name         String // unique within product
+  thumbnailUrl String?  @map("thumbnail_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sliceVariants SliceVariant[]
+
+  @@unique([productId, name], name: "unique_variant_per_product")
+  @@index([tenantId])
+  @@index([productId])
+  @@map("product_variants")
+}
+
+// ============================================================================
+// Junction Tables (Many-to-Many Relationships)
+// ============================================================================
+
+model SliceModel {
+  id        String   @id @default(uuid())
+  sliceId   String   @map("slice_id")
+  modelId   String   @map("model_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  slice Slice @relation(fields: [sliceId], references: [id], onDelete: Cascade)
+  model Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@unique([sliceId, modelId])
+  @@index([sliceId])
+  @@index([modelId])
+  @@map("slice_models")
+}
+
+model SliceVariant {
+  id               String   @id @default(uuid())
+  sliceId          String   @map("slice_id")
+  variantId        String   @map("variant_id")
+  quantityPerPrint Int      @default(1) @map("quantity_per_print")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  slice   Slice          @relation(fields: [sliceId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([sliceId, variantId])
+  @@index([sliceId])
+  @@index([variantId])
+  @@map("slice_variants")
+}
