@@ -87,12 +87,12 @@ function isAllowedFile(filename: string): boolean {
  * - Excludes hidden and system files (.DS_Store, __MACOSX, etc.)
  * - Returns file metadata and content for later processing
  *
- * @param zipData - The zip file as Blob or ArrayBuffer
+ * @param zipData - The zip file as Uint8Array (universally compatible format)
  * @returns Extraction result with file list and statistics
  * @throws Error if zip is malformed/corrupted
  */
 export async function extractZipFile(
-  zipData: Blob | ArrayBuffer,
+  zipData: Uint8Array | Blob,
 ): Promise<ExtractionResult> {
   const startTime = Date.now();
 
@@ -103,7 +103,7 @@ export async function extractZipFile(
   });
 
   try {
-    // Load zip file using JSZip (supports both Blob and ArrayBuffer)
+    // Load zip file using JSZip (Uint8Array is universally supported)
     const zip = await JSZip.loadAsync(zipData);
 
     const extractedFiles: ExtractedFile[] = [];

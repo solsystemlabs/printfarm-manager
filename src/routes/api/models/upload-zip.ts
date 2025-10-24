@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
 import { extractZipFile } from "~/lib/zip/extractor";
+import { convertFileForZip } from "~/lib/zip/file-converter";
 import { createErrorResponse } from "~/lib/utils/errors";
 import { log, logPerformance } from "~/lib/utils/logger";
 
@@ -99,9 +100,9 @@ export const Route = createFileRoute("/api/models/upload-zip")({
           // Extract zip contents
           let extractionResult;
           try {
-            // Convert File to ArrayBuffer for JSZip compatibility
-            const arrayBuffer = await file.arrayBuffer();
-            extractionResult = await extractZipFile(arrayBuffer);
+            // Convert File to Uint8Array using universal converter (works in all environments)
+            const zipData = await convertFileForZip(file);
+            extractionResult = await extractZipFile(zipData);
           } catch (extractionError) {
             // Handle malformed/corrupted zip files
             log("zip_upload_error", {
