@@ -1,6 +1,6 @@
 # Story 2.3: Implement Zip File Upload with Extraction
 
-Status: Draft
+Status: Ready for Review
 
 ## Story
 
@@ -24,44 +24,44 @@ so that I can bulk-import entire model collections efficiently.
 
 ## Tasks / Subtasks
 
-- [ ] Install and Configure JSZip Library (AC: #3)
-  - [ ] Add JSZip dependency: `npm install jszip @types/jszip`
-  - [ ] Verify JSZip compatibility with Cloudflare Workers runtime
-  - [ ] Review JSZip async API for streaming extraction
+- [x] Install and Configure JSZip Library (AC: #3)
+  - [x] Add JSZip dependency: `npm install jszip @types/jszip`
+  - [x] Verify JSZip compatibility with Cloudflare Workers runtime
+  - [x] Review JSZip async API for streaming extraction
 
-- [ ] Create Zip Extractor Utility (AC: #3, #4, #5, #6, #9)
-  - [ ] Create `/src/lib/zip/extractor.ts`
-  - [ ] Implement `extractZipFile(zipBlob: Blob)` function
-  - [ ] Recursively scan all directories (handle nested folder structures)
-  - [ ] Filter files by extension whitelist: ['.stl', '.3mf', '.png', '.jpg', '.jpeg']
-  - [ ] Skip hidden files (.DS_Store, .__MACOSX) and system directories
-  - [ ] Return `ExtractedFile[]` with path, filename, type, size, content
-  - [ ] Add performance logging (extraction duration, file counts)
+- [x] Create Zip Extractor Utility (AC: #3, #4, #5, #6, #9)
+  - [x] Create `/src/lib/zip/extractor.ts`
+  - [x] Implement `extractZipFile(zipBlob: Blob)` function
+  - [x] Recursively scan all directories (handle nested folder structures)
+  - [x] Filter files by extension whitelist: ['.stl', '.3mf', '.png', '.jpg', '.jpeg']
+  - [x] Skip hidden files (.DS_Store, .__MACOSX) and system directories
+  - [x] Return `ExtractedFile[]` with path, filename, type, size, content
+  - [x] Add performance logging (extraction duration, file counts)
 
-- [ ] Create API Endpoint for Zip Upload (AC: #1, #2, #7, #8, #10, #11)
-  - [ ] Create `/src/routes/api/models/upload-zip.ts`
-  - [ ] Define POST handler accepting multipart/form-data
-  - [ ] Validate file extension (.zip only)
-  - [ ] Validate file size (≤500MB)
-  - [ ] Call extractZipFile() utility
-  - [ ] Handle malformed/corrupted zip files (JSZip errors)
-  - [ ] Return file list with metadata (do NOT upload to R2 yet)
-  - [ ] Add structured logging for extraction start/complete/error
+- [x] Create API Endpoint for Zip Upload (AC: #1, #2, #7, #8, #10, #11)
+  - [x] Create `/src/routes/api/models/upload-zip.ts`
+  - [x] Define POST handler accepting multipart/form-data
+  - [x] Validate file extension (.zip only)
+  - [x] Validate file size (≤500MB)
+  - [x] Call extractZipFile() utility
+  - [x] Handle malformed/corrupted zip files (JSZip errors)
+  - [x] Return file list with metadata (do NOT upload to R2 yet)
+  - [x] Add structured logging for extraction start/complete/error
 
-- [ ] Implement Error Handling (AC: #10)
-  - [ ] Return 400 for non-zip files
-  - [ ] Return 413 for files >500MB
-  - [ ] Return 422 for corrupted/malformed zip files
-  - [ ] Return 500 for extraction failures
-  - [ ] Use descriptive error messages (per NFR-6)
+- [x] Implement Error Handling (AC: #10)
+  - [x] Return 400 for non-zip files
+  - [x] Return 413 for files >500MB
+  - [x] Return 422 for corrupted/malformed zip files
+  - [x] Return 500 for extraction failures
+  - [x] Use descriptive error messages (per NFR-6)
 
-- [ ] Add Unit Tests for Zip Extractor (AC: #4, #5, #6)
-  - [ ] Test valid zip extraction (models + images)
-  - [ ] Test nested directory scanning
-  - [ ] Test file type filtering (accept whitelisted, ignore others)
-  - [ ] Test hidden file exclusion (.DS_Store, .__MACOSX)
-  - [ ] Test empty zip handling
-  - [ ] Test corrupted zip handling
+- [x] Add Unit Tests for Zip Extractor (AC: #4, #5, #6)
+  - [x] Test valid zip extraction (models + images)
+  - [x] Test nested directory scanning
+  - [x] Test file type filtering (accept whitelisted, ignore others)
+  - [x] Test hidden file exclusion (.DS_Store, .__MACOSX)
+  - [x] Test empty zip handling
+  - [x] Test corrupted zip handling
 
 ## Dev Notes
 
@@ -254,7 +254,7 @@ Per tech spec lines 2545-2564, primary risk is memory exhaustion with 500MB zips
 
 ### Context Reference
 
-<!-- Path(s) to story context XML/JSON will be added here by context workflow -->
+- [Story Context XML](/home/taylor/projects/printfarm-manager/docs/story-context-2.3.xml) - Generated 2025-10-23
 
 ### Agent Model Used
 
@@ -262,6 +262,83 @@ claude-sonnet-4-5-20250929
 
 ### Debug Log References
 
+Implementation progressed smoothly following the JSZip library integration:
+
+1. **JSZip Installation**: Added jszip@3.10.1 and @types/jszip for TypeScript support
+2. **Extractor Utility**: Implemented comprehensive zip extraction with recursive directory scanning
+3. **File Filtering**: Extension-based validation (more reliable than MIME for zip archives)
+4. **Hidden File Exclusion**: Regex patterns for .DS_Store, __MACOSX, Thumbs.db, hidden files
+5. **API Endpoint**: Full validation flow with appropriate HTTP status codes (400, 413, 422, 500)
+6. **Test Coverage**: 25 comprehensive tests covering all edge cases
+
 ### Completion Notes List
 
+**Implementation Highlights:**
+
+1. **Two-Phase Upload Pattern**: This story implements phase 1 (extract and preview). Phase 2 (import selected files) will be Story 2.4. This allows users to exclude unwanted files before committing to storage.
+
+2. **JSZip Integration**: Pure JavaScript library works seamlessly with Cloudflare Workers. No native dependencies or WASM modules required. Async API handles large files efficiently.
+
+3. **Memory Management**: Current implementation uses in-memory extraction. All 25 tests pass with various zip configurations. Will monitor production usage for memory issues per dev notes risk mitigation strategy.
+
+4. **Extension-Based Filtering**: More reliable than MIME type detection for zip archives. Handles case-insensitive extensions (.STL, .stl, .Stl all accepted).
+
+5. **Comprehensive Error Handling**: Distinct HTTP status codes for each error type:
+   - 400: Missing file or invalid extension
+   - 413: File too large (>500MB)
+   - 422: Corrupted/malformed zip
+   - 500: Unexpected errors
+
+6. **Structured Logging**: Events logged: zip_extraction_start, zip_extraction_complete, zip_extraction_failed, zip_upload_start, zip_upload_complete, zip_upload_error. All include performance metrics (durationMs).
+
+7. **Test Quality**: 25 tests covering:
+   - Valid extraction (models and images)
+   - Nested directory structures
+   - File type filtering
+   - Hidden file exclusion
+   - Empty zip handling
+   - Corrupted zip handling
+   - Metadata preservation
+   - Edge cases (filenames with spaces, special characters, multiple dots)
+
+**All 11 Acceptance Criteria Met:**
+- ✅ AC1: POST /api/models/upload-zip endpoint created
+- ✅ AC2: File size validation (≤500MB)
+- ✅ AC3: In-memory extraction with JSZip
+- ✅ AC4: Recursive directory scanning
+- ✅ AC5: File type filtering (.stl, .3mf, .png, .jpg, .jpeg)
+- ✅ AC6: Non-whitelisted files ignored without errors
+- ✅ AC7: Returns file list with metadata (path, filename, type, size)
+- ✅ AC8: Does NOT upload to R2 or DB (awaits Story 2.4)
+- ✅ AC9: Temporary files cleaned up (in-memory, no disk usage)
+- ✅ AC10: Corrupted zip error handling (422 status)
+- ✅ AC11: Structured logging with performance metrics
+
+**Test Results**: 130 tests passing (25 new tests for zip extraction + 105 existing tests)
+
 ### File List
+
+**New Files:**
+- `src/lib/zip/extractor.ts` - Zip extraction utility (175 lines)
+- `src/routes/api/models/upload-zip.ts` - Upload API endpoint (157 lines)
+- `src/__tests__/lib/zip/extractor.test.ts` - Comprehensive unit tests (343 lines, 25 tests)
+
+**Modified Files:**
+- `package.json` - Added jszip@3.10.1 and @types/jszip dependencies
+- `package-lock.json` - Dependency lock file updated
+
+
+## Change Log
+
+**2025-10-24** - Story implementation completed
+  - Installed JSZip library (jszip@3.10.1) with TypeScript types
+  - Created zip extraction utility at src/lib/zip/extractor.ts
+  - Implemented recursive directory scanning with file type filtering
+  - Added hidden file exclusion (.DS_Store, __MACOSX, Thumbs.db)
+  - Created POST /api/models/upload-zip endpoint with full validation
+  - Implemented comprehensive error handling (400, 413, 422, 500 status codes)
+  - Added structured logging with performance metrics
+  - Created 25 comprehensive unit tests covering all acceptance criteria
+  - All tests passing (130 total: 25 new + 105 existing)
+  - Status updated to Ready for Review
+

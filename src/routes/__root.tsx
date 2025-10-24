@@ -96,6 +96,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             Admin Storage
           </Link>
           <Link
+            to="/test/upload-zip"
+            activeProps={{ className: "font-bold" }}
+          >
+            Test Zip Upload
+          </Link>
+          <Link
             to="/route-a"
             activeProps={{
               className: "font-bold",
