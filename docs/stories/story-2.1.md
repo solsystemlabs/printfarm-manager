@@ -232,8 +232,9 @@ Implemented `onDelete: SetNull` instead of `RESTRICT` to match brainstorming dec
 - Cloudflare Workers use `prisma/generated/cloudflare/client.ts` (WASM engine, Workers compatible)
 - Vitest config uses path aliases to transparently swap cloudflare → local generator during tests
 - Build process generates both clients automatically via `prisma generate` in package.json scripts
-- All 81 tests passing, including 23 database tests
+- All 81 tests passing locally, including 23 database tests
 - Production builds successfully bundle WASM client for Cloudflare deployment
+- CI workflow configured with PostgreSQL service, automatic migrations, and Prisma client generation
 
 ### File List
 
@@ -255,14 +256,16 @@ Implemented `onDelete: SetNull` instead of `RESTRICT` to match brainstorming dec
 - `/src/lib/storage/__tests__/usage.test.ts` - Updated type import to use local generator (2025-10-23)
 - `/vitest.config.ts` - Added path aliases to swap cloudflare → local generator in tests (2025-10-23)
 - `/vite.config.ts` - Added WASM asset support for Cloudflare builds (2025-10-23)
-- `/package.json` - Updated test and build scripts to run `prisma generate` (2025-10-23)
+- `/package.json` - Updated test and build scripts to run `prisma generate`; added engines field requiring Node.js >=22.12.0 (2025-10-23)
 - `/eslint.config.js` - Added `prisma/generated/**` to ignores to exclude auto-generated client files from linting (2025-10-23)
+- `/.github/workflows/ci.yml` - Added PostgreSQL service, DATABASE_URL, migration steps, updated Node.js to v22, added GitGuardian suppressions (2025-10-23)
+- `/.nvmrc` - Created to specify Node.js 22 for consistent development environment (2025-10-23)
 
 ### Change Log
 
 - 2025-10-19: Implemented complete database schema with all entities, relationships, indexes, and constraints. Created migrations and comprehensive test suite. All acceptance criteria met.
 - 2025-10-23: Senior Developer Review notes appended - identified critical adapter initialization issue blocking Cloudflare Workers deployment
-- 2025-10-23: Implemented dual Prisma generator solution - added separate generators for Cloudflare Workers (WASM) and local dev/tests (binary). Updated adapter initialization in `src/lib/db/client.ts`. Fixed raw query type casting. Configured Vite/Vitest for proper WASM handling and generator aliasing. All 81 tests passing, build successful with WASM bundling.
+- 2025-10-23: Implemented dual Prisma generator solution - added separate generators for Cloudflare Workers (WASM) and local dev/tests (binary). Updated adapter initialization in `src/lib/db/client.ts`. Fixed raw query type casting. Configured Vite/Vitest for proper WASM handling and generator aliasing. Configured CI with PostgreSQL service and migrations. All 81 tests passing, build successful with WASM bundling.
 
 ---
 
