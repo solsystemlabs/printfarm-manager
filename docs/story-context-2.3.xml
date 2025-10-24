@@ -1,0 +1,263 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.3</storyId>
+    <title>Implement Zip File Upload with Extraction</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-23</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-2.3.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an owner</asA>
+    <iWant>to upload zip files containing multiple models and images</iWant>
+    <soThat>I can bulk-import entire model collections efficiently</soThat>
+    <tasks>
+      <task id="1">
+        <title>Install and Configure JSZip Library</title>
+        <ac>3</ac>
+        <subtasks>
+          <subtask>Add JSZip dependency: npm install jszip @types/jszip</subtask>
+          <subtask>Verify JSZip compatibility with Cloudflare Workers runtime</subtask>
+          <subtask>Review JSZip async API for streaming extraction</subtask>
+        </subtasks>
+      </task>
+      <task id="2">
+        <title>Create Zip Extractor Utility</title>
+        <ac>3, 4, 5, 6, 9</ac>
+        <subtasks>
+          <subtask>Create /src/lib/zip/extractor.ts</subtask>
+          <subtask>Implement extractZipFile(zipBlob: Blob) function</subtask>
+          <subtask>Recursively scan all directories (handle nested folder structures)</subtask>
+          <subtask>Filter files by extension whitelist: ['.stl', '.3mf', '.png', '.jpg', '.jpeg']</subtask>
+          <subtask>Skip hidden files (.DS_Store, .__MACOSX) and system directories</subtask>
+          <subtask>Return ExtractedFile[] with path, filename, type, size, content</subtask>
+          <subtask>Add performance logging (extraction duration, file counts)</subtask>
+        </subtasks>
+      </task>
+      <task id="3">
+        <title>Create API Endpoint for Zip Upload</title>
+        <ac>1, 2, 7, 8, 10, 11</ac>
+        <subtasks>
+          <subtask>Create /src/routes/api/models/upload-zip.ts</subtask>
+          <subtask>Define POST handler accepting multipart/form-data</subtask>
+          <subtask>Validate file extension (.zip only)</subtask>
+          <subtask>Validate file size (≤500MB)</subtask>
+          <subtask>Call extractZipFile() utility</subtask>
+          <subtask>Handle malformed/corrupted zip files (JSZip errors)</subtask>
+          <subtask>Return file list with metadata (do NOT upload to R2 yet)</subtask>
+          <subtask>Add structured logging for extraction start/complete/error</subtask>
+        </subtasks>
+      </task>
+      <task id="4">
+        <title>Implement Error Handling</title>
+        <ac>10</ac>
+        <subtasks>
+          <subtask>Return 400 for non-zip files</subtask>
+          <subtask>Return 413 for files >500MB</subtask>
+          <subtask>Return 422 for corrupted/malformed zip files</subtask>
+          <subtask>Return 500 for extraction failures</subtask>
+          <subtask>Use descriptive error messages (per NFR-6)</subtask>
+        </subtasks>
+      </task>
+      <task id="5">
+        <title>Add Unit Tests for Zip Extractor</title>
+        <ac>4, 5, 6</ac>
+        <subtasks>
+          <subtask>Test valid zip extraction (models + images)</subtask>
+          <subtask>Test nested directory scanning</subtask>
+          <subtask>Test file type filtering (accept whitelisted, ignore others)</subtask>
+          <subtask>Test hidden file exclusion (.DS_Store, .__MACOSX)</subtask>
+          <subtask>Test empty zip handling</subtask>
+          <subtask>Test corrupted zip handling</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">API endpoint /api/models/upload-zip accepts zip file uploads</criterion>
+    <criterion id="2">Validates zip file size (≤500MB per NFR-2)</criterion>
+    <criterion id="3">Extracts zip contents in-memory (server-side processing)</criterion>
+    <criterion id="4">Recursively scans all directories within zip (supports nested folders per FR-1)</criterion>
+    <criterion id="5">Identifies valid files: .stl, .3mf (models), .png, .jpg, .jpeg (images)</criterion>
+    <criterion id="6">Ignores non-whitelisted files without errors</criterion>
+    <criterion id="7">Returns list of discovered files with preview data (filename, size, type)</criterion>
+    <criterion id="8">Does NOT upload to R2 or DB yet (awaits user selection in Story 2.4)</criterion>
+    <criterion id="9">Temporary extraction files cleaned up after response sent</criterion>
+    <criterion id="10">Handles malformed/corrupted zip files with descriptive error messages</criterion>
+    <criterion id="11">Logs extraction operation per NFR-9 (filename, size, files found, duration)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/tech-spec-epic-2.md</path>
+        <title>Tech Spec Epic 2 - Story 2.3 Implementation</title>
+        <section>Story 2.3: Implement Zip File Upload with Extraction</section>
+        <snippet>Lines 490-696: Complete implementation specification with JSZip library integration, extractor utility code, API endpoint handler, file filtering logic (MODEL_EXTENSIONS: .stl, .3mf; IMAGE_EXTENSIONS: .png, .jpg, .jpeg), hidden file exclusion, and performance logging</snippet>
+      </doc>
+      <doc>
+        <path>docs/solution-architecture.md</path>
+        <title>Solution Architecture - Technology Stack</title>
+        <section>Technology Decisions</section>
+        <snippet>Lines 824-853: JSZip library selected for zip processing (pure JavaScript, Cloudflare Workers compatible, no native dependencies, async API for streaming). Version ^3.10.1</snippet>
+      </doc>
+      <doc>
+        <path>docs/stories/story-2.2.md</path>
+        <title>Story 2.2 Completion Notes - Storage Infrastructure</title>
+        <section>Dev Agent Record - Completion Notes</section>
+        <snippet>Lines 210-271: Storage client abstraction pattern (uploadFile(), getPublicUrl() methods), atomic operations pattern (upload → DB → cleanup on failure), structured logging events, per-request Prisma client usage with getPrismaClient() factory, environment-aware configuration</snippet>
+      </doc>
+      <doc>
+        <path>docs/LOGGING.md</path>
+        <title>Logging Standards and Error Handling</title>
+        <section>Logger Utilities and Error Response</section>
+        <snippet>Lines 1-273: Structured JSON logging format with log(), logError(), logPerformance() utilities. Error response utility createErrorResponse() for sanitized API errors. Never expose stack traces to clients (NFR-6). Common event types for upload operations</snippet>
+      </doc>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>Product Requirements Document - Functional and Non-Functional Requirements</title>
+        <section>Requirements Reference</section>
+        <snippet>FR-1 (Model File Upload), FR-13 (File Validation), NFR-2 (File Size Constraints: 500MB max), NFR-4 (Data Integrity), NFR-6 (Error Handling), NFR-9 (Observability)</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/lib/storage/types.ts</path>
+        <kind>interface</kind>
+        <symbol>StorageClient</symbol>
+        <lines>7-33</lines>
+        <reason>Existing storage abstraction that Story 2.3 should NOT use directly. Zip extraction returns file Blobs without uploading to storage (per AC #8). Upload happens in Story 2.4</reason>
+      </artifact>
+      <artifact>
+        <path>src/lib/utils/logger.ts</path>
+        <kind>utility</kind>
+        <symbol>log, logError, logPerformance</symbol>
+        <lines>1-128</lines>
+        <reason>Structured logging utilities for zip extraction events. Use log() for zip_extraction_start/complete, logError() for extraction failures, logPerformance() for duration tracking</reason>
+      </artifact>
+      <artifact>
+        <path>src/lib/utils/errors.ts</path>
+        <kind>utility</kind>
+        <symbol>createErrorResponse</symbol>
+        <lines>1-80</lines>
+        <reason>Error response utility for API endpoints. Returns sanitized error responses with HTTP status codes (400, 413, 422, 500). Never exposes stack traces to clients (NFR-6)</reason>
+      </artifact>
+      <artifact>
+        <path>src/routes/api/models/upload.ts</path>
+        <kind>api-endpoint</kind>
+        <symbol>Route (POST handler)</symbol>
+        <lines>1-100</lines>
+        <reason>Story 2.2 model upload endpoint demonstrating file validation pattern, error handling, atomic operations, and structured logging. Use similar patterns for zip upload endpoint</reason>
+      </artifact>
+      <artifact>
+        <path>src/lib/db/client.ts</path>
+        <kind>database</kind>
+        <symbol>getPrismaClient</symbol>
+        <lines>unknown</lines>
+        <reason>Per-request Prisma client factory with WASM generator for Cloudflare Workers. Story 2.3 does NOT create database records (AC #8), but Story 2.4 will need this</reason>
+      </artifact>
+      <artifact>
+        <path>prisma/schema.prisma</path>
+        <kind>schema</kind>
+        <symbol>Model entity</symbol>
+        <lines>28-46</lines>
+        <reason>Model entity schema for reference. Story 2.3 does not create records (deferred to Story 2.4), but extractor should prepare data compatible with this schema</reason>
+      </artifact>
+    </code>
+    <dependencies>{{dependencies_artifacts}}</dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint id="1">
+      <title>Two-Phase Upload Pattern</title>
+      <description>Story 2.3 extracts and returns file list WITHOUT uploading to R2 or creating DB records (AC #8). User selects files in UI, then Story 2.4 uploads selected files. This prevents cluttering storage with unwanted files from zip archives</description>
+    </constraint>
+    <constraint id="2">
+      <title>Memory Management</title>
+      <description>500MB zip files may exceed Cloudflare Workers memory limits. Primary strategy: JSZip in-memory extraction. Fallback: If memory issues occur, reduce max size to 250MB or implement chunked extraction (per tech spec lines 2545-2564)</description>
+    </constraint>
+    <constraint id="3">
+      <title>Extension-Based File Type Detection</title>
+      <description>Validation is extension-based, not MIME-based. Whitelist: .stl, .3mf (models), .png, .jpg, .jpeg (images). Unknown files silently ignored without errors. Zip archives lose content-type metadata, making extension validation more reliable</description>
+    </constraint>
+    <constraint id="4">
+      <title>Atomic Operations Pattern</title>
+      <description>From Story 2.2: Upload to storage first, create DB record second, cleanup storage on DB failure. Story 2.3 skips storage/DB operations, but Story 2.4 must follow this pattern when importing selected files</description>
+    </constraint>
+    <constraint id="5">
+      <title>Structured Logging Requirements</title>
+      <description>All operations logged with structured JSON events (NFR-9). Required events: zip_extraction_start (filename, size), zip_extraction_complete (duration_ms, files_found, models/images counts), zip_extraction_failed (error, duration_ms)</description>
+    </constraint>
+    <constraint id="6">
+      <title>Error Response Standards</title>
+      <description>Use createErrorResponse() utility. HTTP codes: 400 (non-zip file), 413 (file >500MB), 422 (corrupted zip), 500 (extraction failure). Never expose stack traces (NFR-6). Return descriptive error messages</description>
+    </constraint>
+    <constraint id="7">
+      <title>TanStack Start API Route Pattern</title>
+      <description>Use createFileRoute() with server.handlers.POST. Access form data via request.formData(). Return JSON responses via json() helper from @tanstack/react-start</description>
+    </constraint>
+    <constraint id="8">
+      <title>Testing Strategy</title>
+      <description>From Story 2.2: Create unit tests for extraction logic (file filtering, nested directories, hidden file exclusion, corrupted zip handling). E2E tests deferred due to TanStack Router complexity</description>
+    </constraint>
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>ExtractedFile</name>
+      <kind>TypeScript interface</kind>
+      <signature>
+        interface ExtractedFile {
+          path: string        // 'models/whale/baby-whale.stl'
+          filename: string    // 'baby-whale.stl'
+          type: 'model' | 'image' | 'unknown'
+          size: number        // bytes
+          content: Blob       // File content (NOT serializable in JSON)
+        }
+      </signature>
+      <path>src/lib/zip/extractor.ts (to be created)</path>
+      <description>Return type for extractZipFile() function. Blobs cannot be serialized in JSON responses. MVP approach: Client re-uploads zip with selected file paths, server re-extracts selected files (Story 2.4)</description>
+    </interface>
+    <interface>
+      <name>createErrorResponse</name>
+      <kind>Utility function</kind>
+      <signature>
+        function createErrorResponse(
+          code: string,
+          message: string,
+          statusCode: number,
+          options?: { field?: string; details?: Record&lt;string, unknown&gt;; originalError?: Error }
+        ): Response
+      </signature>
+      <path>src/lib/utils/errors.ts</path>
+      <description>Error response utility for sanitized API errors. Logs full error details (including stack) to console only. Returns clean error to clients without stack traces</description>
+    </interface>
+    <interface>
+      <name>log, logError, logPerformance</name>
+      <kind>Logging utilities</kind>
+      <signature>
+        function log(event: string, data?: Record&lt;string, unknown&gt;): void
+        function logError(event: string, error: Error | string, data?: Record&lt;string, unknown&gt;): void
+        function logPerformance(event: string, durationMs: number, data?: Record&lt;string, unknown&gt;): void
+      </signature>
+      <path>src/lib/utils/logger.ts</path>
+      <description>Structured JSON logging for all operations. Use log() for informational events, logError() for errors, logPerformance() for duration tracking</description>
+    </interface>
+    <interface>
+      <name>JSZip.loadAsync</name>
+      <kind>External library method</kind>
+      <signature>
+        JSZip.loadAsync(blob: Blob): Promise&lt;JSZip&gt;
+      </signature>
+      <path>jszip npm package</path>
+      <description>JSZip async API for loading zip archives. Returns JSZip instance with files property containing all entries. Use zipEntry.async('blob') to extract file content</description>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>{{test_standards}}</standards>
+    <locations>{{test_locations}}</locations>
+    <ideas>{{test_ideas}}</ideas>
+  </tests>
+</story-context>

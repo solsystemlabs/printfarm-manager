@@ -92,6 +92,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           >
             Home
           </Link>{" "}
+          <Link to="/admin/storage" activeProps={{ className: "font-bold" }}>
+            Admin Storage
+          </Link>
           <Link
             to="/route-a"
             activeProps={{
