@@ -256,6 +256,7 @@ Implemented `onDelete: SetNull` instead of `RESTRICT` to match brainstorming dec
 - `/vitest.config.ts` - Added path aliases to swap cloudflare → local generator in tests (2025-10-23)
 - `/vite.config.ts` - Added WASM asset support for Cloudflare builds (2025-10-23)
 - `/package.json` - Updated test and build scripts to run `prisma generate` (2025-10-23)
+- `/eslint.config.js` - Added `prisma/generated/**` to ignores to exclude auto-generated client files from linting (2025-10-23)
 
 ### Change Log
 

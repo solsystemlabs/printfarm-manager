@@ -13,6 +13,7 @@ export default tseslint.config(
       'routeTree.gen.ts',
       'BMAD-METHOD/**',
       'bmad/**',
+      'prisma/generated/**', // Ignore auto-generated Prisma client files
     ],
   },
   js.configs.recommended,
