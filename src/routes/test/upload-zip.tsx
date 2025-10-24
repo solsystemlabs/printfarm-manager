@@ -93,7 +93,9 @@ function ZipUploadTester() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Zip Upload Endpoint Tester</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Zip Upload Endpoint Tester
+        </h1>
         <p className="text-gray-700">
           Test the /api/models/upload-zip endpoint by uploading a zip file and
           viewing the extracted file metadata.
@@ -102,7 +104,9 @@ function ZipUploadTester() {
 
       {/* Upload Form */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6 border border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Upload Zip File</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          Upload Zip File
+        </h2>
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-900 mb-2">
@@ -122,22 +126,24 @@ function ZipUploadTester() {
             <h3 className="font-semibold text-gray-900 mb-2">Selected File:</h3>
             <div className="text-sm text-gray-800 space-y-1">
               <p>
-                <span className="font-medium text-gray-900">Name:</span> {selectedFile.name}
+                <span className="font-medium text-gray-900">Name:</span>{" "}
+                {selectedFile.name}
               </p>
               <p>
                 <span className="font-medium text-gray-900">Size:</span>{" "}
                 {formatBytes(selectedFile.size)}
               </p>
               <p>
-                <span className="font-medium text-gray-900">Type:</span> {selectedFile.type}
+                <span className="font-medium text-gray-900">Type:</span>{" "}
+                {selectedFile.type}
               </p>
             </div>
 
             {/* Validation Warnings */}
             {isFileTooLarge && (
               <div className="mt-3 p-3 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
-                ⚠️ File exceeds maximum size of{" "}
-                {formatBytes(MAX_FILE_SIZE)} (will be rejected)
+                ⚠️ File exceeds maximum size of {formatBytes(MAX_FILE_SIZE)}{" "}
+                (will be rejected)
               </div>
             )}
             {isInvalidExtension && (
@@ -168,7 +174,9 @@ function ZipUploadTester() {
       {/* Results Display */}
       {result && (
         <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Extraction Results</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Extraction Results
+          </h2>
 
           {/* Summary Statistics */}
           <div className="grid grid-cols-3 gap-4 mb-6">
@@ -176,26 +184,34 @@ function ZipUploadTester() {
               <div className="text-3xl font-bold text-blue-700">
                 {result.totalFiles}
               </div>
-              <div className="text-sm text-gray-800 mt-1 font-medium">Total Files</div>
+              <div className="text-sm text-gray-800 mt-1 font-medium">
+                Total Files
+              </div>
             </div>
             <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200">
               <div className="text-3xl font-bold text-green-700">
                 {result.models}
               </div>
-              <div className="text-sm text-gray-800 mt-1 font-medium">Models</div>
+              <div className="text-sm text-gray-800 mt-1 font-medium">
+                Models
+              </div>
             </div>
             <div className="bg-purple-50 rounded-lg p-4 text-center border border-purple-200">
               <div className="text-3xl font-bold text-purple-700">
                 {result.images}
               </div>
-              <div className="text-sm text-gray-800 mt-1 font-medium">Images</div>
+              <div className="text-sm text-gray-800 mt-1 font-medium">
+                Images
+              </div>
             </div>
           </div>
 
           {/* File List */}
           {result.files.length > 0 ? (
             <div>
-              <h3 className="font-semibold text-gray-900 mb-3">Extracted Files:</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">
+                Extracted Files:
+              </h3>
               <div className="overflow-x-auto border border-gray-200 rounded-lg">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-100 border-b border-gray-200">
@@ -223,7 +239,9 @@ function ZipUploadTester() {
                         <td className="py-3 px-4 text-gray-700 font-mono text-xs">
                           {file.path}
                         </td>
-                        <td className="py-3 px-4 text-gray-900">{file.filename}</td>
+                        <td className="py-3 px-4 text-gray-900">
+                          {file.filename}
+                        </td>
                         <td className="py-3 px-4">
                           <span
                             className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
@@ -257,7 +275,9 @@ function ZipUploadTester() {
 
       {/* API Information */}
       <div className="mt-6 bg-gray-50 rounded-lg p-4 text-sm border border-gray-200">
-        <h3 className="font-semibold text-gray-900 mb-2">API Endpoint Information</h3>
+        <h3 className="font-semibold text-gray-900 mb-2">
+          API Endpoint Information
+        </h3>
         <ul className="space-y-1 text-gray-800">
           <li>
             <span className="font-medium text-gray-900">Endpoint:</span> POST
@@ -268,16 +288,21 @@ function ZipUploadTester() {
             {formatBytes(MAX_FILE_SIZE)}
           </li>
           <li>
-            <span className="font-medium text-gray-900">Allowed Extensions:</span> .zip only
+            <span className="font-medium text-gray-900">
+              Allowed Extensions:
+            </span>{" "}
+            .zip only
           </li>
           <li>
-            <span className="font-medium text-gray-900">Supported File Types:</span> .stl,
-            .3mf (models), .png, .jpg, .jpeg (images)
+            <span className="font-medium text-gray-900">
+              Supported File Types:
+            </span>{" "}
+            .stl, .3mf (models), .png, .jpg, .jpeg (images)
           </li>
           <li>
-            <span className="font-medium text-gray-900">Note:</span> This endpoint only
-            extracts and returns file metadata. It does NOT upload files to R2
-            or create database records.
+            <span className="font-medium text-gray-900">Note:</span> This
+            endpoint only extracts and returns file metadata. It does NOT upload
+            files to R2 or create database records.
           </li>
         </ul>
       </div>

@@ -377,4 +377,83 @@ describe("Zip Extractor", () => {
       expect(result.images).toBe(0);
     });
   });
+
+  describe("Security - Path Traversal Protection", () => {
+    it("should handle path traversal attempts in zip entries", async () => {
+      // Create a zip with malicious path traversal attempts
+      // JSZip normalizes paths automatically, so we test that normalized paths are used
+      const zipBlob = await createTestZip([
+        { path: "../../etc/passwd.stl", content: "Malicious STL" },
+        {
+          path: "../../../root/.ssh/id_rsa.stl",
+          content: "Another malicious STL",
+        },
+        { path: "normal/model.stl", content: "Normal STL" },
+      ]);
+
+      const result = await extractZipFile(zipBlob);
+
+      // All files should be extracted (JSZip normalizes the paths)
+      expect(result.totalFiles).toBe(3);
+      expect(result.models).toBe(3);
+
+      // Verify that paths are safe (JSZip removes leading ../)
+      // JSZip normalizes "../.." to just the filename
+      const paths = result.files.map((f) => f.path);
+
+      // Paths should not contain ".."
+      for (const path of paths) {
+        expect(path).not.toContain("..");
+      }
+
+      // Normalized paths should be returned
+      // JSZip removes dangerous path components
+      expect(paths).toContain("etc/passwd.stl");
+      expect(paths).toContain("root/.ssh/id_rsa.stl");
+      expect(paths).toContain("normal/model.stl");
+    });
+
+    it("should handle absolute paths in zip entries", async () => {
+      // Test that absolute paths are handled
+      // Note: JSZip preserves absolute paths as-is, but they're still contained
+      // within the extraction context and can't escape to the filesystem
+      const zipBlob = await createTestZip([
+        { path: "/absolute/path/model.stl", content: "STL with absolute path" },
+        { path: "/etc/passwd.stl", content: "Another absolute path" },
+      ]);
+
+      const result = await extractZipFile(zipBlob);
+
+      // Files should be extracted
+      expect(result.totalFiles).toBe(2);
+      expect(result.models).toBe(2);
+
+      // Verify files are present (JSZip preserves the paths as-is)
+      const paths = result.files.map((f) => f.path);
+      expect(paths).toContain("/absolute/path/model.stl");
+      expect(paths).toContain("/etc/passwd.stl");
+
+      // The key security point: these paths are contained within in-memory extraction
+      // and are never written to filesystem, so absolute paths don't pose a risk
+    });
+
+    it("should handle complex path traversal patterns", async () => {
+      // Test various path traversal patterns
+      const zipBlob = await createTestZip([
+        { path: "foo/../../bar/model.stl", content: "Complex pattern 1" },
+        { path: "./hidden/./../file.stl", content: "Complex pattern 2" },
+        { path: "a/b/c/../../../d/model.stl", content: "Complex pattern 3" },
+      ]);
+
+      const result = await extractZipFile(zipBlob);
+
+      // All should be extracted with normalized paths
+      expect(result.totalFiles).toBe(3);
+
+      // Verify no ".." remains in paths
+      for (const file of result.files) {
+        expect(file.path).not.toContain("..");
+      }
+    });
+  });
 });

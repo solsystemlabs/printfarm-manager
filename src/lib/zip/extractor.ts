@@ -78,6 +78,34 @@ function isAllowedFile(filename: string): boolean {
 }
 
 /**
+ * Gets current memory usage if available (for monitoring)
+ *
+ * Note: Memory monitoring APIs may not be available in all runtimes.
+ * This function returns undefined if memory monitoring is unavailable.
+ *
+ * @returns Memory usage in bytes, or undefined if unavailable
+ */
+function getMemoryUsage(): number | undefined {
+  // Check for performance.memory API (Chrome DevTools, some runtimes)
+  if (typeof performance !== "undefined" && "memory" in performance) {
+    const memory = performance.memory as { usedJSHeapSize?: number };
+    return memory.usedJSHeapSize;
+  }
+
+  // Check for process.memoryUsage (Node.js)
+  if (typeof process !== "undefined" && "memoryUsage" in process) {
+    try {
+      return process.memoryUsage().heapUsed;
+    } catch {
+      // process.memoryUsage may not be available in all environments
+      return undefined;
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Extracts a zip file and returns all valid files with metadata
  *
  * This function:
@@ -97,14 +125,17 @@ export async function extractZipFile(
   const startTime = Date.now();
 
   const size = zipData instanceof Blob ? zipData.size : zipData.byteLength;
+  const memoryBefore = getMemoryUsage();
 
   log("zip_extraction_start", {
     size,
+    memoryUsedBytes: memoryBefore,
   });
 
   try {
     // Load zip file using JSZip (Uint8Array is universally supported)
-    const zip = await JSZip.loadAsync(zipData);
+    // Enable CRC32 validation for enhanced corruption detection
+    const zip = await JSZip.loadAsync(zipData, { checkCRC32: true });
 
     const extractedFiles: ExtractedFile[] = [];
     let modelCount = 0;
@@ -161,10 +192,18 @@ export async function extractZipFile(
     };
 
     // Log successful extraction with performance metrics
+    const memoryAfter = getMemoryUsage();
+    const memoryDelta =
+      memoryBefore !== undefined && memoryAfter !== undefined
+        ? memoryAfter - memoryBefore
+        : undefined;
+
     logPerformance("zip_extraction_complete", Date.now() - startTime, {
       filesFound: result.totalFiles,
       models: result.models,
       images: result.images,
+      memoryUsedBytes: memoryAfter,
+      memoryDeltaBytes: memoryDelta,
     });
 
     return result;

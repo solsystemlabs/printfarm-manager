@@ -4,9 +4,7 @@ import { extractZipFile } from "~/lib/zip/extractor";
 import { convertFileForZip } from "~/lib/zip/file-converter";
 import { createErrorResponse } from "~/lib/utils/errors";
 import { log, logPerformance } from "~/lib/utils/logger";
-
-// File upload validation constants (per FR-1, NFR-2)
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB in bytes
+import { validateZipFile } from "~/lib/validation/zip-validators";
 
 /**
  * Zip file upload and extraction API endpoint
@@ -35,79 +33,48 @@ export const Route = createFileRoute("/api/models/upload-zip")({
           const formData = await request.formData();
           const file = formData.get("file") as File | null;
 
-          // Validation: Missing file
-          if (!file) {
+          // Validate zip file (presence, extension, size)
+          const validationResult = validateZipFile(file);
+          if (!validationResult.valid) {
+            const { error } = validationResult;
+
+            // Map error codes to HTTP status codes
+            const statusCode = error.code === "FILE_TOO_LARGE" ? 413 : 400;
+
+            // Log validation error
             log("zip_upload_error", {
-              error: "missing_file",
+              error: error.code.toLowerCase(),
+              filename: file?.name,
               durationMs: Date.now() - startTime,
+              ...error.details,
             });
-            return createErrorResponse(
-              "MISSING_FILE",
-              "No file provided in request",
-              400,
-            );
+
+            return createErrorResponse(error.code, error.message, statusCode, {
+              field: error.field,
+              details: error.details,
+            });
           }
+
+          // TypeScript now knows file is not null
+          const validFile = file as File;
 
           // Log upload start
           log("zip_upload_start", {
-            filename: file.name,
-            size: file.size,
+            filename: validFile.name,
+            size: validFile.size,
           });
-
-          // Validation: File extension (must be .zip)
-          const extension = file.name.substring(file.name.lastIndexOf("."));
-          if (extension.toLowerCase() !== ".zip") {
-            log("zip_upload_error", {
-              error: "invalid_file_type",
-              filename: file.name,
-              extension,
-              durationMs: Date.now() - startTime,
-            });
-            return createErrorResponse(
-              "INVALID_FILE_TYPE",
-              "File type not allowed. Only .zip files are accepted",
-              400,
-              {
-                field: "file",
-                details: { extension, allowedExtension: ".zip" },
-              },
-            );
-          }
-
-          // Validation: File size (≤500MB per NFR-2)
-          if (file.size > MAX_FILE_SIZE) {
-            log("zip_upload_error", {
-              error: "file_too_large",
-              filename: file.name,
-              size: file.size,
-              maxSize: MAX_FILE_SIZE,
-              durationMs: Date.now() - startTime,
-            });
-            return createErrorResponse(
-              "FILE_TOO_LARGE",
-              `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
-              413,
-              {
-                field: "file",
-                details: {
-                  fileSize: file.size,
-                  maxSize: MAX_FILE_SIZE,
-                },
-              },
-            );
-          }
 
           // Extract zip contents
           let extractionResult;
           try {
             // Convert File to Uint8Array using universal converter (works in all environments)
-            const zipData = await convertFileForZip(file);
+            const zipData = await convertFileForZip(validFile);
             extractionResult = await extractZipFile(zipData);
           } catch (extractionError) {
             // Handle malformed/corrupted zip files
             log("zip_upload_error", {
               error: "corrupted_zip",
-              filename: file.name,
+              filename: validFile.name,
               extractionError:
                 extractionError instanceof Error
                   ? extractionError.message
@@ -135,7 +102,7 @@ export const Route = createFileRoute("/api/models/upload-zip")({
 
           // Log successful extraction
           logPerformance("zip_upload_complete", Date.now() - startTime, {
-            filename: file.name,
+            filename: validFile.name,
             filesExtracted: extractionResult.totalFiles,
             models: extractionResult.models,
             images: extractionResult.images,
