@@ -99,7 +99,9 @@ export const Route = createFileRoute("/api/models/upload-zip")({
           // Extract zip contents
           let extractionResult;
           try {
-            extractionResult = await extractZipFile(file);
+            // Convert File to ArrayBuffer for JSZip compatibility
+            const arrayBuffer = await file.arrayBuffer();
+            extractionResult = await extractZipFile(arrayBuffer);
           } catch (extractionError) {
             // Handle malformed/corrupted zip files
             log("zip_upload_error", {

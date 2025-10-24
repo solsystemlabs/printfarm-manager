@@ -93,43 +93,43 @@ function ZipUploadTester() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Zip Upload Endpoint Tester</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Zip Upload Endpoint Tester</h1>
+        <p className="text-gray-700">
           Test the /api/models/upload-zip endpoint by uploading a zip file and
           viewing the extracted file metadata.
         </p>
       </div>
 
       {/* Upload Form */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Upload Zip File</h2>
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6 border border-gray-200">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Upload Zip File</h2>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-900 mb-2">
             Select Zip File
           </label>
           <input
             type="file"
             accept=".zip"
             onChange={handleFileChange}
-            className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+            className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none px-3 py-2"
             disabled={uploading}
           />
         </div>
 
         {selectedFile && (
-          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold mb-2">Selected File:</h3>
-            <div className="text-sm space-y-1">
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h3 className="font-semibold text-gray-900 mb-2">Selected File:</h3>
+            <div className="text-sm text-gray-800 space-y-1">
               <p>
-                <span className="font-medium">Name:</span> {selectedFile.name}
+                <span className="font-medium text-gray-900">Name:</span> {selectedFile.name}
               </p>
               <p>
-                <span className="font-medium">Size:</span>{" "}
+                <span className="font-medium text-gray-900">Size:</span>{" "}
                 {formatBytes(selectedFile.size)}
               </p>
               <p>
-                <span className="font-medium">Type:</span> {selectedFile.type}
+                <span className="font-medium text-gray-900">Type:</span> {selectedFile.type}
               </p>
             </div>
 
@@ -167,49 +167,49 @@ function ZipUploadTester() {
 
       {/* Results Display */}
       {result && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Extraction Results</h2>
+        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Extraction Results</h2>
 
           {/* Summary Statistics */}
           <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-blue-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-blue-600">
+            <div className="bg-blue-50 rounded-lg p-4 text-center border border-blue-200">
+              <div className="text-3xl font-bold text-blue-700">
                 {result.totalFiles}
               </div>
-              <div className="text-sm text-gray-600 mt-1">Total Files</div>
+              <div className="text-sm text-gray-800 mt-1 font-medium">Total Files</div>
             </div>
-            <div className="bg-green-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-green-600">
+            <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200">
+              <div className="text-3xl font-bold text-green-700">
                 {result.models}
               </div>
-              <div className="text-sm text-gray-600 mt-1">Models</div>
+              <div className="text-sm text-gray-800 mt-1 font-medium">Models</div>
             </div>
-            <div className="bg-purple-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-purple-600">
+            <div className="bg-purple-50 rounded-lg p-4 text-center border border-purple-200">
+              <div className="text-3xl font-bold text-purple-700">
                 {result.images}
               </div>
-              <div className="text-sm text-gray-600 mt-1">Images</div>
+              <div className="text-sm text-gray-800 mt-1 font-medium">Images</div>
             </div>
           </div>
 
           {/* File List */}
           {result.files.length > 0 ? (
             <div>
-              <h3 className="font-semibold mb-3">Extracted Files:</h3>
-              <div className="overflow-x-auto">
+              <h3 className="font-semibold text-gray-900 mb-3">Extracted Files:</h3>
+              <div className="overflow-x-auto border border-gray-200 rounded-lg">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="bg-gray-100 border-b border-gray-200">
                     <tr>
-                      <th className="text-left py-2 px-3 font-semibold">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900">
                         Path
                       </th>
-                      <th className="text-left py-2 px-3 font-semibold">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900">
                         Filename
                       </th>
-                      <th className="text-left py-2 px-3 font-semibold">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900">
                         Type
                       </th>
-                      <th className="text-right py-2 px-3 font-semibold">
+                      <th className="text-right py-3 px-4 font-semibold text-gray-900">
                         Size
                       </th>
                     </tr>
@@ -218,26 +218,26 @@ function ZipUploadTester() {
                     {result.files.map((file, index) => (
                       <tr
                         key={index}
-                        className="border-b hover:bg-gray-50 transition-colors"
+                        className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
                       >
-                        <td className="py-2 px-3 text-gray-600 font-mono text-xs">
+                        <td className="py-3 px-4 text-gray-700 font-mono text-xs">
                           {file.path}
                         </td>
-                        <td className="py-2 px-3">{file.filename}</td>
-                        <td className="py-2 px-3">
+                        <td className="py-3 px-4 text-gray-900">{file.filename}</td>
+                        <td className="py-3 px-4">
                           <span
-                            className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                            className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
                               file.type === "model"
-                                ? "bg-green-100 text-green-800"
+                                ? "bg-green-200 text-green-900 border border-green-300"
                                 : file.type === "image"
-                                  ? "bg-purple-100 text-purple-800"
-                                  : "bg-gray-100 text-gray-800"
+                                  ? "bg-purple-200 text-purple-900 border border-purple-300"
+                                  : "bg-gray-200 text-gray-900 border border-gray-300"
                             }`}
                           >
                             {file.type}
                           </span>
                         </td>
-                        <td className="py-2 px-3 text-right text-gray-600">
+                        <td className="py-3 px-4 text-right text-gray-800 font-medium">
                           {formatBytes(file.size)}
                         </td>
                       </tr>
@@ -247,7 +247,7 @@ function ZipUploadTester() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-700 font-medium">
               No files found in the zip archive (or all files were filtered
               out).
             </div>
@@ -256,26 +256,26 @@ function ZipUploadTester() {
       )}
 
       {/* API Information */}
-      <div className="mt-6 bg-gray-50 rounded-lg p-4 text-sm">
-        <h3 className="font-semibold mb-2">API Endpoint Information</h3>
-        <ul className="space-y-1 text-gray-600">
+      <div className="mt-6 bg-gray-50 rounded-lg p-4 text-sm border border-gray-200">
+        <h3 className="font-semibold text-gray-900 mb-2">API Endpoint Information</h3>
+        <ul className="space-y-1 text-gray-800">
           <li>
-            <span className="font-medium">Endpoint:</span> POST
+            <span className="font-medium text-gray-900">Endpoint:</span> POST
             /api/models/upload-zip
           </li>
           <li>
-            <span className="font-medium">Max Size:</span>{" "}
+            <span className="font-medium text-gray-900">Max Size:</span>{" "}
             {formatBytes(MAX_FILE_SIZE)}
           </li>
           <li>
-            <span className="font-medium">Allowed Extensions:</span> .zip only
+            <span className="font-medium text-gray-900">Allowed Extensions:</span> .zip only
           </li>
           <li>
-            <span className="font-medium">Supported File Types:</span> .stl,
+            <span className="font-medium text-gray-900">Supported File Types:</span> .stl,
             .3mf (models), .png, .jpg, .jpeg (images)
           </li>
           <li>
-            <span className="font-medium">Note:</span> This endpoint only
+            <span className="font-medium text-gray-900">Note:</span> This endpoint only
             extracts and returns file metadata. It does NOT upload files to R2
             or create database records.
           </li>
