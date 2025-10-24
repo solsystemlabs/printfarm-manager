@@ -218,24 +218,27 @@ Successfully implemented model file upload API endpoint with dual-environment su
 
 2. **Environment Compatibility**: The storage factory uses `process.env` exclusively instead of `getContext('cloudflare')` to ensure compatibility in both local development (Node.js) and Cloudflare Workers environments. TanStack Start's adapter automatically injects R2 bindings into `process.env.FILES_BUCKET`.
 
-3. **File Handling Strategy**: MinIO client converts File objects to buffers (required by the minio SDK), while R2 client streams them directly (more memory-efficient). The unified interface abstracts this difference from the upload endpoint.
+3. **Database Client Usage**: Uses `getPrismaClient()` factory from `~/lib/db` (not the singleton from `~/lib/db/client`). The factory creates a per-request Prisma client with the Cloudflare generator, ensuring WASM compatibility for production builds. Pool cleanup happens in a finally block to prevent connection leaks.
 
-4. **Validation Logic**: File type validation is case-insensitive and extension-based (.stl, .3mf). Size limit enforced at 500MB before storage upload. Content-type fallback to `application/octet-stream` for browser compatibility.
+4. **File Handling Strategy**: MinIO client converts File objects to buffers (required by the minio SDK), while R2 client streams them directly (more memory-efficient). The unified interface abstracts this difference from the upload endpoint.
 
-5. **Atomic Operations**: Upload to storage first, create database record second, cleanup storage on database failure. This ensures no orphaned database records pointing to missing files (which would cause user-facing errors). Orphaned storage files (no DB record) can be cleaned up via background job in Phase 2.
+5. **Validation Logic**: File type validation is case-insensitive and extension-based (.stl, .3mf). Size limit enforced at 500MB before storage upload. Content-type fallback to `application/octet-stream` for browser compatibility.
 
-6. **Structured Logging**: Comprehensive event logging throughout upload lifecycle:
+6. **Atomic Operations**: Upload to storage first, create database record second, cleanup storage on database failure. This ensures no orphaned database records pointing to missing files (which would cause user-facing errors). Orphaned storage files (no DB record) can be cleaned up via background job in Phase 2.
+
+7. **Structured Logging**: Comprehensive event logging throughout upload lifecycle:
    - `model_upload_start`: Filename, size, content-type
    - `model_upload_complete`: Model ID, duration, storage type
    - `model_upload_error`: Error type, phase, duration
    - `model_upload_cleanup_success/failed`: Cleanup operations during rollback
 
-7. **Testing Strategy**: Created 24 validation logic tests covering file extension validation, size limits, storage key generation, content-type handling, and content-disposition formatting. Full E2E tests deferred due to TanStack Router's complex route structure.
+8. **Testing Strategy**: Created 24 validation logic tests covering file extension validation, size limits, storage key generation, content-type handling, and content-disposition formatting. Full E2E tests deferred due to TanStack Router's complex route structure.
 
 **Verification:**
-- ✅ All tests pass (24 tests)
+- ✅ All tests pass (105 total, including 24 upload validation tests)
 - ✅ Type checking passes
 - ✅ Linting passes
+- ✅ Production build succeeds (WASM bundling verified)
 - ✅ All acceptance criteria met
 
 ### File List
