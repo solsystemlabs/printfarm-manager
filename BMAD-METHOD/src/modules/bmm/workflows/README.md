@@ -1,5 +1,5 @@
 ---
-last-redoc-date: 2025-10-01
+last-redoc-date: 2025-10-12
 ---
 
 # BMM Workflows - The Complete v6 Flow
@@ -25,25 +25,25 @@ The BMM (BMAD Method Module) orchestrates software development through four dist
 ├──────────────────────────────────────────────────────────────┤
 │  brainstorm-game ──┐                                         │
 │  brainstorm-project ├──→ research ──→ product-brief  ──┐     │
-│  game-brief ────────┘                                  │     │
+│  game-brief ────────┘                          game-brief ┘  │
 └────────────────────────────────────────────────────────┼─────┘
                                                          ↓
 ┌──────────────────────────────────────────────────────────────┐
 │                    PHASE 2: PLANNING                         │
-│                  (Scale-Adaptive Router)                     │
+│              (Scale-Adaptive Router - by type)               │
 ├──────────────────────────────────────────────────────────────┤
-│                    plan-project                              │
-│                         ├──→ Level 0: tech-spec only         │
-│                         ├──→ Level 1-2: PRD + tech-spec      │
-│                         ├──→ Level 3-4: PRD + Epics ──────┐  │
-│                         └──→ Game: GDD                    │  │
-└───────────────────────────────────────────────────────────┼──┘
-                                                            ↓
+│  SOFTWARE: plan-project          GAMES: gdd            │
+│      ├──→ Level 0: tech-spec only      ├──→ GDD (all levels) │
+│      ├──→ Level 1: tech-spec only      └──→ Narrative design │
+│      ├──→ Level 2: PRD + tech-spec                           │
+│      └──→ Level 3-4: PRD + Epics ────────────────────────┐   │
+└──────────────────────────────────────────────────────────┼───┘
+                                                           ↓
 ┌──────────────────────────────────────────────────────────────┐
 │                   PHASE 3: SOLUTIONING                       │
-│                    (Levels 3-4 Only)                         │
+│              (Software Levels 3-4 / Complex Games)           │
 ├──────────────────────────────────────────────────────────────┤
-│  3-solutioning ──→ Architecture.md                           │
+│  3-solutioning ──→ architecture.md                  │
 │       ↓                                                      │
 │  tech-spec (per epic, JIT during implementation)             │
 └────────────────────────────────────────────────────────────┬─┘
@@ -60,24 +60,62 @@ The BMM (BMAD Method Module) orchestrates software development through four dist
 └──────────────────────────────────────────────────────────────┘
 ```
 
+## Universal Entry Point: workflow-status
+
+**Before starting any workflow, check your status!**
+
+The `workflow-status` workflow is the **universal entry point** for all BMM workflows:
+
+```bash
+bmad analyst workflow-status
+# or
+bmad pm workflow-status
+```
+
+**What it does:**
+
+- ✅ Checks for existing workflow status file
+- ✅ Displays current phase, progress, and next action
+- ✅ Helps new users plan their workflow approach
+- ✅ Guides brownfield projects to documentation first
+- ✅ Routes to appropriate workflows based on context
+
+**No status file?** It will:
+
+1. Ask about project context (greenfield vs brownfield)
+2. Offer analysis options (full analysis, skip to planning, or quick tech spec)
+3. Guide you to the right first workflow
+
+**Status file exists?** It will:
+
+1. Display current phase and progress
+2. Show Phase 4 implementation state (BACKLOG/TODO/IN PROGRESS/DONE)
+3. Recommend exact next action
+4. Offer to change workflow or display menu
+
+**All agents (bmad-master, analyst, pm) should check workflow-status on load.**
+
+---
+
 ## Phase 1: Analysis (Optional)
 
 Optional workflows for project discovery and requirements gathering. Output feeds into Phase 2 planning.
 
 ### Workflows
 
-| Workflow               | Purpose                                     | Output                 | When to Use           |
-| ---------------------- | ------------------------------------------- | ---------------------- | --------------------- |
-| **brainstorm-game**    | Game concept ideation using 5 methodologies | Concept proposals      | New game projects     |
-| **brainstorm-project** | Software solution exploration               | Architecture proposals | New software projects |
-| **game-brief**         | Structured game design foundation           | Game brief document    | Before GDD creation   |
-| **product-brief**      | Strategic product planning culmination      | Product brief          | End of analysis phase |
-| **research**           | Multi-mode research (market/technical/deep) | Research artifacts     | When evidence needed  |
+| Workflow               | Purpose                                     | Output                    | When to Use            |
+| ---------------------- | ------------------------------------------- | ------------------------- | ---------------------- |
+| **workflow-status**    | Universal entry point and status checker    | Status display + guidance | **Always start here!** |
+| **brainstorm-game**    | Game concept ideation using 5 methodologies | Concept proposals         | New game projects      |
+| **brainstorm-project** | Software solution exploration               | Architecture proposals    | New software projects  |
+| **game-brief**         | Structured game design foundation           | Game brief document       | Before GDD creation    |
+| **product-brief**      | Strategic product planning culmination      | Product brief             | End of analysis phase  |
+| **research**           | Multi-mode research (market/technical/deep) | Research artifacts        | When evidence needed   |
 
 ### Flow
 
 ```
-Brainstorming → Research → Brief → Planning (Phase 2)
+workflow-status (check) → Brainstorming → Research → Brief → Planning (Phase 2)
 ```
 
 ## Phase 2: Planning (Required)
@@ -86,39 +124,77 @@ The central orchestrator that determines project scale and generates appropriate
 
 ### Scale Levels
 
-| Level | Scope                    | Outputs                 | Next Phase       |
-| ----- | ------------------------ | ----------------------- | ---------------- |
-| **0** | Single atomic change     | tech-spec only          | → Implementation |
-| **1** | 1-10 stories, 1 epic     | Minimal PRD + tech-spec | → Implementation |
-| **2** | 5-15 stories, 1-2 epics  | Focused PRD + tech-spec | → Implementation |
-| **3** | 12-40 stories, 2-5 epics | Full PRD + Epics list   | → Solutioning    |
-| **4** | 40+ stories, 5+ epics    | Enterprise PRD + Epics  | → Solutioning    |
+| Level | Scope                    | Outputs                        | Next Phase                     |
+| ----- | ------------------------ | ------------------------------ | ------------------------------ |
+| **0** | Single atomic change     | tech-spec + 1 story            | → Implementation               |
+| **1** | 1-10 stories, 1 epic     | tech-spec + epic + 2-3 stories | → Implementation               |
+| **2** | 5-15 stories, 1-2 epics  | PRD + epics                    | → Tech-spec → Implementation   |
+| **3** | 12-40 stories, 2-5 epics | PRD + epics                    | → Solutioning → Implementation |
+| **4** | 40+ stories, 5+ epics    | PRD + epics                    | → Solutioning → Implementation |
+
+**Key Changes (v6a):**
+
+- **Level 0**: Now generates a single user story in addition to tech-spec
+- **Level 1**: Now generates 2-3 stories as part of planning (prefer longer stories over more stories)
+- Both Level 0/1 skip Phase 3 and populate Phase 4 story backlog automatically
 
 ### Routing Logic
 
+**Universal Entry Point** (workflow-status):
+
 ```
-plan-project
-    ├─→ Detect project type (game/web/mobile/backend/etc)
+workflow-status
+    ├─→ Check for existing status file
+    │   ├─→ If exists: Display status + recommend next action
+    │   └─→ If not exists: Guide workflow planning
+    ├─→ Determine project context (greenfield/brownfield)
+    ├─→ Determine project type (game/web/mobile/backend/etc)
     ├─→ Assess complexity → assign Level 0-4
-    ├─→ Check context (greenfield/brownfield)
-    │   └─→ If brownfield & undocumented:
-    │       └─→ HALT: "Generate brownfield documentation first"
-    │           └─→ (TBD workflow for codebase analysis)
-    ├─→ Route to appropriate sub-workflow:
-    │   ├─→ Game → GDD workflow
-    │   ├─→ Level 0 → tech-spec workflow
-    │   ├─→ Level 1-2 → PRD + embedded tech-spec
-    │   └─→ Level 3-4 → PRD + epics → Solutioning
-    └─→ Generate project-workflow-analysis.md (tracking doc)
+    ├─→ Map complete workflow journey
+    └─→ Generate bmm-workflow-status.md + direct to first workflow
+```
+
+**Direct Routing** (no intermediate routers):
+
+```
+workflow-status determines routing:
+
+    SOFTWARE PROJECTS:
+    ├─→ Level 0-1 → bmad architect tech-spec
+    │   └─→ Validates status file + level
+    │   └─→ Generates tech-spec.md + stories
+    │   └─→ Direct to Phase 4 (implementation)
+    │
+    ├─→ Level 2 → bmad pm prd
+    │   └─→ Validates status file + level
+    │   └─→ Generates PRD.md + epics.md
+    │   └─→ Then: bmad architect tech-spec (lightweight solutioning)
+    │   └─→ Then: Phase 4 (implementation)
+    │
+    └─→ Level 3-4 → bmad pm prd
+        └─→ Validates status file + level
+        └─→ Generates PRD.md + epics.md
+        └─→ Then: Phase 3 (architecture)
+        └─→ Then: Phase 4 (implementation)
+
+    GAME PROJECTS:
+    └─→ All Levels → bmad pm gdd
+        └─→ Validates status file + project type
+        └─→ Generates GDD.md + epics.md
+        └─→ Optional: narrative design
+        └─→ Then: Phase 3 or 4 (based on complexity)
 ```
 
 ### Key Outputs
 
-- **PRD.md**: Product Requirements Document (Levels 1-4)
+- **PRD.md**: Product Requirements Document (Levels 2-4)
 - **Epics.md**: Epic breakdown with stories (Levels 2-4)
+- **epic-stories.md**: Epic summary with story links (Level 1)
 - **tech-spec.md**: Technical specification (Levels 0-2 only)
+- **story-{slug}.md**: Single user story (Level 0)
+- **story-{slug}-1.md, story-{slug}-2.md, story-{slug}-3.md**: User stories (Level 1)
 - **GDD.md**: Game Design Document (game projects)
-- **project-workflow-analysis.md**: Workflow state tracking
+- **bmm-workflow-status.md**: Versioned workflow state tracking with story backlog
 
 ## Phase 3: Solutioning (Levels 3-4 Only)
 
@@ -128,7 +204,7 @@ Architecture and technical design phase for complex projects.
 
 | Workflow          | Owner     | Purpose                        | Output                    | Timing            |
 | ----------------- | --------- | ------------------------------ | ------------------------- | ----------------- |
-| **3-solutioning** | Architect | Create overall architecture    | Architecture.md with ADRs | Once per project  |
+| **3-solutioning** | Architect | Create overall architecture    | architecture.md with ADRs | Once per project  |
 | **tech-spec**     | Architect | Create epic-specific tech spec | tech-spec-epic-N.md       | One per epic, JIT |
 
 ### Just-In-Time Tech Specs
@@ -149,61 +225,127 @@ FOR each epic in sequence:
 
 The core development cycle that transforms requirements into working software.
 
+### The Story State Machine
+
+Phase 4 uses a 4-state lifecycle to manage story progression, tracked in `bmm-workflow-status.md`:
+
+```
+BACKLOG → TODO → IN PROGRESS → DONE
+```
+
+#### State Definitions
+
+- **BACKLOG**: Ordered list of stories to be drafted (populated at phase transition)
+  - Contains all stories with IDs, titles, and file names
+  - Order is sequential (Epic 1 stories first, then Epic 2, etc.)
+
+- **TODO**: Single story that needs drafting (or drafted, awaiting approval)
+  - SM drafts story here using `create-story` workflow
+  - Story status is "Draft" until user approves
+  - User runs `story-ready` workflow to approve
+
+- **IN PROGRESS**: Single story approved for development
+  - Moved here by `story-ready` workflow
+  - DEV implements using `dev-story` workflow
+  - Story status is "Ready" or "In Review"
+
+- **DONE**: Completed stories with dates and points
+  - Moved here by `story-done` workflow after DoD complete
+  - Immutable record of completed work
+
+**Key Innovation**: Agents never search for "next story" - they always read the exact story from the status file.
+
 ### The Implementation Loop
 
 ```
-┌─────────────────────────────────────────┐
-│            SM: create-story             │
-│   (Generate next story from epics.md)   │
-└─────────────────────┬───────────────────┘
-                      ↓
-┌─────────────────────────────────────────┐
-│           SM: story-context             │
-│  (Generate expertise injection XML)     │
-└─────────────────────┬───────────────────┘
-                      ↓
-┌─────────────────────────────────────────┐
-│            DEV: dev-story               │
-│  (Implement with context injection)     │
-└─────────────────────┬───────────────────┘
-                      ↓
-┌─────────────────────────────────────────┐
-│         SR/DEV: review-story            │
-│     (Validate against criteria)         │
-└─────────────────────┬───────────────────┘
-                      ↓
-            ┌─────────┴─────────┐
-            │    Issues Found?   │
-            └─────────┬─────────┘
-                ┌─────┴─────┐
-                ↓           ↓
-        [No: Next Story]  [Yes: correct-course]
-                              ↓
-                      [Return to appropriate step]
+Phase Transition (Phase 2 or 3 → Phase 4)
+  ↓
+┌─────────────────────────────────────────────────┐
+│  BACKLOG populated with all stories              │
+│  TODO initialized with first story               │
+└───────────────────┬─────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│  SM: create-story (drafts story in TODO)        │
+│  Reads: status file TODO section                │
+│  Output: Story file with Status="Draft"         │
+└───────────────────┬─────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│  User reviews story                              │
+│  ↓                                               │
+│  SM: story-ready (approves story)                │
+│  Actions: TODO → IN PROGRESS                     │
+│           BACKLOG → TODO (next story)            │
+│           Story Status = "Ready"                 │
+└───────────────────┬─────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│  SM: story-context (optional but recommended)   │
+│  Generates expertise injection XML               │
+└───────────────────┬─────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│  DEV: dev-story (implements story)               │
+│  Reads: status file IN PROGRESS section         │
+│  Implements with context injection               │
+└───────────────────┬─────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────┐
+│  User reviews implementation (DoD check)         │
+│  ↓                                               │
+│  DEV: story-done (marks story done)          │
+│  Actions: IN PROGRESS → DONE                     │
+│           TODO → IN PROGRESS (if exists)         │
+│           BACKLOG → TODO (if exists)             │
+│           Story Status = "Done"                  │
+└───────────────────┬─────────────────────────────┘
+                    ↓
+            ┌───────┴────────┐
+            │  More stories?  │
+            └───────┬─────────┘
+                ┌───┴───┐
+                ↓       ↓
+          [Yes: Loop]  [No: Epic/Project Complete]
+                         ↓
+                   [retrospective]
 ```
 
 ### Workflow Responsibilities
 
-| Workflow           | Agent  | Purpose                      | Key Innovation             |
-| ------------------ | ------ | ---------------------------- | -------------------------- |
-| **create-story**   | SM     | Generate ONE story at a time | Enforces epics.md planning |
-| **story-context**  | SM     | Create expertise injection   | JIT technical guidance     |
-| **dev-story**      | DEV    | Implement with context       | Resumable after review     |
-| **review-story**   | SR/DEV | Comprehensive validation     | Fresh context review       |
-| **correct-course** | SM     | Handle issues/changes        | Adaptive response          |
-| **retrospective**  | SM     | Capture epic learnings       | Continuous improvement     |
+| Workflow           | Agent  | Purpose                               | State Transition      | No Search Required       |
+| ------------------ | ------ | ------------------------------------- | --------------------- | ------------------------ |
+| **create-story**   | SM     | Draft story from TODO section         | (Story stays in TODO) | Reads TODO section       |
+| **story-ready**    | SM     | Approve drafted story for development | TODO → IN PROGRESS    | Reads TODO section       |
+| **story-context**  | SM     | Generate expertise injection XML      | (No state change)     | Reads IN PROGRESS        |
+| **dev-story**      | DEV    | Implement story                       | (No state change)     | Reads IN PROGRESS        |
+| **story-done**     | DEV    | Mark story done after DoD complete    | IN PROGRESS → DONE    | Reads IN PROGRESS        |
+| **review-story**   | SR/DEV | Quality validation (optional)         | (No state change)     | Manual story selection   |
+| **correct-course** | SM     | Handle issues/changes                 | (Adaptive)            | Manual story selection   |
+| **retrospective**  | SM     | Capture epic learnings                | (No state change)     | Manual or epic-triggered |
 
-### Story Flow States
+### Story File Status Values
+
+Stories have a `Status:` field in their markdown file that reflects their position in the state machine:
 
 ```
-Draft (create-story)
-  → Approved (SM approval)
-    → In Progress (dev-story)
-      → Ready for Review (dev complete)
-        → Done (review passed)
-        OR
-        → In Progress (review failed, back to dev)
+Status: Draft       (Story created by create-story, awaiting user review)
+  ↓
+Status: Ready       (User approved via story-ready, ready for implementation)
+  ↓
+Status: In Review   (Implementation complete, awaiting final approval)
+  ↓
+Status: Done        (User approved via story-done, DoD complete)
 ```
+
+**Status File Position vs Story File Status:**
+
+| Status File State | Story File Status    | Meaning                               |
+| ----------------- | -------------------- | ------------------------------------- |
+| BACKLOG           | (file doesn't exist) | Story not yet drafted                 |
+| TODO              | Draft                | Story drafted, awaiting user approval |
+| IN PROGRESS       | Ready or In Review   | Story approved for development        |
+| DONE              | Done                 | Story complete, DoD met               |
 
 ## Greenfield vs Brownfield Considerations
 
@@ -251,14 +393,26 @@ plan-project (Phase 2)
 
 ### Tracking Documents
 
-- **project-workflow-analysis.md**: Maintains workflow state, level, and progress
-- **Epics.md**: Master list of epics and stories (source of truth for planning)
+- **bmm-workflow-status.md**: Versioned workflow state tracking with 4-section story backlog
+  - **BACKLOG**: Ordered list of stories to be drafted
+  - **TODO**: Single story ready for drafting (or drafted, awaiting approval)
+  - **IN PROGRESS**: Single story approved for development
+  - **DONE**: Completed stories with dates and points
+  - Populated automatically at phase transitions
+  - Single source of truth for story progression
+  - Agents read (never search) to know what to work on next
+
+- **Epics.md**: Master list of epics and stories (source of truth for planning, Level 2-4)
 
 ### Phase Outputs
 
 - **Phase 1**: Briefs and research documents
-- **Phase 2**: PRD, Epics, or tech-spec based on level
-- **Phase 3**: Architecture.md, epic-specific tech specs
+- **Phase 2**:
+  - Level 0: tech-spec.md + story-{slug}.md
+  - Level 1: tech-spec.md + epic-stories.md + story-{slug}-N.md files
+  - Level 2: PRD.md + epics.md (then tech-spec.md in Phase 3)
+  - Level 3-4: PRD.md + epics.md (then architecture.md in Phase 3)
+- **Phase 3**: architecture.md, epic-specific tech specs
 - **Phase 4**: Story files, context XMLs, implemented code
 
 ## Best Practices
@@ -307,25 +461,32 @@ plan-project (Phase 2)
 ## Quick Reference Commands
 
 ```bash
+# Universal Entry Point (Start Here!)
+bmad analyst workflow-status  # Check status and get recommendations
+
 # Phase 1: Analysis (Optional)
 bmad analyst brainstorm-project
 bmad analyst research
 bmad analyst product-brief
 
 # Phase 2: Planning
-bmad pm plan-project
+bmad pm prd             # Level 2-4 software projects
+bmad architect tech-spec # Level 0-1 software projects
+bmad pm gdd             # Game projects
 
 # Phase 3: Solutioning (L3-4)
-bmad architect solution-architecture
+bmad architect architecture
 bmad architect tech-spec  # Per epic, JIT
 
 # Phase 4: Implementation
-bmad sm create-story      # One at a time
-bmad sm story-context     # After each story
-bmad dev develop          # With context loaded
-bmad dev review-story     # Or SR agent
-bmad sm correct-course    # If issues
-bmad sm retrospective     # After epic
+bmad sm create-story      # Draft story from TODO section
+bmad sm story-ready       # Approve story for development (after user review)
+bmad sm story-context     # Generate context XML (optional but recommended)
+bmad dev dev-story        # Implement story from IN PROGRESS section
+bmad dev story-done   # Mark story done (after user confirms DoD)
+bmad dev review-story     # Quality validation (optional)
+bmad sm correct-course    # If issues arise
+bmad sm retrospective     # After epic complete
 ```
 
 ## Future Enhancements

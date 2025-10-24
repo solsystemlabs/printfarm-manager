@@ -10,7 +10,7 @@ communication_language: "{config_source}:communication_language"
 date: system-generated
 
 # Workflow components
-installed_path: "{project-root}/bmad/bmm/workflows/dev-story"
+installed_path: "{project-root}/bmad/bmm/workflows/4-implementation/dev-story"
 instructions: "{installed_path}/instructions.md"
 validation: "{installed_path}/checklist.md"
 
@@ -24,32 +24,11 @@ variables:
   strict: true # if true, halt on validation failures
   story_dir: "{config_source}:dev_story_location" # Directory containing story markdown files
   story_selection_limit: 10
-  run_until_complete: true # Continue through all tasks without pausing except on HALT conditions
-  force_yolo: true # Hint executor to activate #yolo: skip optional prompts and elicitation
+  run_until_complete: false # Continue through all tasks without pausing except on HALT conditions
+  force_yolo: false # Hint executor to activate #yolo: skip optional prompts and elicitation
 
 # Recommended inputs
 recommended_inputs:
   - story_markdown: "Path to the story markdown file (Tasks/Subtasks, Acceptance Criteria present)"
-
-# Required tools (conceptual; executor should provide equivalents)
-required_tools:
-  - read_file
-  - write_file
-  - search_repo
-  - run_tests
-  - list_files
-  - file_info
-
-tags:
-  - development
-  - story-execution
-  - tests
-  - validation
-  - bmad-v6
-
-execution_hints:
-  interactive: false # Minimize prompts; intended to run to completion
-  autonomous: true # Proceed without user input unless blocked
-  iterative: true
 
 web_bundle: false

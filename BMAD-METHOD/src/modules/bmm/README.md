@@ -17,7 +17,7 @@ Specialized AI agents for different development roles:
 - **Architect** - Technical architecture and design
 - **SM** (Scrum Master) - Sprint and story management
 - **DEV** (Developer) - Code implementation
-- **SR** (Senior Reviewer) - Code review and quality
+- **TEA** (Test Architect) - Test Architect
 - **UX** - User experience design
 - And more specialized roles
 
@@ -39,10 +39,12 @@ The heart of BMM - structured workflows for the four development phases:
    - `tech-spec` - Epic-specific technical specifications
 
 4. **Implementation Phase** (Iterative)
-   - `create-story` - Story generation
-   - `story-context` - Expertise injection
-   - `dev-story` - Implementation
-   - `review-story` - Quality validation
+   - `create-story` - Story drafting (SM agent)
+   - `story-ready` - Approve story for development (SM agent)
+   - `story-context` - Expertise injection (SM agent)
+   - `dev-story` - Implementation (DEV agent)
+   - `story-done` - Mark story done (DEV agent)
+   - `review-story` - Quality validation (DEV/SR agent)
    - `correct-course` - Issue resolution
    - `retrospective` - Continuous improvement
 
@@ -60,22 +62,14 @@ Extension modules that add specialized capabilities to BMM.
 
 ### 🏗️ `/testarch`
 
-Test architecture and quality assurance components.
+Test architecture and quality assurance components. The **[Test Architect (TEA) Guide](./testarch/README.md)** provides comprehensive testing strategy across 9 workflows: framework setup, CI/CD, test design, ATDD, automation, traceability, NFR assessment, quality gates, and test review.
 
 ## Quick Start
 
 ```bash
-# Run a planning workflow
-bmad pm plan-project
-
-# Create a new story
-bmad sm create-story
-
-# Run development workflow
-bmad dev develop
-
-# Review implementation
-bmad sr review-story
+# Load the PM agent - either via slash command or drag and drop or @ the agent file.
+# Once loaded, the agent should greet you and offer a menu of options. You can enter:
+`*plan-project`
 ```
 
 ## Key Concepts
@@ -94,6 +88,21 @@ BMM automatically adapts to project complexity:
 
 Technical specifications are created one epic at a time during implementation, not all upfront, allowing for learning and adaptation.
 
+### Story State Machine
+
+Stories flow through a 4-state lifecycle tracked in the status file:
+
+```
+BACKLOG → TODO → IN PROGRESS → DONE
+```
+
+- **BACKLOG**: Ordered list of stories to be drafted (populated at phase transition)
+- **TODO**: Single story ready for SM to draft (or drafted, awaiting approval)
+- **IN PROGRESS**: Single story approved for DEV to implement
+- **DONE**: Completed stories with dates and points
+
+Agents never search for "next story" - they always read the exact story from the status file. Simple workflows (`story-ready`, `story-done`) advance the queue automatically.
+
 ### Context Injection
 
 Story-specific technical guidance is generated dynamically, providing developers with exactly the expertise needed for each task.
@@ -110,6 +119,7 @@ BMM integrates seamlessly with the BMad Core framework, leveraging:
 ## Related Documentation
 
 - [BMM Workflows Guide](./workflows/README.md) - **Start here!**
+- [Test Architect (TEA) Guide](./testarch/README.md) - Quality assurance and testing strategy
 - [Agent Documentation](./agents/README.md) - Individual agent capabilities
 - [Team Configurations](./teams/README.md) - Pre-built team setups
 - [Task Library](./tasks/README.md) - Reusable task components

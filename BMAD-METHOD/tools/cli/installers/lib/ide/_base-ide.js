@@ -105,7 +105,7 @@ class BaseIdeSetup {
     // Get module agents
     const entries = await fs.readdir(bmadDir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isDirectory() && entry.name !== 'core' && entry.name !== '_cfg') {
+      if (entry.isDirectory() && entry.name !== 'core' && entry.name !== '_cfg' && entry.name !== 'agents') {
         const moduleAgentsPath = path.join(bmadDir, entry.name, 'agents');
         if (await fs.pathExists(moduleAgentsPath)) {
           const moduleAgents = await this.scanDirectory(moduleAgentsPath, '.md');
@@ -115,6 +115,37 @@ class BaseIdeSetup {
               module: entry.name,
             })),
           );
+        }
+      }
+    }
+
+    // Get standalone agents from bmad/agents/ directory
+    const standaloneAgentsDir = path.join(bmadDir, 'agents');
+    if (await fs.pathExists(standaloneAgentsDir)) {
+      const agentDirs = await fs.readdir(standaloneAgentsDir, { withFileTypes: true });
+
+      for (const agentDir of agentDirs) {
+        if (!agentDir.isDirectory()) continue;
+
+        const agentDirPath = path.join(standaloneAgentsDir, agentDir.name);
+        const agentFiles = await fs.readdir(agentDirPath);
+
+        for (const file of agentFiles) {
+          if (!file.endsWith('.md')) continue;
+          if (file.includes('.customize.')) continue;
+
+          const filePath = path.join(agentDirPath, file);
+          const content = await fs.readFile(filePath, 'utf8');
+
+          if (content.includes('localskip="true"')) continue;
+
+          agents.push({
+            name: file.replace('.md', ''),
+            path: filePath,
+            relativePath: path.relative(standaloneAgentsDir, filePath),
+            filename: file,
+            module: 'standalone', // Mark as standalone agent
+          });
         }
       }
     }
@@ -145,7 +176,7 @@ class BaseIdeSetup {
     // Get module tasks
     const entries = await fs.readdir(bmadDir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isDirectory() && entry.name !== 'core' && entry.name !== '_cfg') {
+      if (entry.isDirectory() && entry.name !== 'core' && entry.name !== '_cfg' && entry.name !== 'agents') {
         const moduleTasksPath = path.join(bmadDir, entry.name, 'tasks');
         if (await fs.pathExists(moduleTasksPath)) {
           const moduleTasks = await this.scanDirectory(moduleTasksPath, '.md');
@@ -213,12 +244,12 @@ class BaseIdeSetup {
       processed = this.xmlHandler.injectActivationSimple(processed, metadata);
     }
 
-    // Use the actual project directory path if provided, otherwise default to 'bmad'
+    // Only replace {project-root} if a specific projectDir is provided
+    // Otherwise leave the placeholder intact
     // Note: Don't add trailing slash - paths in source include leading slash
-    const projectRoot = projectDir || 'bmad';
-
-    // Common replacements (including in the activation block)
-    processed = processed.replaceAll('{project-root}', projectRoot);
+    if (projectDir) {
+      processed = processed.replaceAll('{project-root}', projectDir);
+    }
     processed = processed.replaceAll('{module}', metadata.module || 'core');
     processed = processed.replaceAll('{agent}', metadata.name || '');
     processed = processed.replaceAll('{task}', metadata.name || '');
