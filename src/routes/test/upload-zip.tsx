@@ -1,29 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import {
+  extractZipFile,
+  type ExtractionResult,
+} from "~/lib/zip/client-extractor";
 
 export const Route = createFileRoute("/test/upload-zip")({
   component: ZipUploadTester,
 });
-
-interface ExtractedFile {
-  path: string;
-  filename: string;
-  type: "model" | "image" | "unknown";
-  size: number;
-}
-
-interface UploadResponse {
-  files: ExtractedFile[];
-  totalFiles: number;
-  models: number;
-  images: number;
-}
-
-interface ErrorResponse {
-  error: string;
-  message: string;
-  statusCode: number;
-}
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
@@ -37,8 +21,9 @@ function formatBytes(bytes: number): string {
 
 function ZipUploadTester() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<UploadResponse | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [result, setResult] = useState<ExtractionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,42 +32,40 @@ function ZipUploadTester() {
       setSelectedFile(file);
       setResult(null);
       setError(null);
+      setProgress(0);
     }
   };
 
-  const handleUpload = async () => {
+  const handleExtract = async () => {
     if (!selectedFile) {
       setError("Please select a zip file");
       return;
     }
 
-    setUploading(true);
+    setExtracting(true);
     setError(null);
     setResult(null);
+    setProgress(0);
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
+      // Extract zip file CLIENT-SIDE (avoids Cloudflare Workers memory limits)
+      const extractionResult = await extractZipFile(
+        selectedFile,
+        (progressPercent) => {
+          setProgress(progressPercent);
+        },
+      );
 
-      const response = await fetch("/api/models/upload-zip", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = (await response.json()) as ErrorResponse;
-        setError(`${errorData.message} (${response.status})`);
-        return;
-      }
-
-      const data = (await response.json()) as UploadResponse;
-      setResult(data);
+      setResult(extractionResult);
+      setProgress(100);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "An unexpected error occurred",
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred during extraction",
       );
     } finally {
-      setUploading(false);
+      setExtracting(false);
     }
   };
 
@@ -94,11 +77,11 @@ function ZipUploadTester() {
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Zip Upload Endpoint Tester
+          Client-Side Zip Extraction Tester
         </h1>
         <p className="text-gray-700">
-          Test the /api/models/upload-zip endpoint by uploading a zip file and
-          viewing the extracted file metadata.
+          Test client-side zip extraction by uploading a zip file and viewing
+          the extracted file metadata. Extraction happens in your browser.
         </p>
       </div>
 
@@ -117,7 +100,7 @@ function ZipUploadTester() {
             accept=".zip"
             onChange={handleFileChange}
             className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none px-3 py-2"
-            disabled={uploading}
+            disabled={extracting}
           />
         </div>
 
@@ -155,12 +138,28 @@ function ZipUploadTester() {
         )}
 
         <button
-          onClick={handleUpload}
-          disabled={uploading || !selectedFile}
+          onClick={handleExtract}
+          disabled={extracting || !selectedFile}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors"
         >
-          {uploading ? "Extracting..." : "Upload & Extract"}
+          {extracting ? "Extracting..." : "Extract Zip File"}
         </button>
+
+        {/* Progress Bar */}
+        {extracting && (
+          <div className="mt-4">
+            <div className="flex justify-between text-sm text-gray-700 mb-2">
+              <span>Extraction Progress</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Error Display */}
@@ -273,19 +272,19 @@ function ZipUploadTester() {
         </div>
       )}
 
-      {/* API Information */}
+      {/* Extraction Information */}
       <div className="mt-6 bg-gray-50 rounded-lg p-4 text-sm border border-gray-200">
         <h3 className="font-semibold text-gray-900 mb-2">
-          API Endpoint Information
+          Client-Side Extraction Information
         </h3>
         <ul className="space-y-1 text-gray-800">
           <li>
-            <span className="font-medium text-gray-900">Endpoint:</span> POST
-            /api/models/upload-zip
+            <span className="font-medium text-gray-900">Processing:</span>{" "}
+            Client-side (in your browser)
           </li>
           <li>
             <span className="font-medium text-gray-900">Max Size:</span>{" "}
-            {formatBytes(MAX_FILE_SIZE)}
+            {formatBytes(MAX_FILE_SIZE)} (recommended)
           </li>
           <li>
             <span className="font-medium text-gray-900">
@@ -300,9 +299,9 @@ function ZipUploadTester() {
             .stl, .3mf (models), .png, .jpg, .jpeg (images)
           </li>
           <li>
-            <span className="font-medium text-gray-900">Note:</span> This
-            endpoint only extracts and returns file metadata. It does NOT upload
-            files to R2 or create database records.
+            <span className="font-medium text-gray-900">Note:</span> Extraction
+            happens in your browser to avoid server memory limits. No files are
+            uploaded to the server during extraction.
           </li>
         </ul>
       </div>

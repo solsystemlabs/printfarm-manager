@@ -1,5 +1,4 @@
 import JSZip from "jszip";
-import { log, logPerformance } from "~/lib/utils/logger";
 
 /**
  * Extracted file metadata and content
@@ -13,7 +12,7 @@ export interface ExtractedFile {
   type: "model" | "image" | "unknown";
   /** File size in bytes */
   size: number;
-  /** File content as Blob */
+  /** File content as Blob (for later upload) */
   content: Blob;
 }
 
@@ -78,78 +77,54 @@ function isAllowedFile(filename: string): boolean {
 }
 
 /**
- * Gets current memory usage if available (for monitoring)
+ * Extracts a zip file in the browser and returns all valid files with metadata
  *
- * Note: Memory monitoring APIs may not be available in all runtimes.
- * This function returns undefined if memory monitoring is unavailable.
+ * This function runs CLIENT-SIDE to avoid Cloudflare Workers memory limits.
+ * Modern browsers can handle large files (500MB+) without issues.
  *
- * @returns Memory usage in bytes, or undefined if unavailable
- */
-function getMemoryUsage(): number | undefined {
-  // Check for performance.memory API (Chrome DevTools, some runtimes)
-  if (typeof performance !== "undefined" && "memory" in performance) {
-    const memory = performance.memory as { usedJSHeapSize?: number };
-    return memory.usedJSHeapSize;
-  }
-
-  // Check for process.memoryUsage (Node.js)
-  if (typeof process !== "undefined" && "memoryUsage" in process) {
-    try {
-      return process.memoryUsage().heapUsed;
-    } catch {
-      // process.memoryUsage may not be available in all environments
-      return undefined;
-    }
-  }
-
-  return undefined;
-}
-
-/**
- * Extracts a zip file and returns all valid files with metadata
- *
- * This function:
+ * Features:
  * - Extracts zip contents in-memory using JSZip
  * - Recursively scans all directories (supports nested folders per FR-1)
  * - Filters files by extension whitelist (.stl, .3mf, .png, .jpg, .jpeg)
  * - Excludes hidden and system files (.DS_Store, __MACOSX, etc.)
  * - Returns file metadata and content for later processing
  *
- * @param zipData - The zip file as Uint8Array (universally compatible format)
+ * @param zipFile - The zip file from file input
+ * @param onProgress - Optional callback for progress updates (0-100)
  * @returns Extraction result with file list and statistics
  * @throws Error if zip is malformed/corrupted
  */
 export async function extractZipFile(
-  zipData: Uint8Array | Blob,
+  zipFile: File | Blob,
+  onProgress?: (progress: number) => void,
 ): Promise<ExtractionResult> {
   const startTime = Date.now();
 
-  const size = zipData instanceof Blob ? zipData.size : zipData.byteLength;
-  const memoryBefore = getMemoryUsage();
-
-  log("zip_extraction_start", {
-    size,
-    memoryUsedBytes: memoryBefore,
-  });
-
   try {
-    // Load zip file using JSZip (Uint8Array is universally supported)
+    // Load zip file using JSZip
     // Enable CRC32 validation for enhanced corruption detection
-    const zip = await JSZip.loadAsync(zipData, { checkCRC32: true });
+    const zip = await JSZip.loadAsync(zipFile, { checkCRC32: true });
 
     const extractedFiles: ExtractedFile[] = [];
     let modelCount = 0;
     let imageCount = 0;
 
+    // Get total number of files for progress tracking
+    const allEntries = Object.entries(zip.files);
+    const totalEntries = allEntries.length;
+    let processedEntries = 0;
+
     // Iterate through all entries in the zip (includes nested directories)
-    for (const [path, zipEntry] of Object.entries(zip.files)) {
+    for (const [path, zipEntry] of allEntries) {
       // Skip directories (we only want files)
       if (zipEntry.dir) {
+        processedEntries++;
         continue;
       }
 
       // Skip system/hidden files
       if (shouldExcludeFile(path)) {
+        processedEntries++;
         continue;
       }
 
@@ -158,6 +133,7 @@ export async function extractZipFile(
 
       // Skip files that aren't in the whitelist
       if (!isAllowedFile(filename)) {
+        processedEntries++;
         continue;
       }
 
@@ -182,6 +158,13 @@ export async function extractZipFile(
         size: content.size,
         content,
       });
+
+      // Update progress
+      processedEntries++;
+      if (onProgress && totalEntries > 0) {
+        const progress = Math.round((processedEntries / totalEntries) * 100);
+        onProgress(progress);
+      }
     }
 
     const result: ExtractionResult = {
@@ -191,28 +174,20 @@ export async function extractZipFile(
       images: imageCount,
     };
 
-    // Log successful extraction with performance metrics
-    const memoryAfter = getMemoryUsage();
-    const memoryDelta =
-      memoryBefore !== undefined && memoryAfter !== undefined
-        ? memoryAfter - memoryBefore
-        : undefined;
-
-    logPerformance("zip_extraction_complete", Date.now() - startTime, {
+    // Log extraction time to console for performance monitoring
+    const duration = Date.now() - startTime;
+    console.log(`[Zip Extraction] Completed in ${duration}ms`, {
       filesFound: result.totalFiles,
       models: result.models,
       images: result.images,
-      memoryUsedBytes: memoryAfter,
-      memoryDeltaBytes: memoryDelta,
+      originalSize: zipFile.size,
     });
 
     return result;
   } catch (error) {
     // Log extraction failure
-    log("zip_extraction_failed", {
-      error: error instanceof Error ? error.message : String(error),
-      durationMs: Date.now() - startTime,
-    });
+    const duration = Date.now() - startTime;
+    console.error(`[Zip Extraction] Failed after ${duration}ms:`, error);
 
     throw error;
   }
