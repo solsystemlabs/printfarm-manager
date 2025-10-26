@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
-import JSZip from "jszip";
 import { getPrismaClient } from "~/lib/db";
 import { getStorageClient } from "~/lib/storage";
 import { createErrorResponse } from "~/lib/utils/errors";
@@ -65,19 +64,23 @@ interface ImportResponse {
 /**
  * Bulk Import API Endpoint
  *
- * Imports multiple files from a zip archive. This endpoint:
- * 1. Re-extracts the uploaded zip file (client already extracted once for preview)
- * 2. Filters to selected file paths only
- * 3. Uploads each file individually to storage (R2/MinIO)
- * 4. Creates database record for each uploaded file
- * 5. Returns mixed success/failure results (partial success supported)
+ * Imports multiple files that were already extracted client-side (Story 2.3).
+ * This endpoint receives the extracted file Blobs directly, NOT a zip file.
  *
- * Reuses Story 2.2 atomic upload pattern:
+ * CRITICAL: Client-side extraction is required because Cloudflare Workers
+ * has only 128MB memory, insufficient for large zip files. The client must
+ * extract files in the browser and send the Blobs to this endpoint.
+ *
+ * For each file:
+ * 1. Validates file type and size
+ * 2. Uploads to storage (R2/MinIO)
+ * 3. Creates database record
+ * 4. Returns mixed success/failure results (partial success supported)
+ *
+ * Reuses Story 2.2 atomic upload pattern per file:
  * - Upload to storage first
  * - Create database record second
  * - Cleanup storage on DB failure
- *
- * Each file upload is atomic, but batch is not atomic (allows partial success).
  */
 export const Route = createFileRoute("/api/models/import-zip")({
   server: {
@@ -88,95 +91,37 @@ export const Route = createFileRoute("/api/models/import-zip")({
           null;
 
         try {
-          // Parse multipart form data
+          // Parse multipart form data containing extracted files
           const formData = await request.formData();
-          const zipFile = formData.get("file") as File | null;
-          const selectedPathsJson = formData.get("selectedPaths") as
-            | string
-            | null;
 
-          // Validation: Missing file
-          if (!zipFile) {
-            log("bulk_import_error", {
-              error: "missing_file",
-              durationMs: Date.now() - startTime,
-            });
-            return createErrorResponse(
-              "MISSING_FILE",
-              "No zip file provided in request",
-              400,
-            );
+          // Extract all files from form data
+          // Files are sent as: file_0, file_1, file_2, etc.
+          const files: File[] = [];
+          let fileIndex = 0;
+          while (true) {
+            const file = formData.get(`file_${fileIndex}`) as File | null;
+            if (!file) break;
+            files.push(file);
+            fileIndex++;
           }
 
-          // Validation: Missing selectedPaths
-          if (!selectedPathsJson) {
+          // Validation: At least one file
+          if (files.length === 0) {
             log("bulk_import_error", {
-              error: "missing_selected_paths",
+              error: "no_files_provided",
               durationMs: Date.now() - startTime,
             });
             return createErrorResponse(
-              "MISSING_SELECTED_PATHS",
-              "No selected file paths provided",
-              400,
-            );
-          }
-
-          // Parse selected paths
-          let selectedPaths: string[];
-          try {
-            selectedPaths = JSON.parse(selectedPathsJson);
-            if (!Array.isArray(selectedPaths)) {
-              throw new Error("selectedPaths must be an array");
-            }
-          } catch {
-            log("bulk_import_error", {
-              error: "invalid_selected_paths",
-              selectedPathsJson,
-              durationMs: Date.now() - startTime,
-            });
-            return createErrorResponse(
-              "INVALID_SELECTED_PATHS",
-              "selectedPaths must be a valid JSON array of file paths",
-              400,
-            );
-          }
-
-          // Validation: At least one file selected
-          if (selectedPaths.length === 0) {
-            log("bulk_import_error", {
-              error: "no_files_selected",
-              durationMs: Date.now() - startTime,
-            });
-            return createErrorResponse(
-              "NO_FILES_SELECTED",
-              "At least one file must be selected for import",
+              "NO_FILES_PROVIDED",
+              "No files provided for import",
               400,
             );
           }
 
           log("bulk_import_start", {
-            zipFilename: zipFile.name,
-            zipSize: zipFile.size,
-            selectedCount: selectedPaths.length,
+            fileCount: files.length,
+            totalSize: files.reduce((sum, f) => sum + f.size, 0),
           });
-
-          // Re-extract zip file (client already extracted once for preview)
-          let zip: JSZip;
-          try {
-            zip = await JSZip.loadAsync(zipFile, { checkCRC32: true });
-          } catch (extractError) {
-            log("bulk_import_error", {
-              error: "zip_extraction_failed",
-              zipFilename: zipFile.name,
-              durationMs: Date.now() - startTime,
-            });
-            return createErrorResponse(
-              "ZIP_EXTRACTION_FAILED",
-              "Failed to extract zip file. File may be corrupted.",
-              422,
-              { originalError: extractError },
-            );
-          }
 
           // Get environment-appropriate storage client
           const storage = await getStorageClient();
@@ -196,35 +141,13 @@ export const Route = createFileRoute("/api/models/import-zip")({
           const prisma = dbClient.prisma;
           pool = dbClient.pool;
 
-          // Process each selected file
+          // Process each file
           const imported: ImportedFileResult[] = [];
           const failed: FailedFileResult[] = [];
           let totalBytes = 0;
 
-          for (const path of selectedPaths) {
-            const zipEntry = zip.file(path);
-
-            // File not found in zip
-            if (!zipEntry) {
-              failed.push({
-                filename: path.split("/").pop() || path,
-                error: "FILE_NOT_FOUND_IN_ZIP",
-                message: `File not found in zip archive: ${path}`,
-              });
-              continue;
-            }
-
-            // Skip directories
-            if (zipEntry.dir) {
-              failed.push({
-                filename: path.split("/").pop() || path,
-                error: "DIRECTORY_NOT_SUPPORTED",
-                message: `Cannot import directories: ${path}`,
-              });
-              continue;
-            }
-
-            const filename = path.split("/").pop() || path;
+          for (const file of files) {
+            const filename = file.name;
 
             // Validate file extension
             if (!isAllowedFile(filename)) {
@@ -236,20 +159,17 @@ export const Route = createFileRoute("/api/models/import-zip")({
               continue;
             }
 
+            // Validate file size
+            if (file.size > MAX_FILE_SIZE) {
+              failed.push({
+                filename,
+                error: "FILE_TOO_LARGE",
+                message: `File exceeds maximum size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+              });
+              continue;
+            }
+
             try {
-              // Extract file content as Blob
-              const content = await zipEntry.async("blob");
-
-              // Validate file size
-              if (content.size > MAX_FILE_SIZE) {
-                failed.push({
-                  filename,
-                  error: "FILE_TOO_LARGE",
-                  message: `File exceeds maximum size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
-                });
-                continue;
-              }
-
               // Determine file type
               const fileType = getFileType(filename);
 
@@ -262,20 +182,14 @@ export const Route = createFileRoute("/api/models/import-zip")({
 
               // Upload to storage (atomicity step 1)
               try {
-                // Convert Blob to File for storage API
-                const file = new File([content], filename, {
-                  type: content.type || "application/octet-stream",
-                });
-
                 await storage.uploadFile(storageKey, file, {
-                  contentType: file.type,
+                  contentType: file.type || "application/octet-stream",
                   contentDisposition: `attachment; filename="${filename}"`,
                 });
               } catch {
                 log("bulk_import_file_error", {
                   error: "storage_upload_failed",
                   filename,
-                  path,
                   storageKey,
                 });
                 failed.push({
@@ -296,8 +210,8 @@ export const Route = createFileRoute("/api/models/import-zip")({
                     filename,
                     r2Key: storageKey,
                     r2Url: publicUrl,
-                    fileSize: content.size,
-                    contentType: content.type || "application/octet-stream",
+                    fileSize: file.size,
+                    contentType: file.type || "application/octet-stream",
                     thumbnailUrl: null, // Will be generated in Epic 5
                   },
                 });
@@ -311,12 +225,12 @@ export const Route = createFileRoute("/api/models/import-zip")({
                   size: model.fileSize,
                 });
 
-                totalBytes += content.size;
+                totalBytes += file.size;
 
                 log("bulk_import_file_success", {
                   filename,
                   modelId: model.id,
-                  size: content.size,
+                  size: file.size,
                 });
               } catch {
                 // Cleanup: Delete storage file if database creation fails
@@ -338,7 +252,6 @@ export const Route = createFileRoute("/api/models/import-zip")({
                 log("bulk_import_file_error", {
                   error: "database_creation_failed",
                   filename,
-                  path,
                   storageKey,
                 });
 
@@ -352,7 +265,6 @@ export const Route = createFileRoute("/api/models/import-zip")({
               log("bulk_import_file_error", {
                 error: "file_processing_failed",
                 filename,
-                path,
               });
               failed.push({
                 filename,
@@ -364,7 +276,7 @@ export const Route = createFileRoute("/api/models/import-zip")({
 
           // Log bulk import completion
           logPerformance("bulk_import_complete", Date.now() - startTime, {
-            totalRequested: selectedPaths.length,
+            totalRequested: files.length,
             succeeded: imported.length,
             failed: failed.length,
             totalBytes,
@@ -376,7 +288,7 @@ export const Route = createFileRoute("/api/models/import-zip")({
             imported,
             failed,
             summary: {
-              total: selectedPaths.length,
+              total: files.length,
               succeeded: imported.length,
               failed: failed.length,
               totalBytes,

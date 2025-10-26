@@ -129,12 +129,6 @@ function ZipUploadTester() {
       return;
     }
 
-    // Validation: Must have original zip file
-    if (!selectedZipFile) {
-      setError("Original zip file not found. Please start over.");
-      return;
-    }
-
     setWorkflowState("importing");
     setError(null);
 
@@ -147,16 +141,20 @@ function ZipUploadTester() {
     });
 
     try {
-      // Prepare selected file paths for API
-      const selectedPaths = selectedFiles.map((f) => f.path);
-
-      // Create form data
+      // Create form data with extracted file Blobs
+      // IMPORTANT: Send the already-extracted Blobs, NOT the zip file!
+      // Cloudflare Workers cannot handle zip extraction due to 128MB memory limit
       const formData = new FormData();
-      formData.append("file", selectedZipFile);
-      formData.append("selectedPaths", JSON.stringify(selectedPaths));
 
-      // Call bulk import API with progress updates
-      // Note: We can't get real-time progress from fetch, so we'll simulate it
+      selectedFiles.forEach((extractedFile, index) => {
+        // Convert extracted Blob to File with proper metadata
+        const file = new File([extractedFile.content], extractedFile.filename, {
+          type: extractedFile.content.type || "application/octet-stream",
+        });
+        formData.append(`file_${index}`, file);
+      });
+
+      // Update progress to show first file
       setImportProgress({
         currentIndex: 0,
         currentFileName: selectedFiles[0]?.filename || "",

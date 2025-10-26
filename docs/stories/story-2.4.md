@@ -87,6 +87,15 @@ Story 2.3 successfully moved zip extraction from server to client-side due to Cl
 1. **Phase 1 (Story 2.3 - COMPLETE)**: Client extracts zip → displays file list
 2. **Phase 2 (Story 2.4 - THIS STORY)**: User selects files → client uploads selected files
 
+**⚠️ CRITICAL CONSTRAINT: Server-Side Extraction is Impossible**
+
+Cloudflare Workers has a 128MB memory limit, making server-side zip extraction infeasible for large files (some zips are 100MB+). The client MUST:
+- Extract the zip in the browser (Story 2.3)
+- Keep extracted file Blobs in memory
+- Send the extracted Blobs to the server (NOT the zip file)
+
+The server cannot and must not attempt to re-extract the zip file.
+
 **Simplified Import Flow:**
 
 Per tech spec lines 712-719, we use a simplified approach that avoids temporary storage complexity:
@@ -94,9 +103,11 @@ Per tech spec lines 712-719, we use a simplified approach that avoids temporary 
 ```
 User uploads zip file
   → [CLIENT] Extract using client-extractor.ts (Story 2.3)
+  → [CLIENT] Keep extracted file Blobs in memory
   → [CLIENT] Display file selection UI
   → [USER] Reviews and selects files
-  → [CLIENT] Uploads selected files individually to import API
+  → [CLIENT] Send selected file Blobs to import API (NOT zip file!)
+  → [SERVER] Receives extracted files directly
   → [SERVER] Creates R2 object + database record for each file
   → [CLIENT] Shows success confirmation
 ```
@@ -368,10 +379,15 @@ Key architectural decisions:
 - Retry mechanism for failed uploads (optional)
 
 **Key technical decisions:**
-- Kept zip file in browser memory and re-extract on import (avoids temp storage complexity)
+- Send extracted file Blobs directly to server (NOT the zip file - critical for Cloudflare Workers 128MB limit)
 - Upload files individually for progress tracking and partial success
 - Each file upload is atomic (R2 first, DB second, cleanup on failure per Story 2.2 pattern)
 - Progress tracking shows percentage but cannot track real-time upload progress from fetch API
+
+**Critical fix applied (2025-10-25):**
+- Initial implementation incorrectly attempted to re-extract zip on server, which violated Story 2.3's architectural constraint
+- Fixed to send extracted file Blobs directly from client (files sent as `file_0`, `file_1`, etc. in FormData)
+- Server now receives ready-to-upload files, avoiding zip extraction entirely
 
 ### File List
 
