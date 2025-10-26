@@ -169,14 +169,17 @@ function ZipUploadTester() {
       const data = (await response.json()) as {
         imported: ImportedFile[];
         failed: FailedFile[];
-        summary: { total: number; succeeded: number; failed: number; totalBytes: number };
+        summary: {
+          total: number;
+          succeeded: number;
+          failed: number;
+          totalBytes: number;
+        };
         error?: { message: string };
       };
 
       if (!response.ok) {
-        throw new Error(
-          data.error?.message || "Failed to import files",
-        );
+        throw new Error(data.error?.message || "Failed to import files");
       }
 
       // Success!
@@ -269,7 +272,11 @@ function ZipUploadTester() {
 
           <button
             onClick={handleExtract}
-            disabled={!selectedZipFile || Boolean(isFileTooLarge) || Boolean(isInvalidExtension)}
+            disabled={
+              !selectedZipFile ||
+              Boolean(isFileTooLarge) ||
+              Boolean(isInvalidExtension)
+            }
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
           >
             Extract and Review Files
@@ -338,7 +345,10 @@ function ZipUploadTester() {
           currentFileIndex={importProgress.currentIndex}
           totalFiles={selectedFiles.length}
           currentFileName={importProgress.currentFileName}
-          bytesUploaded={importProgress.currentIndex * importProgress.totalBytes / selectedFiles.length}
+          bytesUploaded={
+            (importProgress.currentIndex * importProgress.totalBytes) /
+            selectedFiles.length
+          }
           totalBytes={importProgress.totalBytes}
         />
       )}

@@ -11,7 +11,9 @@ describe("Bulk Import API Endpoint Logic", () => {
   function getFileType(filename: string): "model" | "image" | "unknown" {
     const MODEL_EXTENSIONS = [".stl", ".3mf"];
     const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"];
-    const extension = filename.substring(filename.lastIndexOf(".")).toLowerCase();
+    const extension = filename
+      .substring(filename.lastIndexOf("."))
+      .toLowerCase();
 
     if (MODEL_EXTENSIONS.includes(extension)) {
       return "model";
@@ -26,7 +28,9 @@ describe("Bulk Import API Endpoint Logic", () => {
 
   function isAllowedFile(filename: string): boolean {
     const ALLOWED_EXTENSIONS = [".stl", ".3mf", ".png", ".jpg", ".jpeg"];
-    const extension = filename.substring(filename.lastIndexOf(".")).toLowerCase();
+    const extension = filename
+      .substring(filename.lastIndexOf("."))
+      .toLowerCase();
     return ALLOWED_EXTENSIONS.includes(extension);
   }
 
