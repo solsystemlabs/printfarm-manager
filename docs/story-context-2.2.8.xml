@@ -1,0 +1,495 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.8</storyId>
+    <title>Implement Slice CRUD Operations</title>
+    <status>ContextReadyDraft</status>
+    <generatedAt>2025-10-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-2.8.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an owner</asA>
+    <iWant>to view, edit, and delete slice records</iWant>
+    <soThat>I can manage my slice configurations</soThat>
+    <acceptanceCriteria>
+      <criterion id="1">Slice detail page displays: thumbnail, filename, size, upload date, associated models, products, filaments</criterion>
+      <criterion id="2">Edit functionality: update slice name (if extraction didn't provide good name)</criterion>
+      <criterion id="3">Delete functionality: hard delete with warnings per FR-17</criterion>
+      <criterion id="4">Deletion prevented if slice is last/only slice for a product variant (per FR-7)</criterion>
+      <criterion id="5">Deleting slice deletes associated R2 file (atomic operation per NFR-4)</criterion>
+      <criterion id="6">Download button for slice file (sets proper headers per FR-16)</criterion>
+      <criterion id="7">Slice list page shows all slices in visual grid</criterion>
+      <criterion id="8">Metadata display section shows "Metadata not extracted yet" if metadataExtracted = false</criterion>
+      <criterion id="9">Logs all CRUD operations with performance metrics per NFR-9</criterion>
+      <criterion id="10">Slice detail enhanced in Epic 3 with curated metadata fields (layer height, temps, etc.)</criterion>
+    </acceptanceCriteria>
+  </story>
+
+  <documentation>
+    <artifact id="1" type="tech-spec" relevance="high">
+      <path>docs/tech-spec-epic-2.md</path>
+      <section>Story 2.8: Implement Slice CRUD Operations (lines 1724-1850 estimated)</section>
+      <keyPoints>
+        - Mirrors Story 2.7 structure but for slices
+        - GET endpoint returns slice with relationships (sliceModels, sliceFilaments, sliceVariants)
+        - DELETE checks if last slice for variant (Epic 4 constraint)
+        - metadataExtracted flag indicates whether Epic 3 extraction completed
+        - Download button with content-disposition: attachment (force download)
+        - Metadata display section prepares for Epic 3 enhancement
+      </keyPoints>
+    </artifact>
+
+    <artifact id="2" type="epic-requirements" relevance="high">
+      <path>docs/epics.md</path>
+      <section>Story 2.8: Implement Slice CRUD Operations (lines 367-388)</section>
+      <keyPoints>
+        - Prerequisites: Story 2.5 (slice upload)
+        - Display associated models, products, filaments
+        - Edit: update name (if extraction didn't provide good name)
+        - Delete: hard delete with R2 cleanup
+        - Deletion prevented if last slice for variant (per FR-7)
+        - Download with proper content-disposition headers
+        - Enhanced in Epic 3 with metadata display
+      </keyPoints>
+    </artifact>
+
+    <artifact id="3" type="prd-requirements" relevance="high">
+      <path>docs/PRD.md</path>
+      <section>FR-7: Product Variants Must Have Slice</section>
+      <keyPoints>
+        - Product variants require at least one slice (recipe)
+        - Cannot delete last/only slice for a variant
+        - Return 409 SLICE_REQUIRED error if attempted
+        - Rationale: Variant without slice is unusable (no print instructions)
+        - MVP: Constraint deferred to Epic 4 (when variants implemented)
+      </keyPoints>
+    </artifact>
+
+    <artifact id="4" type="prd-requirements" relevance="high">
+      <path>docs/PRD.md</path>
+      <section>FR-16: Download Headers</section>
+      <keyPoints>
+        - Slice downloads must use content-disposition: attachment
+        - Forces browser to download (not display inline)
+        - Headers set during upload (Story 2.5)
+        - Format: attachment; filename="slice-name.gcode.3mf"
+        - Critical for .gcode files (browser might try to render as text)
+      </keyPoints>
+    </artifact>
+
+    <artifact id="5" type="story-reference" relevance="high">
+      <path>docs/stories/story-2.7.md</path>
+      <section>Model CRUD Pattern</section>
+      <keyPoints>
+        - Story 2.8 mirrors Story 2.7 structure
+        - Same API patterns (GET, PATCH, DELETE endpoints)
+        - Same UI patterns (detail page, list page, delete modal)
+        - Reusable components: DeleteConfirmModal, grid layouts
+        - Can be developed in parallel with Story 2.7
+      </keyPoints>
+    </artifact>
+
+    <artifact id="6" type="story-reference" relevance="high">
+      <path>docs/stories/story-2.5.md</path>
+      <section>Slice Upload (Creates Slices)</section>
+      <keyPoints>
+        - Story 2.5 creates slices (upload endpoint)
+        - Sets R2 headers: content-disposition: attachment
+        - Sets metadataExtracted = false by default
+        - Story 2.8 provides read, update, delete operations
+        - Uses same error handling and logging patterns
+      </keyPoints>
+    </artifact>
+
+    <artifact id="7" type="epic-integration" relevance="high">
+      <path>docs/epics.md</path>
+      <section>Epic 3: Metadata Extraction Integration</section>
+      <keyPoints>
+        - Story 2.8 displays metadataExtracted flag
+        - Epic 3 Story 3.1 parses .gcode.3mf files
+        - Epic 3 Story 3.6 displays curated metadata fields
+        - Story 2.8 prepares UI structure for metadata display
+        - Metadata section shows "Not extracted yet" or actual data
+      </keyPoints>
+    </artifact>
+  </documentation>
+
+  <codeArtifacts>
+    <artifact id="1" type="api-pattern" relevance="high">
+      <path>src/routes/api/slices/upload.ts</path>
+      <reason>Slice upload API (Story 2.5) - establishes patterns for slice API endpoints</reason>
+      <keyPatterns>
+        - TanStack Start createFileRoute pattern
+        - R2 upload with proper headers (attachment)
+        - Prisma database operations on slices table
+        - metadataExtracted flag set to false
+      </keyPatterns>
+    </artifact>
+
+    <artifact id="2" type="api-reference" relevance="high">
+      <path>src/routes/api/models/$modelId.ts</path>
+      <reason>Model CRUD API (Story 2.7) - template for slice CRUD structure</reason>
+      <keyPatterns>
+        - GET with relationship includes
+        - PATCH for updates
+        - DELETE with usage checking
+        - Atomic R2+DB deletion pattern
+      </keyPatterns>
+    </artifact>
+
+    <artifact id="3" type="ui-reference" relevance="high">
+      <path>src/routes/models/$modelId.tsx</path>
+      <reason>Model detail page (Story 2.7) - template for slice detail UI</reason>
+      <keyPatterns>
+        - React Query data fetching
+        - Detail page layout
+        - Delete confirmation modal
+        - Edit inline functionality
+      </keyPatterns>
+    </artifact>
+
+    <artifact id="4" type="database-schema" relevance="high">
+      <path>prisma/schema.prisma</path>
+      <reason>Slice schema with metadata fields and relationships (Story 2.1)</reason>
+      <relevantFields>
+        Slice.id, filename, r2Key, r2Url, fileSize, contentType, thumbnailUrl
+        Slice.metadataExtracted, metadataJson (Epic 3)
+        Slice.layerHeight, nozzleTemp, bedTemp, etc. (Epic 3 curated fields)
+        Slice.sliceModels, sliceFilaments, sliceVariants (relationships)
+      </relevantFields>
+    </artifact>
+
+    <artifact id="5" type="component" relevance="high">
+      <path>src/components/DeleteConfirmModal.tsx</path>
+      <reason>Delete confirmation modal (Story 2.7) - reusable for slice deletion</reason>
+      <reusability>Same modal component for both model and slice deletion</reusability>
+    </artifact>
+
+    <artifact id="6" type="utility" relevance="high">
+      <path>src/lib/utils/errors.ts</path>
+      <reason>Error handling utility for consistent responses</reason>
+    </artifact>
+
+    <artifact id="7" type="utility" relevance="high">
+      <path>src/lib/utils/logger.ts</path>
+      <reason>Structured logging utilities</reason>
+    </artifact>
+  </codeArtifacts>
+
+  <constraints>
+    <constraint id="1" type="business-logic" priority="high">
+      <title>Deletion Prevention (Last Slice for Variant)</title>
+      <description>
+        Per FR-7 and AC#4, prevent deletion if slice is last for a variant:
+        - Check sliceVariants relationship
+        - For each variant, count total slices
+        - If count == 1 (this is the only slice), return 409 SLICE_REQUIRED
+        - Rationale: Variants must have at least one slice (recipe)
+        - MVP: Constraint deferred to Epic 4 (when variants implemented)
+      </description>
+    </constraint>
+
+    <constraint id="2" type="architecture" priority="critical">
+      <title>Atomic Deletion Pattern (Same as Story 2.7)</title>
+      <description>
+        Per NFR-4:
+        1. Delete from database first
+        2. Delete from R2 second
+        
+        Same rationale as Story 2.7:
+        - Prevents dangling DB references
+        - R2 orphans acceptable (cleanup in storage audit)
+        - DB failure means operation failed (slice still exists)
+      </description>
+    </constraint>
+
+    <constraint id="3" type="architecture" priority="high">
+      <title>Hard Delete Pattern (No Soft Delete)</title>
+      <description>
+        Per FR-17, MVP uses hard delete:
+        - Physical removal from database
+        - R2 file deleted
+        - Relationships break (show warnings)
+        - No soft delete in MVP (simplicity)
+      </description>
+    </constraint>
+
+    <constraint id="4" type="ui-ux" priority="high">
+      <title>Metadata Status Display</title>
+      <description>
+        Per AC#8, clearly show metadata extraction status:
+        - If metadataExtracted == false: "⚠️ Metadata not extracted yet"
+        - If metadataExtracted == true: Show curated fields (Epic 3)
+        - Badge on list page: "Metadata Extracted" or "Pending"
+        - Prepare UI structure for Epic 3 Story 3.6 enhancement
+      </description>
+    </constraint>
+
+    <constraint id="5" type="download" priority="high">
+      <title>Download Headers (Content-Disposition)</title>
+      <description>
+        Per FR-16 and AC#6:
+        - R2 URL already has content-disposition: attachment (set in Story 2.5)
+        - Download button just links to r2Url
+        - Forces browser to download (not display inline)
+        - Test on mobile browsers (iOS Safari, Android Chrome)
+        - Format: attachment; filename="slice-name.gcode.3mf"
+      </description>
+    </constraint>
+
+    <constraint id="6" type="integration" priority="medium">
+      <title>Epic 3 Metadata Display Integration</title>
+      <description>
+        Per AC#10, prepare for Epic 3 enhancements:
+        
+        Story 2.8 (MVP):
+        - Show metadataExtracted flag
+        - Display "Metadata pending" message
+        
+        Epic 3 Story 3.6 will add:
+        - Curated fields display (layer height, temps, infill, etc.)
+        - "Show All Metadata" toggle for full JSON
+        - Filament list with AMS slot assignments
+        
+        Story 2.8 creates the UI structure, Epic 3 populates it.
+      </description>
+    </constraint>
+
+    <constraint id="7" type="integration" priority="medium">
+      <title>Epic 4 Product Variant Integration</title>
+      <description>
+        Per AC#1, slice detail shows product associations:
+        - Display "Used in X products" count
+        - List product variant names with links
+        - MVP: Show placeholder "Products coming in Epic 4"
+        - Epic 4 will populate sliceVariants relationships
+        - Deletion constraint (AC#4) enforced in Epic 4
+      </description>
+    </constraint>
+
+    <constraint id="8" type="ui-ux" priority="high">
+      <title>Visual Grid Layout (Same as Story 2.7)</title>
+      <description>
+        Per UX Principle 1 and AC#7:
+        - Responsive grid: 4 columns → 2 → 1
+        - Each card: thumbnail, filename, file size, metadata badge
+        - Placeholder when thumbnailUrl is null
+        - Click card navigates to detail page
+      </description>
+    </constraint>
+
+    <constraint id="9" type="error-handling" priority="high">
+      <title>HTTP Status Codes</title>
+      <description>
+        Consistent error codes:
+        - 200: GET success
+        - 204: DELETE success
+        - 404: SLICE_NOT_FOUND
+        - 409: SLICE_REQUIRED (last for variant)
+        - 422: VALIDATION_FAILED (PATCH)
+        - 500: FETCH_FAILED, UPDATE_FAILED, DELETE_FAILED
+      </description>
+    </constraint>
+
+    <constraint id="10" type="performance" priority="medium">
+      <title>Relationship Query Optimization</title>
+      <description>
+        Load related entities efficiently:
+        - Use Prisma include with selective fields
+        - Example: include: { sliceModels: { include: { model: { select: { id, filename } } } } }
+        - Epic 3 will add: sliceFilaments relationships
+        - Epic 4 will add: sliceVariants relationships
+      </description>
+    </constraint>
+
+    <constraint id="11" type="typescript" priority="high">
+      <title>TypeScript Standards</title>
+      <description>
+        Per CLAUDE.md:
+        - NEVER use 'any' type
+        - Strict TypeScript configuration
+        - Type-safe route parameters
+        - Interface definitions for API responses
+      </description>
+    </constraint>
+
+    <constraint id="12" type="testing" priority="high">
+      <title>Testing Standards</title>
+      <description>
+        Per CLAUDE.md:
+        - All tests must pass
+        - Don't ignore unrelated failures
+        - Test deletion prevention (409 for last slice)
+        - Test download headers
+        - Test metadata display logic
+      </description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface id="1" type="api-endpoint">
+      <path>GET /api/slices/$sliceId</path>
+      <description>Fetch slice details with relationships</description>
+      <successResponse>
+        Status: 200
+        Body: {
+          id, filename, r2Url, thumbnailUrl, fileSize, contentType,
+          metadataExtracted, createdAt, updatedAt,
+          models: Array&lt;{ id, filename }&gt;,
+          filaments: Array&lt;...&gt; (Epic 3),
+          variants: Array&lt;...&gt; (Epic 4)
+        }
+      </successResponse>
+      <errorResponses>
+        <error status="404" code="SLICE_NOT_FOUND"/>
+        <error status="500" code="FETCH_FAILED"/>
+      </errorResponses>
+    </interface>
+
+    <interface id="2" type="api-endpoint">
+      <path>PATCH /api/slices/$sliceId</path>
+      <description>Update slice metadata</description>
+      <requestBody>{ filename?: string, thumbnailUrl?: string }</requestBody>
+      <successResponse>Status: 200, Body: (updated slice)</successResponse>
+      <errorResponses>
+        <error status="404" code="SLICE_NOT_FOUND"/>
+        <error status="422" code="VALIDATION_FAILED"/>
+        <error status="500" code="UPDATE_FAILED"/>
+      </errorResponses>
+    </interface>
+
+    <interface id="3" type="api-endpoint">
+      <path>DELETE /api/slices/$sliceId</path>
+      <description>Delete slice and associated R2 file</description>
+      <successResponse>Status: 204 No Content</successResponse>
+      <errorResponses>
+        <error status="404" code="SLICE_NOT_FOUND"/>
+        <error status="409" code="SLICE_REQUIRED">Last slice for variant</error>
+        <error status="500" code="DELETE_FAILED"/>
+      </errorResponses>
+    </interface>
+
+    <interface id="4" type="ui-route">
+      <path>/slices/$sliceId</path>
+      <description>Slice detail page UI</description>
+      <functionality>
+        - Display slice metadata, thumbnail
+        - Show metadataExtracted status
+        - Display associated models, filaments (Epic 3), variants (Epic 4)
+        - Download button
+        - Edit button
+        - Delete button with confirmation
+      </functionality>
+    </interface>
+
+    <interface id="5" type="ui-route">
+      <path>/slices (index)</path>
+      <description>Slice list page UI</description>
+      <functionality>
+        - Responsive grid of slice cards
+        - Each card: thumbnail, filename, size, metadata badge
+        - Click card to navigate to detail
+        - "Upload New Slice" button
+      </functionality>
+    </interface>
+  </interfaces>
+
+  <dependencies>
+    <package name="@tanstack/react-router" version="existing"/>
+    <package name="@tanstack/react-start" version="existing"/>
+    <package name="@tanstack/react-query" version="existing"/>
+    <package name="@prisma/client" version="existing"/>
+    <package name="zod" version="existing"/>
+    <cloudflareBinding name="FILES_BUCKET" type="R2"/>
+  </dependencies>
+
+  <testing>
+    <standards>
+      <framework>Vitest 3.2.4 with React Testing Library 16.3.0</framework>
+      <coverageGoal>&gt;80%</coverageGoal>
+      <priority>Test deletion prevention and download headers</priority>
+    </standards>
+
+    <testLocations>
+      <location>src/__tests__/routes/api/slices/$sliceId.test.ts</location>
+      <location>src/__tests__/routes/slices/$sliceId.test.tsx</location>
+      <location>src/__tests__/components/SliceCard.test.tsx</location>
+    </testLocations>
+
+    <testIdeas>
+      <category name="GET /api/slices/$sliceId">
+        <test>Returns 200 with slice data</test>
+        <test>Returns 404 for invalid ID</test>
+        <test>Includes metadataExtracted flag</test>
+        <test>Includes associated models</test>
+      </category>
+
+      <category name="DELETE /api/slices/$sliceId">
+        <test>Deletes slice and R2 file successfully</test>
+        <test>Returns 204 on success</test>
+        <test>Returns 409 if last slice for variant (Epic 4)</test>
+        <test>Deletes from DB before R2</test>
+      </category>
+
+      <category name="Slice Detail Page">
+        <test>Renders metadata status correctly</test>
+        <test>Shows "Not extracted yet" if metadataExtracted == false</test>
+        <test>Download button links to r2Url</test>
+        <test>Delete button opens confirmation modal</test>
+      </category>
+
+      <category name="Slice List Page">
+        <test>Displays grid of slice cards</test>
+        <test>Shows metadata badge on each card</test>
+        <test>Responsive grid layout (4→2→1)</test>
+      </category>
+
+      <category name="Download Functionality">
+        <test>Download button has correct URL</test>
+        <test>R2 URL has content-disposition: attachment header</test>
+        <test>Download forces file download (not inline view)</test>
+        <test>Filename in download matches original slice name</test>
+      </category>
+
+      <category name="Metadata Display">
+        <test>Shows pending badge if metadataExtracted == false</test>
+        <test>Shows extracted badge if metadataExtracted == true</test>
+        <test>Metadata section prepared for Epic 3 enhancement</test>
+      </category>
+    </testIdeas>
+  </testing>
+
+  <implementationNotes>
+    <note priority="high">
+      Story 2.8 is nearly identical to Story 2.7 (Model CRUD).
+      Develop in parallel, share components (DeleteConfirmModal, grid patterns).
+      Main differences: metadataExtracted flag, download headers, Epic 3/4 integration points.
+    </note>
+
+    <note priority="high">
+      Deletion prevention (AC#4) is deferred to Epic 4 (when product variants exist).
+      Include the check logic in code but it won't be testable until Epic 4.
+      Document this clearly in code comments.
+    </note>
+
+    <note priority="medium">
+      Metadata display (AC#8, AC#10) prepares for Epic 3.
+      Create UI structure now, Epic 3 Story 3.6 will populate with actual data.
+      Show clear "Not extracted yet" message in MVP.
+    </note>
+
+    <note priority="medium">
+      Download headers (AC#6) already set in Story 2.5.
+      This story just links to r2Url with download attribute.
+      Test download on mobile browsers to ensure proper behavior.
+    </note>
+
+    <note priority="low">
+      Epic 4 will add product variant associations.
+      Include placeholder UI: "Used in Products: Coming in Epic 4"
+      Database relationships already exist (Story 2.1 schema).
+    </note>
+  </implementationNotes>
+</story-context>

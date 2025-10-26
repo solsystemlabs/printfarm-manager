@@ -1,0 +1,608 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.6</storyId>
+    <title>Implement Thumbnail Handling</title>
+    <status>ContextReadyDraft</status>
+    <generatedAt>2025-10-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-2.6.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an owner</asA>
+    <iWant>thumbnails automatically extracted and resized from uploaded files</iWant>
+    <soThat>my catalog has consistent visual presentation</soThat>
+    <acceptanceCriteria>
+      <criterion id="1">Image files (.png, .jpg) uploaded as thumbnails during zip extraction</criterion>
+      <criterion id="2">Oversized images (>2MB or >1024x1024) automatically resized to fit limits per NFR-2</criterion>
+      <criterion id="3">Resizing preserves aspect ratio, uses high-quality scaling</criterion>
+      <criterion id="4">If resizing fails or is complex, show oversized image as unselectable with warning per FR-3</criterion>
+      <criterion id="5">Default placeholder image used when no thumbnail available</criterion>
+      <criterion id="6">Thumbnails extracted from .gcode.3mf files (embedded in slice file) - defer extraction logic to Epic 3</criterion>
+      <criterion id="7">Manual thumbnail upload/replace supported via UI (owner can change thumbnail anytime)</criterion>
+      <criterion id="8">Resized images converted to JPEG format (85% quality) for consistency</criterion>
+      <criterion id="9">Images within limits (≤2MB and ≤1024x1024) uploaded as-is without resizing</criterion>
+      <criterion id="10">Resize failures handled gracefully (return error, not crash application)</criterion>
+      <criterion id="11">Thumbnails stored with content-disposition: inline (for browser viewing)</criterion>
+      <criterion id="12">Logs resize operations with performance metrics per NFR-9</criterion>
+    </acceptanceCriteria>
+  </story>
+
+  <criticalInvestigation>
+    <issue>Sharp Library Compatibility with Cloudflare Workers</issue>
+    <description>
+      Sharp is a popular Node.js image processing library that uses libvips (native C library).
+      Cloudflare Workers use V8 isolates (not full Node.js runtime), and native bindings are NOT supported.
+      
+      REQUIRED: Test sharp in staging Cloudflare Workers environment before proceeding with implementation.
+    </description>
+    <testingSteps>
+      1. Install sharp: npm install sharp @types/sharp
+      2. Create test endpoint: /api/images/test-resize
+      3. Deploy to Cloudflare Workers staging
+      4. Attempt image resize operation
+      5. Document results: Success or failure with error details
+    </testingSteps>
+    <fallbackOptions>
+      <option priority="1" recommended="true">
+        <name>Client-Side Canvas Resizing</name>
+        <description>Resize images in browser using Canvas API before upload</description>
+        <pros>No server dependencies, works everywhere, consistent with Story 2.3 client-side pattern</pros>
+        <cons>Requires client-side JavaScript, slower for large batches</cons>
+      </option>
+      <option priority="2">
+        <name>Cloudflare Images API</name>
+        <description>Use Cloudflare's managed image transformation service</description>
+        <pros>Server-side, no compatibility issues, managed service</pros>
+        <cons>Additional cost ($5/month for 100k transformations), vendor lock-in</cons>
+      </option>
+      <option priority="3">
+        <name>Accept Oversized with Warning</name>
+        <description>Per AC#4, mark oversized images as unselectable with warning</description>
+        <pros>Simple implementation, no new dependencies</pros>
+        <cons>Poor UX, requires manual user intervention</cons>
+      </option>
+    </fallbackOptions>
+  </criticalInvestigation>
+
+  <documentation>
+    <artifact id="1" type="tech-spec" relevance="high">
+      <path>docs/tech-spec-epic-2.md</path>
+      <section>Story 2.6: Implement Thumbnail Handling (lines 1227-1421)</section>
+      <keyPoints>
+        - Sharp compatibility testing required (lines 1246-1248)
+        - Resize utility implementation with sharp (lines 1250-1316)
+        - Thumbnail upload API endpoint (lines 1319-1406)
+        - Resize limits: 2MB file size, 1024x1024 dimensions
+        - JPEG conversion at 85% quality for consistency
+        - Aspect ratio preservation with fit: inside
+        - Performance logging: original_size, resized_size, duration_ms
+      </keyPoints>
+      <snippet>
+export async function resizeImage(
+  imageBuffer: ArrayBuffer,
+  originalFilename: string
+): Promise&lt;Buffer | null&gt; {
+  const buffer = Buffer.from(imageBuffer)
+  const image = sharp(buffer)
+  const metadata = await image.metadata()
+
+  const needsResize =
+    (metadata.width &amp;&amp; metadata.width &gt; MAX_DIMENSIONS) ||
+    (metadata.height &amp;&amp; metadata.height &gt; MAX_DIMENSIONS) ||
+    buffer.length &gt; MAX_THUMBNAIL_SIZE
+
+  if (!needsResize) {
+    return buffer // Upload original unchanged
+  }
+
+  const resized = await image
+    .resize({
+      width: MAX_DIMENSIONS,
+      height: MAX_DIMENSIONS,
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+    .jpeg({ quality: 85 })
+    .toBuffer()
+
+  return resized
+}
+      </snippet>
+    </artifact>
+
+    <artifact id="2" type="epic-requirements" relevance="high">
+      <path>docs/epics.md</path>
+      <section>Story 2.6: Implement Thumbnail Handling (lines 320-341)</section>
+      <keyPoints>
+        - Prerequisites: Stories 2.2, 2.3, 2.5
+        - Image files uploaded as thumbnails during zip extraction
+        - Oversized images automatically resized
+        - Manual thumbnail upload/replace supported
+        - .gcode.3mf thumbnail extraction deferred to Epic 3
+        - Decision: Store resized only (not both original and resized)
+      </keyPoints>
+    </artifact>
+
+    <artifact id="3" type="prd-requirements" relevance="high">
+      <path>docs/PRD.md</path>
+      <section>NFR-2: File Size and Storage Limits</section>
+      <keyPoints>
+        - Thumbnail size limits: ≤2MB file size, ≤1024x1024 pixels
+        - Rationale: Balance visual quality with storage costs and load times
+        - Implementation: Auto-resize oversized images to meet limits
+      </keyPoints>
+    </artifact>
+
+    <artifact id="4" type="prd-requirements" relevance="medium">
+      <path>docs/PRD.md</path>
+      <section>FR-3: Oversized Image Handling</section>
+      <keyPoints>
+        - If resizing fails or is too complex, show image as unselectable
+        - Display warning message to user
+        - Suggest manual resize before re-upload
+        - Don't crash application on resize failures
+      </keyPoints>
+    </artifact>
+
+    <artifact id="5" type="story-reference" relevance="high">
+      <path>docs/stories/story-2.4.md</path>
+      <section>Bulk Import Integration</section>
+      <keyPoints>
+        - Story 2.4 provides file selection UI after zip extraction
+        - Thumbnail upload happens during bulk import
+        - Image files in zip should be uploaded as thumbnails
+        - Link thumbnails to models via thumbnailUrl field
+        - If thumbnail upload fails, log warning but continue model import
+      </keyPoints>
+    </artifact>
+
+    <artifact id="6" type="story-reference" relevance="medium">
+      <path>docs/stories/story-2.3.md</path>
+      <section>Client-Side Architecture Pattern</section>
+      <keyPoints>
+        - Story 2.3 moved zip extraction to client-side due to Workers memory limits
+        - If sharp fails, client-side canvas resizing follows same pattern
+        - Browser has no memory constraints for file processing
+        - Client-first architecture is established pattern
+      </keyPoints>
+    </artifact>
+
+    <artifact id="7" type="architecture" relevance="high">
+      <path>CLAUDE.md</path>
+      <section>Cloudflare Workers Context (lines 90-152)</section>
+      <keyPoints>
+        - Workers use V8 isolates, not full Node.js runtime
+        - Native bindings (C/C++) are NOT supported
+        - R2 access via cf.env.FILES_BUCKET binding
+        - Environment variables via getContext('cloudflare')
+        - Memory limit: 128MB per request
+        - Execution limit: 30 seconds CPU time
+      </keyPoints>
+    </artifact>
+  </documentation>
+
+  <codeArtifacts>
+    <artifact id="1" type="utility" relevance="high">
+      <path>src/lib/utils/errors.ts</path>
+      <reason>Error handling utility for consistent error responses (from Stories 2.2, 2.5)</reason>
+      <interfaces>
+        <interface>createErrorResponse(error: Error, status: number, code: string)</interface>
+      </interfaces>
+    </artifact>
+
+    <artifact id="2" type="utility" relevance="high">
+      <path>src/lib/utils/logger.ts</path>
+      <reason>Structured logging utilities for performance metrics (from Stories 2.2, 2.5)</reason>
+      <interfaces>
+        <interface>log(event: string, data: object)</interface>
+        <interface>logError(event: string, error: Error, data: object)</interface>
+      </interfaces>
+    </artifact>
+
+    <artifact id="3" type="api-pattern" relevance="high">
+      <path>src/routes/api/models/upload.ts</path>
+      <reason>File upload pattern template (from Story 2.2) - similar structure needed</reason>
+      <keyPatterns>
+        - TanStack Start createFileRoute pattern
+        - FormData file extraction
+        - R2 bucket access via getContext('cloudflare')
+        - Upload with httpMetadata headers
+        - Structured logging with performance metrics
+      </keyPatterns>
+    </artifact>
+
+    <artifact id="4" type="integration-point" relevance="high">
+      <path>src/routes/api/models/import-zip.ts</path>
+      <reason>Bulk import endpoint (Story 2.4) - needs thumbnail upload integration</reason>
+      <modificationNeeded>
+        Add thumbnail upload logic for image files during bulk import:
+        1. Identify image files in selected files list
+        2. For each image: call thumbnail upload/resize
+        3. Store returned R2 URL in model thumbnailUrl field
+        4. Handle failures gracefully (log warning, continue import)
+      </modificationNeeded>
+    </artifact>
+
+    <artifact id="5" type="database-schema" relevance="medium">
+      <path>prisma/schema.prisma</path>
+      <reason>Model and Slice schemas include thumbnailUrl field (from Story 2.1)</reason>
+      <relevantFields>
+        Model.thumbnailUrl (String?, nullable)
+        Slice.thumbnailUrl (String?, nullable)
+      </relevantFields>
+    </artifact>
+
+    <artifact id="6" type="client-utility" relevance="high">
+      <path>src/lib/zip/client-extractor.ts</path>
+      <reason>Client-side extraction pattern (Story 2.3) - reference for client-side resize fallback</reason>
+      <keyPatterns>
+        - Browser-based file processing
+        - Progress callback pattern
+        - Blob handling in browser
+        - Error handling without server
+      </keyPatterns>
+    </artifact>
+  </codeArtifacts>
+
+  <constraints>
+    <constraint id="1" type="architecture" priority="critical">
+      <title>Sharp Compatibility Testing Required</title>
+      <description>
+        MUST test sharp library in Cloudflare Workers staging environment before implementation.
+        Sharp uses native bindings which are NOT supported in V8 isolates.
+        If sharp fails, implement client-side canvas resizing fallback.
+      </description>
+    </constraint>
+
+    <constraint id="2" type="technical" priority="high">
+      <title>Thumbnail Size Limits</title>
+      <description>
+        Per NFR-2:
+        - File size: ≤2MB
+        - Dimensions: ≤1024x1024 pixels
+        - Auto-resize if oversized
+        - If resize fails, mark as unselectable per FR-3
+      </description>
+    </constraint>
+
+    <constraint id="3" type="technical" priority="high">
+      <title>Aspect Ratio Preservation</title>
+      <description>
+        Per AC#3, resizing must preserve aspect ratio.
+        Use sharp resize options:
+        - fit: 'inside' (shrink to fit, no cropping)
+        - withoutEnlargement: true (never upscale)
+        Example: 2000x1000 → 1024x512 (not 1024x1024)
+      </description>
+    </constraint>
+
+    <constraint id="4" type="technical" priority="high">
+      <title>JPEG Conversion for Consistency</title>
+      <description>
+        Per AC#8 and tech spec:
+        - Convert all resized thumbnails to JPEG
+        - Quality: 85% (good balance of quality vs size)
+        - Always use .jpg extension after resize
+        - Provides consistent format across all thumbnails
+      </description>
+    </constraint>
+
+    <constraint id="5" type="technical" priority="medium">
+      <title>Content-Disposition Headers</title>
+      <description>
+        Per AC#11:
+        - Thumbnails: content-disposition: inline (browser displays)
+        - Models/Slices: content-disposition: attachment (browser downloads)
+        This allows thumbnails to be viewed directly in img tags.
+      </description>
+    </constraint>
+
+    <constraint id="6" type="integration" priority="high">
+      <title>Story 2.4 Bulk Import Integration</title>
+      <description>
+        Per AC#1, integrate thumbnail upload with Story 2.4 bulk import:
+        - Identify image files during import
+        - Upload as thumbnails (resize if needed)
+        - Link thumbnail URL to model/slice
+        - Handle failures gracefully (don't block model import)
+      </description>
+    </constraint>
+
+    <constraint id="7" type="integration" priority="medium">
+      <title>Story 2.7/2.8 Manual Upload Integration</title>
+      <description>
+        Per AC#7, add manual thumbnail upload/replace to:
+        - Model detail pages (Story 2.7)
+        - Slice detail pages (Story 2.8)
+        Implementation: File input → thumbnail upload API → update thumbnailUrl
+      </description>
+    </constraint>
+
+    <constraint id="8" type="scope" priority="high">
+      <title>Epic 3 Deferred: .gcode.3mf Thumbnail Extraction</title>
+      <description>
+        Per AC#6:
+        - Automatic extraction from .gcode.3mf is deferred to Epic 3 Story 3.1
+        - Story 2.6 only implements manual thumbnail upload
+        - Database schema already supports thumbnailUrl (Story 2.1)
+      </description>
+    </constraint>
+
+    <constraint id="9" type="ui" priority="medium">
+      <title>Default Placeholder Images</title>
+      <description>
+        Per AC#5, provide default placeholders when thumbnailUrl is null:
+        - Model placeholder: Generic 3D cube/mesh icon
+        - Slice placeholder: Generic printer/gcode icon
+        - Store in /public/images/placeholders/
+        - SVG format recommended (scalable, small size)
+      </description>
+    </constraint>
+
+    <constraint id="10" type="error-handling" priority="high">
+      <title>Graceful Resize Failures</title>
+      <description>
+        Per AC#4 and AC#10:
+        - If resize fails, return 422 RESIZE_FAILED error
+        - Log error details but don't crash
+        - Mark image as unselectable in UI
+        - Show warning: "Image resize failed. Image too large or corrupted."
+        - Suggest user resize offline
+      </description>
+    </constraint>
+
+    <constraint id="11" type="performance" priority="medium">
+      <title>Performance Logging</title>
+      <description>
+        Per NFR-9 and AC#12, log performance metrics:
+        - duration_ms: Time to resize image
+        - original_size: Original file size in bytes
+        - resized_size: Resized file size in bytes
+        - reduction_percent: Size reduction percentage
+      </description>
+    </constraint>
+
+    <constraint id="12" type="storage" priority="medium">
+      <title>R2 Storage Organization</title>
+      <description>
+        Use prefixed R2 keys for organization:
+        - Thumbnails: thumbnails/uuid.jpg
+        - Always .jpg extension (after JPEG conversion)
+        - Consistent with models/ and slices/ prefixes
+      </description>
+    </constraint>
+
+    <constraint id="13" type="typescript" priority="high">
+      <title>TypeScript Standards</title>
+      <description>
+        Per CLAUDE.md:
+        - NEVER use 'any' type to fix type issues
+        - Use strict TypeScript configuration
+        - Proper error typing (Error | unknown patterns)
+      </description>
+    </constraint>
+
+    <constraint id="14" type="testing" priority="high">
+      <title>Testing Standards</title>
+      <description>
+        Per Story 2.2/2.5 patterns:
+        - All tests must pass before story completion
+        - Don't ignore test failures even if unrelated
+        - Unit tests for resize utility
+        - API endpoint tests
+        - Integration tests with Story 2.4
+      </description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface id="1" type="utility-function">
+      <signature>resizeImage(imageBuffer: ArrayBuffer, originalFilename: string): Promise&lt;Buffer | null&gt;</signature>
+      <description>Resizes image if oversized, returns Buffer or null on failure</description>
+      <parameters>
+        <param>imageBuffer: Raw image data as ArrayBuffer</param>
+        <param>originalFilename: Filename for logging purposes</param>
+      </parameters>
+      <returns>Resized image Buffer (JPEG format) or null if resize fails</returns>
+      <errors>Returns null on resize failure, logs error details</errors>
+    </interface>
+
+    <interface id="2" type="api-endpoint">
+      <path>POST /api/images/upload</path>
+      <description>Upload and resize thumbnail image</description>
+      <requestBody>FormData with 'file' field (PNG or JPEG image)</requestBody>
+      <successResponse>
+        Status: 201
+        Body: { url: string } // R2 URL of uploaded thumbnail
+      </successResponse>
+      <errorResponses>
+        <error status="400" code="MISSING_FILE">No file in FormData</error>
+        <error status="400" code="INVALID_IMAGE_TYPE">File type not PNG or JPEG</error>
+        <error status="422" code="RESIZE_FAILED">Image resize operation failed</error>
+        <error status="500" code="UPLOAD_FAILED">R2 upload or unexpected error</error>
+      </errorResponses>
+    </interface>
+
+    <interface id="3" type="integration">
+      <description>Thumbnail upload integration with Story 2.4 bulk import</description>
+      <modificationRequired>src/routes/api/models/import-zip.ts</modificationRequired>
+      <logic>
+        For each selected file:
+          if (file.type === 'image'):
+            thumbnailUrl = await uploadThumbnail(file)
+            if (thumbnailUrl):
+              model.thumbnailUrl = thumbnailUrl
+            else:
+              log warning, continue import
+      </logic>
+    </interface>
+  </interfaces>
+
+  <dependencies>
+    <package name="sharp" version="latest" optional="true">
+      <reason>Image resizing library (IF compatible with Cloudflare Workers)</reason>
+      <install>npm install sharp @types/sharp</install>
+      <compatibility>TESTING REQUIRED - May not work due to native bindings</compatibility>
+    </package>
+
+    <package name="@tanstack/react-router" version="existing">
+      <reason>API route creation with createFileRoute</reason>
+    </package>
+
+    <package name="@tanstack/react-start" version="existing">
+      <reason>JSON response helper (json function)</reason>
+    </package>
+
+    <cloudflareBinding name="FILES_BUCKET" type="R2">
+      <reason>R2 bucket for storing thumbnails</reason>
+      <configured>wrangler.jsonc</configured>
+    </cloudflareBinding>
+
+    <fallbackOption name="Canvas API" condition="if sharp fails">
+      <reason>Client-side image resizing in browser</reason>
+      <noDependencies>Built into browsers, no npm packages needed</noDependencies>
+    </fallbackOption>
+
+    <fallbackOption name="Cloudflare Images API" condition="if sharp fails">
+      <reason>Managed image transformation service</reason>
+      <cost>$5/month for 100k transformations</cost>
+      <apiDocs>https://developers.cloudflare.com/images/</apiDocs>
+    </fallbackOption>
+  </dependencies>
+
+  <testing>
+    <standards>
+      <framework>Vitest 3.2.4 with React Testing Library 16.3.0</framework>
+      <coverageGoal>&gt;80% for resize utility and upload API</coverageGoal>
+      <priority>Sharp compatibility test is highest priority (determines implementation approach)</priority>
+    </standards>
+
+    <testLocations>
+      <location>src/__tests__/lib/images/resize.test.ts</location>
+      <location>src/__tests__/routes/api/images/upload.test.ts</location>
+      <location>Integration tests in Story 2.4 tests (bulk import with thumbnails)</location>
+    </testLocations>
+
+    <testIdeas>
+      <category name="Sharp Compatibility (Priority 1)">
+        <test>Deploy test endpoint to Cloudflare Workers staging</test>
+        <test>Attempt sharp.resize() operation with sample image</test>
+        <test>Document success/failure with error details</test>
+        <test>If fails: Document which fallback option to implement</test>
+      </category>
+
+      <category name="Resize Utility Logic">
+        <test>Image within size/dimension limits → returned unchanged</test>
+        <test>Image over dimension limit (2000x1000) → resized to 1024x512</test>
+        <test>Image over size limit (5MB) → resized and compressed to &lt;2MB</test>
+        <test>Small image (500x500) → not upscaled (withoutEnlargement)</test>
+        <test>Portrait image (600x1200) → resized to 512x1024 (aspect ratio preserved)</test>
+        <test>Square image (2000x2000) → resized to 1024x1024</test>
+        <test>JPEG conversion applied to all resized images</test>
+        <test>JPEG quality set to 85%</test>
+        <test>Corrupted image → returns null, logs error</test>
+        <test>Invalid image data → returns null, logs error</test>
+      </category>
+
+      <category name="API Endpoint Validation">
+        <test>Valid PNG upload → 201 with R2 URL</test>
+        <test>Valid JPEG upload → 201 with R2 URL</test>
+        <test>Invalid type (GIF) → 400 INVALID_IMAGE_TYPE</test>
+        <test>Invalid type (BMP) → 400 INVALID_IMAGE_TYPE</test>
+        <test>Missing file → 400 MISSING_FILE</test>
+        <test>Resize failure → 422 RESIZE_FAILED</test>
+        <test>R2 upload failure → 500 UPLOAD_FAILED</test>
+      </category>
+
+      <category name="R2 Storage">
+        <test>Thumbnail uploaded to R2 with thumbnails/ prefix</test>
+        <test>R2 key format: thumbnails/uuid.jpg</test>
+        <test>Content-Type header set to image/jpeg</test>
+        <test>Content-Disposition set to inline (not attachment)</test>
+        <test>R2 URL returned in response</test>
+        <test>Uploaded file accessible via R2 URL</test>
+      </category>
+
+      <category name="Performance Logging">
+        <test>image_resize_start event logged with filename and size</test>
+        <test>image_resize_complete logged with duration_ms</test>
+        <test>image_resize_complete includes original_size and resized_size</test>
+        <test>image_resize_complete includes reduction_percent</test>
+        <test>image_resize_skipped logged when image within limits</test>
+        <test>image_resize_failed logged on errors</test>
+        <test>image_upload_start and image_upload_complete logged</test>
+      </category>
+
+      <category name="Integration with Story 2.4">
+        <test>Bulk import with mixed files (models + images) → images uploaded as thumbnails</test>
+        <test>Thumbnail URL linked to model via thumbnailUrl field</test>
+        <test>Thumbnail upload failure → log warning, continue model import</test>
+        <test>Multiple images in zip → all uploaded, only one linked per model</test>
+      </category>
+
+      <category name="Manual Upload (Story 2.7/2.8 Integration)">
+        <test>Upload thumbnail from model detail page → thumbnailUrl updated</test>
+        <test>Replace existing thumbnail → old thumbnail deleted from R2</test>
+        <test>Upload thumbnail from slice detail page → thumbnailUrl updated</test>
+      </category>
+
+      <category name="Error Handling">
+        <test>Corrupted image → graceful failure, 422 error</test>
+        <test>Extremely large image (exceeds memory) → graceful failure</test>
+        <test>R2 unavailable → 500 error, logged</test>
+        <test>Resize timeout (if applicable) → graceful failure</test>
+      </category>
+
+      <category name="Edge Cases">
+        <test>Empty file → validation error</test>
+        <test>File with wrong extension (.txt renamed to .jpg) → type validation catches</test>
+        <test>Animated image (GIF, APNG) → rejected (not in allowed types)</test>
+        <test>Very small image (10x10) → uploaded as-is, no upscaling</test>
+        <test>Filename with special characters → handled correctly in R2 key</test>
+      </category>
+
+      <category name="Fallback Implementation (If Sharp Fails)">
+        <test>Client-side canvas resize reduces oversized image correctly</test>
+        <test>Canvas resize preserves aspect ratio</test>
+        <test>Resized blob uploaded to server successfully</test>
+        <test>Progress feedback shown during client-side resize</test>
+      </category>
+    </testIdeas>
+  </testing>
+
+  <implementationNotes>
+    <note priority="critical">
+      FIRST TASK: Test sharp compatibility with Cloudflare Workers.
+      Create simple test endpoint, deploy to staging, document results.
+      This determines entire implementation approach.
+    </note>
+
+    <note priority="high">
+      If sharp works: Implement server-side resize utility as specified in tech spec.
+      If sharp fails: Implement client-side Canvas API resizing (recommended fallback).
+    </note>
+
+    <note priority="high">
+      Integration with Story 2.4 bulk import is critical for AC#1.
+      Modify import-zip endpoint to handle image files separately.
+    </note>
+
+    <note priority="medium">
+      Default placeholder images needed for AC#5.
+      Source or create SVG icons for models and slices.
+      Store in /public/images/placeholders/ directory.
+    </note>
+
+    <note priority="medium">
+      Manual upload UI (AC#7) is part of Stories 2.7 and 2.8.
+      This story provides the API endpoint, later stories add UI integration.
+    </note>
+
+    <note priority="low">
+      Epic 3 Story 3.1 will handle .gcode.3mf thumbnail extraction (AC#6).
+      No action required in this story beyond documenting integration point.
+    </note>
+  </implementationNotes>
+</story-context>

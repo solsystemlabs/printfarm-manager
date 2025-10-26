@@ -1,0 +1,620 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.7</storyId>
+    <title>Implement Model CRUD Operations</title>
+    <status>ContextReadyDraft</status>
+    <generatedAt>2025-10-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-2.7.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an owner</asA>
+    <iWant>to view, edit, and delete model records</iWant>
+    <soThat>I can manage my model catalog over time</soThat>
+    <acceptanceCriteria>
+      <criterion id="1">Model detail page displays: thumbnail, filename, size, upload date, associated slices, products</criterion>
+      <criterion id="2">Edit functionality: update model name, replace thumbnail</criterion>
+      <criterion id="3">Delete functionality: hard delete per FR-17 (no soft delete in MVP)</criterion>
+      <criterion id="4">Deletion warning shows related entities: "This model is used in 3 slices and 2 products"</criterion>
+      <criterion id="5">Deleting model deletes associated R2 file (atomic operation per NFR-4)</criterion>
+      <criterion id="6">Deletion breaks relationships - slices/products show warning "Missing model: [name]"</criterion>
+      <criterion id="7">Model list page shows all models in visual grid with thumbnails and names per UX Principle 1</criterion>
+      <criterion id="8">Download button for model file (sets proper headers per FR-16)</criterion>
+      <criterion id="9">Deletion prevented if model used in slices (409 conflict error)</criterion>
+      <criterion id="10">Logs all CRUD operations with performance metrics per NFR-9</criterion>
+    </acceptanceCriteria>
+  </story>
+
+  <documentation>
+    <artifact id="1" type="tech-spec" relevance="high">
+      <path>docs/tech-spec-epic-2.md</path>
+      <section>Story 2.7: Implement Model CRUD Operations (lines 1423-1722)</section>
+      <keyPoints>
+        - Dynamic route pattern: /api/models/$modelId
+        - GET endpoint returns model with relationships (sliceModels)
+        - DELETE checks usage before deletion (prevent if used)
+        - DELETE: Database first, R2 cleanup second (atomic pattern)
+        - PATCH updates filename and thumbnailUrl
+        - Hard delete (no soft delete in MVP)
+        - React Query for data fetching and mutations
+        - Confirmation modal prevents accidental deletion
+      </keyPoints>
+      <snippet>
+DELETE: async ({ params }) => {
+  const model = await prisma.model.findUnique({
+    where: { id: params.modelId },
+    include: { sliceModels: true }
+  })
+
+  if (model.sliceModels.length > 0) {
+    return createErrorResponse(
+      new Error(`Cannot delete model used in ${model.sliceModels.length} slice(s)`),
+      409,
+      'MODEL_IN_USE'
+    )
+  }
+
+  // Delete from database first
+  await prisma.model.delete({ where: { id: params.modelId } })
+
+  // Queue R2 deletion (eventual consistency acceptable)
+  await bucket.delete(model.r2Key)
+
+  return new Response(null, { status: 204 })
+}
+      </snippet>
+    </artifact>
+
+    <artifact id="2" type="epic-requirements" relevance="high">
+      <path>docs/epics.md</path>
+      <section>Story 2.7: Implement Model CRUD Operations (lines 344-364)</section>
+      <keyPoints>
+        - Prerequisites: Story 2.2 (model upload)
+        - Display associated slices and products on detail page
+        - Edit: update name, replace thumbnail
+        - Delete: hard delete with R2 cleanup
+        - Deletion warning shows related entities
+        - Visual grid for model list page
+        - UI warnings prevent accidental deletions
+      </keyPoints>
+    </artifact>
+
+    <artifact id="3" type="prd-requirements" relevance="high">
+      <path>docs/PRD.md</path>
+      <section>FR-17: Hard Delete (No Soft Delete in MVP)</section>
+      <keyPoints>
+        - MVP uses physical deletion (no soft delete)
+        - Deleted records removed from database permanently
+        - Associated R2 files deleted
+        - Relationships break (show warnings on related entities)
+        - Rationale: Simplicity for MVP, soft delete adds complexity
+      </keyPoints>
+    </artifact>
+
+    <artifact id="4" type="prd-requirements" relevance="high">
+      <path>docs/PRD.md</path>
+      <section>NFR-4: Data Integrity and Consistency (Atomic Operations)</section>
+      <keyPoints>
+        - Deletion pattern: Database first, R2 second
+        - If DB delete fails, R2 file remains (consistent state)
+        - If R2 delete fails after DB delete, orphaned file (acceptable)
+        - Orphaned R2 files can be cleaned up in storage audit
+        - Prevents dangling references (DB pointing to non-existent R2 files)
+      </keyPoints>
+    </artifact>
+
+    <artifact id="5" type="story-reference" relevance="high">
+      <path>docs/stories/story-2.2.md</path>
+      <section>Model Upload Pattern</section>
+      <keyPoints>
+        - Story 2.2 creates models (upload endpoint)
+        - Story 2.7 provides read, update, delete operations
+        - Uses same error handling utilities
+        - Uses same logging patterns
+        - Atomic R2+DB operations established pattern
+      </keyPoints>
+    </artifact>
+
+    <artifact id="6" type="story-reference" relevance="medium">
+      <path>docs/stories/story-2.6.md</path>
+      <section>Thumbnail Upload Integration</section>
+      <keyPoints>
+        - Story 2.6 provides /api/images/upload endpoint
+        - Model edit includes thumbnail replace functionality
+        - User clicks "Replace Thumbnail" → file input
+        - Upload image → get R2 URL
+        - PATCH /api/models/$modelId with new thumbnailUrl
+        - Old thumbnail remains in R2 (cleanup deferred)
+      </keyPoints>
+    </artifact>
+
+    <artifact id="7" type="ux-specification" relevance="high">
+      <path>docs/ux-specification.md</path>
+      <section>UX Principle 1: Visual-First Navigation</section>
+      <keyPoints>
+        - Catalog pages default to visual grid layout
+        - Each item shows thumbnail (or placeholder)
+        - 4 columns desktop → 2 tablet → 1 mobile (responsive)
+        - Hover effects for visual feedback
+        - Click anywhere on card to navigate
+        - Thumbnails minimum 200x200px for visibility
+      </keyPoints>
+    </artifact>
+  </documentation>
+
+  <codeArtifacts>
+    <artifact id="1" type="api-pattern" relevance="high">
+      <path>src/routes/api/models/upload.ts</path>
+      <reason>Model upload API (Story 2.2) - establishes patterns for model API endpoints</reason>
+      <keyPatterns>
+        - TanStack Start createFileRoute pattern
+        - Cloudflare context access via getContext('cloudflare')
+        - R2 bucket operations
+        - Prisma database operations
+        - Error handling with createErrorResponse
+        - Structured logging with log() and logError()
+      </keyPatterns>
+    </artifact>
+
+    <artifact id="2" type="utility" relevance="high">
+      <path>src/lib/utils/errors.ts</path>
+      <reason>Error handling utility for consistent error responses</reason>
+      <interfaces>
+        <interface>createErrorResponse(error: Error, status: number, code: string)</interface>
+      </interfaces>
+    </artifact>
+
+    <artifact id="3" type="utility" relevance="high">
+      <path>src/lib/utils/logger.ts</path>
+      <reason>Structured logging utilities for performance metrics</reason>
+      <interfaces>
+        <interface>log(event: string, data: object)</interface>
+        <interface>logError(event: string, error: Error, data: object)</interface>
+      </interfaces>
+    </artifact>
+
+    <artifact id="4" type="database-client" relevance="high">
+      <path>src/lib/db/client.ts</path>
+      <reason>Prisma client factory for database operations</reason>
+      <interfaces>
+        <interface>getPrismaClient(): PrismaClient</interface>
+      </interfaces>
+      <usage>Use for all database queries in API endpoints</usage>
+    </artifact>
+
+    <artifact id="5" type="database-schema" relevance="high">
+      <path>prisma/schema.prisma</path>
+      <reason>Model schema with relationships (from Story 2.1)</reason>
+      <relevantFields>
+        Model.id, filename, r2Key, r2Url, fileSize, contentType, thumbnailUrl, createdAt, updatedAt
+        Model.sliceModels (relationship to slices via junction table)
+      </relevantFields>
+    </artifact>
+
+    <artifact id="6" type="ui-pattern" relevance="medium">
+      <path>src/routes/models/index.tsx</path>
+      <reason>Model list page (may exist from prior work, to be created if not)</reason>
+      <keyPatterns>
+        - React Query for data fetching
+        - Responsive grid layout (Tailwind CSS)
+        - Loading and error states
+        - Navigation to detail pages
+      </keyPatterns>
+    </artifact>
+  </codeArtifacts>
+
+  <constraints>
+    <constraint id="1" type="architecture" priority="critical">
+      <title>Hard Delete Pattern (No Soft Delete)</title>
+      <description>
+        Per FR-17, MVP uses hard delete (physical removal):
+        - Delete record from database permanently
+        - Delete associated R2 file
+        - Relationships break (slices/products show warnings)
+        - NO deletedAt timestamp, NO soft delete in MVP
+        - Rationale: Simplicity, soft delete adds query complexity
+      </description>
+    </constraint>
+
+    <constraint id="2" type="architecture" priority="critical">
+      <title>Atomic Deletion Pattern (DB First, R2 Second)</title>
+      <description>
+        Per NFR-4:
+        1. Delete from database first (await prisma.model.delete)
+        2. Delete from R2 second (await bucket.delete)
+        
+        Why this order:
+        - Prevents dangling DB references (DB pointing to deleted R2 file)
+        - If R2 fails, orphaned file can be cleaned up later
+        - If DB fails, entire operation failed (model still exists)
+        
+        Alternative order (R2 → DB) would create broken state if DB fails.
+      </description>
+    </constraint>
+
+    <constraint id="3" type="business-logic" priority="high">
+      <title>Deletion Prevention (409 Conflict)</title>
+      <description>
+        Per AC#9, prevent deletion if model used in slices:
+        - Check sliceModels relationship count
+        - If count > 0, return 409 MODEL_IN_USE error
+        - Show user: "Cannot delete model used in X slice(s)"
+        - User must delete slices first or reassign to different model
+        - MVP: Prevention only (no cascading delete option)
+      </description>
+    </constraint>
+
+    <constraint id="4" type="integration" priority="high">
+      <title>TanStack Router Dynamic Routes</title>
+      <description>
+        Use TanStack Router dynamic route parameters:
+        - API route: /api/models/$modelId
+        - UI route: /models/$modelId
+        - Type-safe parameter access via Route.useParams()
+        - Pattern established in TanStack Start framework
+      </description>
+    </constraint>
+
+    <constraint id="5" type="database" priority="high">
+      <title>Relationship Loading (Prisma Includes)</title>
+      <description>
+        Load related entities efficiently:
+        - Use Prisma include for relationships
+        - Only select needed fields (not full related objects)
+        - Example: include: { sliceModels: { include: { slice: { select: { id: true, filename: true } } } } }
+        - Avoids N+1 query problems
+        - Reduces response payload size
+      </description>
+    </constraint>
+
+    <constraint id="6" type="ui-ux" priority="high">
+      <title>Visual Grid Layout</title>
+      <description>
+        Per UX Principle 1 and AC#7:
+        - Responsive grid: 4 columns desktop → 2 tablet → 1 mobile
+        - Each card: thumbnail (200x200px min), filename, file size
+        - Placeholder image when thumbnailUrl is null
+        - Hover effect (scale or shadow)
+        - Click anywhere on card navigates to detail page
+        - Consistent with Epic 5 Story 5.3 grid patterns
+      </description>
+    </constraint>
+
+    <constraint id="7" type="ui-ux" priority="high">
+      <title>Delete Confirmation Modal</title>
+      <description>
+        Per AC#4, prevent accidental deletion:
+        - Modal shows warning if model used in slices
+        - Warning text in red: "This model is used in X slices"
+        - Delete button disabled if 409 error occurs
+        - Show API error message if deletion fails
+        - Cancel button closes modal without action
+        - Modal pattern reusable for Story 2.8 (slice deletion)
+      </description>
+    </constraint>
+
+    <constraint id="8" type="integration" priority="medium">
+      <title>Thumbnail Replace Integration (Story 2.6)</title>
+      <description>
+        Model detail page includes thumbnail upload:
+        - "Replace Thumbnail" button → file input
+        - Upload to /api/images/upload (Story 2.6)
+        - Returns R2 URL
+        - PATCH /api/models/$modelId with new thumbnailUrl
+        - Old thumbnail remains in R2 (cleanup deferred to storage audit)
+      </description>
+    </constraint>
+
+    <constraint id="9" type="scope" priority="medium">
+      <title>Epic 4 Integration Points (Product Relationships)</title>
+      <description>
+        Model detail shows product associations (Epic 4):
+        - Display "Used in X products" count
+        - List product names with links
+        - Deletion warning includes product count
+        - MVP: Show placeholder "Products coming in Epic 4"
+        - Epic 4 will populate productVariantModels relationships
+      </description>
+    </constraint>
+
+    <constraint id="10" type="error-handling" priority="high">
+      <title>HTTP Status Codes</title>
+      <description>
+        Consistent error codes:
+        - 200: GET success (model found)
+        - 204: DELETE success (no content)
+        - 404: MODEL_NOT_FOUND (model ID doesn't exist)
+        - 409: MODEL_IN_USE (cannot delete, used in slices)
+        - 422: VALIDATION_FAILED (invalid input for PATCH)
+        - 500: FETCH_FAILED, UPDATE_FAILED, DELETE_FAILED (server errors)
+        
+        All errors use createErrorResponse utility for consistency.
+      </description>
+    </constraint>
+
+    <constraint id="11" type="performance" priority="medium">
+      <title>Performance Logging</title>
+      <description>
+        Per NFR-9, log operation performance:
+        - log('model_fetched', { model_id, duration_ms })
+        - log('model_updated', { model_id, fields_changed, duration_ms })
+        - log('model_deleted', { model_id, filename })
+        - logError('model_delete_failed', error, { model_id })
+        
+        Track duration_ms for all operations to identify bottlenecks.
+      </description>
+    </constraint>
+
+    <constraint id="12" type="react-query" priority="high">
+      <title>React Query Integration</title>
+      <description>
+        Use React Query for data management:
+        - useQuery for GET operations (automatic caching)
+        - useMutation for DELETE/PATCH operations
+        - Query keys: ['model', modelId] for caching
+        - Invalidate queries on mutations (refetch after updates)
+        - Built-in loading/error states
+        - Optimistic updates optional (defer to Phase 2)
+      </description>
+    </constraint>
+
+    <constraint id="13" type="typescript" priority="high">
+      <title>TypeScript Standards</title>
+      <description>
+        Per CLAUDE.md:
+        - NEVER use 'any' type to fix type issues
+        - Use strict TypeScript configuration
+        - Proper error typing (Error | unknown patterns)
+        - Type-safe route parameters (TanStack Router)
+        - Interface definitions for API responses
+      </description>
+    </constraint>
+
+    <constraint id="14" type="testing" priority="high">
+      <title>Testing Standards</title>
+      <description>
+        Per CLAUDE.md:
+        - All tests must pass before story completion
+        - Don't ignore test failures even if unrelated
+        - Unit tests for API endpoints (GET, PATCH, DELETE)
+        - Component tests for UI pages (detail, list)
+        - Integration tests for delete flow (modal → API → redirect)
+      </description>
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface id="1" type="api-endpoint">
+      <path>GET /api/models/$modelId</path>
+      <description>Fetch model details with relationships</description>
+      <parameters>
+        <param>modelId: UUID from URL path parameter</param>
+      </parameters>
+      <successResponse>
+        Status: 200
+        Body: {
+          id: string,
+          filename: string,
+          r2Url: string,
+          thumbnailUrl: string | null,
+          fileSize: number,
+          contentType: string,
+          createdAt: string,
+          updatedAt: string,
+          slices: Array&lt;{ id: string, filename: string }&gt;
+        }
+      </successResponse>
+      <errorResponses>
+        <error status="404" code="MODEL_NOT_FOUND">Model ID doesn't exist</error>
+        <error status="500" code="FETCH_FAILED">Database error</error>
+      </errorResponses>
+    </interface>
+
+    <interface id="2" type="api-endpoint">
+      <path>PATCH /api/models/$modelId</path>
+      <description>Update model metadata</description>
+      <requestBody>
+        {
+          filename?: string,
+          thumbnailUrl?: string
+        }
+      </requestBody>
+      <successResponse>
+        Status: 200
+        Body: { (updated model object) }
+      </successResponse>
+      <errorResponses>
+        <error status="404" code="MODEL_NOT_FOUND">Model ID doesn't exist</error>
+        <error status="422" code="VALIDATION_FAILED">Invalid input</error>
+        <error status="500" code="UPDATE_FAILED">Database error</error>
+      </errorResponses>
+    </interface>
+
+    <interface id="3" type="api-endpoint">
+      <path>DELETE /api/models/$modelId</path>
+      <description>Delete model and associated R2 file</description>
+      <successResponse>
+        Status: 204 No Content
+      </successResponse>
+      <errorResponses>
+        <error status="404" code="MODEL_NOT_FOUND">Model ID doesn't exist</error>
+        <error status="409" code="MODEL_IN_USE">Cannot delete, used in X slices</error>
+        <error status="500" code="DELETE_FAILED">Database or R2 error</error>
+      </errorResponses>
+    </interface>
+
+    <interface id="4" type="ui-route">
+      <path>/models/$modelId</path>
+      <description>Model detail page UI component</description>
+      <functionality>
+        - Display model metadata and thumbnail
+        - Show associated slices and products
+        - Download button for R2 file
+        - Edit button (inline or modal)
+        - Delete button (triggers confirmation modal)
+        - React Query for data fetching
+      </functionality>
+    </interface>
+
+    <interface id="5" type="ui-route">
+      <path>/models (index)</path>
+      <description>Model list page UI component</description>
+      <functionality>
+        - Display all models in responsive grid
+        - Each card: thumbnail, filename, file size
+        - Click card to navigate to detail page
+        - "Upload New Model" button
+        - Loading skeleton during fetch
+        - Empty state if no models
+      </functionality>
+    </interface>
+  </interfaces>
+
+  <dependencies>
+    <package name="@tanstack/react-router" version="existing">
+      <reason>Dynamic routes and type-safe params</reason>
+    </package>
+
+    <package name="@tanstack/react-start" version="existing">
+      <reason>API route creation and JSON responses</reason>
+    </package>
+
+    <package name="@tanstack/react-query" version="existing">
+      <reason>Data fetching, caching, and mutations</reason>
+    </package>
+
+    <package name="@prisma/client" version="existing">
+      <reason>Database operations with relationships</reason>
+    </package>
+
+    <package name="zod" version="existing">
+      <reason>Input validation for PATCH endpoint</reason>
+    </package>
+
+    <cloudflareBinding name="FILES_BUCKET" type="R2">
+      <reason>R2 bucket for deleting model files</reason>
+    </cloudflareBinding>
+  </dependencies>
+
+  <testing>
+    <standards>
+      <framework>Vitest 3.2.4 with React Testing Library 16.3.0</framework>
+      <coverageGoal>&gt;80% for API endpoints and UI components</coverageGoal>
+      <priority>Test deletion flow thoroughly (prevent data loss)</priority>
+    </standards>
+
+    <testLocations>
+      <location>src/__tests__/routes/api/models/$modelId.test.ts</location>
+      <location>src/__tests__/routes/models/$modelId.test.tsx</location>
+      <location>src/__tests__/components/ModelCard.test.tsx</location>
+      <location>src/__tests__/components/DeleteConfirmModal.test.tsx</location>
+    </testLocations>
+
+    <testIdeas>
+      <category name="GET /api/models/$modelId">
+        <test>Returns 200 with model data for valid ID</test>
+        <test>Returns 404 MODEL_NOT_FOUND for invalid ID</test>
+        <test>Includes associated slices in response</test>
+        <test>Includes thumbnailUrl (or null if not set)</test>
+        <test>Logs model_fetched event with duration</test>
+      </category>
+
+      <category name="PATCH /api/models/$modelId">
+        <test>Updates filename successfully</test>
+        <test>Updates thumbnailUrl successfully</test>
+        <test>Returns 404 for invalid ID</test>
+        <test>Returns 422 for invalid input (empty filename)</test>
+        <test>Logs model_updated event</test>
+      </category>
+
+      <category name="DELETE /api/models/$modelId">
+        <test>Deletes model and R2 file successfully</test>
+        <test>Returns 204 No Content on success</test>
+        <test>Returns 404 for invalid ID</test>
+        <test>Returns 409 MODEL_IN_USE if model used in slices</test>
+        <test>Deletes from DB before R2 (atomic pattern)</test>
+        <test>R2 file deleted after successful DB deletion</test>
+        <test>Logs model_deleted event</test>
+        <test>Logs error if R2 deletion fails (but DB already deleted)</test>
+      </category>
+
+      <category name="Model Detail Page UI">
+        <test>Renders model metadata correctly</test>
+        <test>Shows thumbnail or placeholder</test>
+        <test>Displays associated slices list</test>
+        <test>Download button links to r2Url</test>
+        <test>Delete button opens confirmation modal</test>
+        <test>Edit button allows filename change</test>
+        <test>Shows loading state while fetching</test>
+        <test>Shows error state if fetch fails</test>
+      </category>
+
+      <category name="Delete Confirmation Modal">
+        <test>Shows warning if model used in slices</test>
+        <test>Delete button triggers DELETE API call</test>
+        <test>Cancel button closes modal without action</test>
+        <test>Shows error message if deletion fails</test>
+        <test>Disables delete button during deletion</test>
+        <test>Redirects to /models on successful deletion</test>
+      </category>
+
+      <category name="Model List Page">
+        <test>Renders grid of model cards</test>
+        <test>Each card shows thumbnail and filename</test>
+        <test>Click card navigates to detail page</test>
+        <test>Shows placeholder when thumbnailUrl is null</test>
+        <test>Responsive grid (4→2→1 columns)</test>
+        <test>Shows loading skeleton during fetch</test>
+        <test>Shows empty state if no models</test>
+      </category>
+
+      <category name="Integration Tests">
+        <test>Full CRUD flow: create (2.2) → read → update → delete</test>
+        <test>Delete prevention: create model → link to slice → attempt delete → verify 409</test>
+        <test>Thumbnail replace: detail page → upload thumbnail → verify updated</test>
+      </category>
+
+      <category name="Error Handling">
+        <test>Network error during fetch → shows error state</test>
+        <test>Network error during delete → shows error in modal</test>
+        <test>R2 unavailable → DELETE returns 500 error</test>
+        <test>Database unavailable → GET/PATCH/DELETE return 500 error</test>
+      </category>
+    </testIdeas>
+  </testing>
+
+  <implementationNotes>
+    <note priority="high">
+      This story mirrors Story 2.8 (Slice CRUD) structure.
+      Stories 2.7 and 2.8 can be developed in parallel with shared components:
+      - DeleteConfirmModal (reusable for both)
+      - Grid layout patterns (reusable for both)
+      - API endpoint patterns (identical structure)
+    </note>
+
+    <note priority="high">
+      Deletion prevention (AC#9) is critical for data integrity.
+      Thoroughly test the 409 MODEL_IN_USE error path.
+      Consider adding E2E test: create model → link to slice → attempt delete.
+    </note>
+
+    <note priority="medium">
+      Thumbnail replace functionality (AC#2) integrates Story 2.6.
+      Ensure /api/images/upload endpoint is available before implementing.
+    </note>
+
+    <note priority="medium">
+      Epic 4 will add product relationships.
+      Leave placeholder UI: "Used in Products: Coming in Epic 4"
+      Database already supports relationships (Story 2.1 schema).
+    </note>
+
+    <note priority="low">
+      Grid pagination deferred unless needed per NFR-11.
+      React Query caching should handle performance for &lt;1000 models.
+      Monitor performance in production, add infinite scroll if needed.
+    </note>
+  </implementationNotes>
+</story-context>

@@ -1,0 +1,433 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.5</storyId>
+    <title>Implement Slice File Upload API</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-2.5.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an owner</asA>
+    <iWant>to upload .gcode.3mf and .gcode slice files</iWant>
+    <soThat>I can attach sliced configurations to my models</soThat>
+    <tasks>
+- Create Slice Upload API Endpoint
+  - Create `/src/routes/api/slices/upload.ts` file
+  - Implement POST handler following TanStack Start pattern
+  - Access Cloudflare context and R2 bucket binding
+  - Validate file presence in FormData
+  - Validate file extension (.gcode.3mf, .gcode) - case-insensitive
+  - Validate file size (≤50MB max)
+  - Generate unique R2 key with UUID prefix
+  - Upload file to R2 with proper httpMetadata headers
+  - Create Prisma database record (slice table)
+  - Set metadataExtracted = false (default for MVP)
+  - Return 201 response with slice metadata
+  - Implement R2 cleanup on database failure (try-catch around DB create)
+  - Add structured logging (start, complete, error events)
+
+- Implement File Validation Utilities
+  - Create validation constants (MAX_SLICE_SIZE = 50MB)
+  - Create ALLOWED_EXTENSIONS array ['.gcode.3mf', '.gcode']
+  - Implement extension validation logic (handle .gcode.3mf correctly)
+  - Implement size validation with descriptive error messages
+  - Return appropriate HTTP status codes (400 for invalid type, 413 for too large)
+
+- Implement Error Handling
+  - Use createErrorResponse utility from ~/lib/utils/errors
+  - Handle missing file (400 MISSING_FILE)
+  - Handle invalid file type (400 INVALID_FILE_TYPE)
+  - Handle file too large (413 FILE_TOO_LARGE)
+  - Handle R2 upload failure (500 R2_UPLOAD_FAILED)
+  - Handle database creation failure (500 DB_CREATE_FAILED)
+  - Implement cleanup: delete R2 file if DB creation fails
+  - Log all errors with duration metrics
+
+- Add Structured Logging
+  - Log slice_upload_start with filename, size, content_type
+  - Log slice_upload_complete with slice_id, filename, size, duration_ms
+  - Log slice_upload_error with error details and duration_ms
+  - Follow existing logging patterns from Story 2.2
+
+- Write Unit Tests
+  - Test valid .gcode.3mf upload succeeds
+  - Test valid .gcode upload succeeds
+  - Test file too large (>50MB) returns 413
+  - Test invalid file type (.stl, .zip, .txt) returns 400
+  - Test missing file returns 400
+  - Test case-insensitive extension matching (.GCODE, .Gcode)
+  - Test R2 upload failure handling
+  - Test database creation failure triggers R2 cleanup
+  - Test metadataExtracted defaults to false
+  - Test response includes all required fields (id, filename, r2Url, etc.)
+
+- Create Simple Test UI (Optional)
+  - Create `/src/routes/test/upload-slice.tsx` page
+  - Add file input accepting .gcode.3mf and .gcode files
+  - Display file size validation warnings
+  - Show upload progress/status
+  - Display upload result (slice ID, URL, etc.)
+  - Provide link to slice detail page (when available in Story 2.8)
+</tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. API endpoint `/api/slices/upload` accepts POST requests
+2. Validates file type (.gcode.3mf, .gcode per FR-2)
+3. Validates file size (≤50MB per NFR-2)
+4. Uploads file to R2 with unique filename
+5. Sets proper content-type and content-disposition headers
+6. Creates database record with metadata: filename, size, content-type, R2 URL
+7. metadataExtracted defaults to false (Epic 3 will handle extraction)
+8. Returns upload success response with slice ID and URL
+9. Handles errors gracefully with appropriate status codes
+10. Cleans up R2 file if database creation fails (atomic operation per NFR-4)
+11. Logs upload operation with performance metrics per NFR-9
+</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/tech-spec-epic-2.md</path>
+        <title>Technical Specification - Epic 2: Core File Management</title>
+        <section>Story 2.5: Implement Slice File Upload API (lines 1075-1224)</section>
+        <snippet>Complete implementation specification with code example for slice upload endpoint. Includes atomic upload pattern (R2 → DB → cleanup), file validation (.gcode.3mf, .gcode extensions), size limits (50MB), and structured logging.</snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/epics.md</path>
+        <title>Epic Breakdown with User Stories</title>
+        <section>Story 2.5 (lines 295-318)</section>
+        <snippet>User story and acceptance criteria for slice file upload. Prerequisites: Story 2.1 (database schema). Technical note: Metadata extraction deferred to Epic 3, similar structure to Story 2.2 (model upload).</snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/PRD.md</path>
+        <title>Product Requirements Document</title>
+        <section>FR-2: Slice File Management</section>
+        <snippet>Functional requirements for .gcode.3mf and .gcode file uploads, metadata extraction (Epic 3), slice-to-model relationships, and download capabilities. Max file size: 50MB per NFR-2.</snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/PRD.md</path>
+        <title>Product Requirements Document</title>
+        <section>NFR-4: Data Integrity and Consistency</section>
+        <snippet>Atomic operations pattern: R2 upload first, database record second, cleanup R2 on DB failure. This prevents orphaned database records pointing to missing files.</snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/PRD.md</path>
+        <title>Product Requirements Document</title>
+        <section>NFR-9: Observability and Debugging</section>
+        <snippet>Structured logging requirements: log all file upload operations with filename, size, user selections, outcome, and performance metrics (upload times, extraction times).</snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/stories/story-2.2.md</path>
+        <title>Story 2.2: Implement Model File Upload API</title>
+        <section>Complete Story (Status: Ready for Review)</section>
+        <snippet>Reference implementation for file upload pattern. Story 2.5 follows identical atomic upload pattern but for slices: different file types (.gcode.3mf, .gcode vs .stl, .3mf), different size limit (50MB vs 500MB), different database table (slices vs models), different R2 prefix (slices/ vs models/). Includes comprehensive review notes and implementation decisions.</snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/CLAUDE.md</path>
+        <title>Project Documentation for Claude Code</title>
+        <section>Cloudflare Workers Context - Accessing Environment Variables in API Routes</section>
+        <snippet>Use getContext('cloudflare') from vinxi/http to access Cloudflare environment variables and bindings. Access R2 bucket via cf.env.FILES_BUCKET. Environment-specific buckets: pm-dev-files (development), pm-staging-files (staging), pm-files (production).</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>/home/taylor/projects/printfarm-manager/src/routes/api/models/upload.ts</path>
+        <kind>API endpoint implementation</kind>
+        <symbol>POST handler for model upload</symbol>
+        <lines>1-257</lines>
+        <reason>Reference implementation of atomic file upload pattern that Story 2.5 must follow. Demonstrates: file validation (extension, size), R2 upload with headers, database record creation, cleanup on failure, structured logging with performance metrics.</reason>
+      </artifact>
+      <artifact>
+        <path>/home/taylor/projects/printfarm-manager/src/lib/utils/errors.ts</path>
+        <kind>Utility module</kind>
+        <symbol>createErrorResponse</symbol>
+        <lines>1-80</lines>
+        <reason>Shared error response utility required for consistent error handling. Returns sanitized error responses to clients without exposing stack traces (per NFR-6). Logs full error details server-side.</reason>
+      </artifact>
+      <artifact>
+        <path>/home/taylor/projects/printfarm-manager/src/lib/utils/logger.ts</path>
+        <kind>Utility module</kind>
+        <symbol>log, logError, logPerformance</symbol>
+        <lines>1-128</lines>
+        <reason>Structured logging utilities required for NFR-9 compliance. Used for upload lifecycle events: slice_upload_start, slice_upload_complete, slice_upload_error with performance metrics (duration_ms).</reason>
+      </artifact>
+      <artifact>
+        <path>/home/taylor/projects/printfarm-manager/src/lib/storage/index.ts</path>
+        <kind>Storage abstraction layer</kind>
+        <symbol>getStorageClient</symbol>
+        <lines>N/A (file exists)</lines>
+        <reason>Storage factory that returns environment-appropriate client (MinIO for dev, R2 for staging/prod). Provides uploadFile() and getPublicUrl() methods used in upload endpoint. Extended in Story 2.2 to support file uploads.</reason>
+      </artifact>
+      <artifact>
+        <path>/home/taylor/projects/printfarm-manager/src/lib/db/index.ts</path>
+        <kind>Database client factory</kind>
+        <symbol>getPrismaClient</symbol>
+        <lines>N/A (file exists)</lines>
+        <reason>Creates per-request Prisma client with Cloudflare WASM generator for Workers compatibility. Used instead of singleton. Requires pool cleanup in finally block to prevent connection leaks.</reason>
+      </artifact>
+      <artifact>
+        <path>/home/taylor/projects/printfarm-manager/prisma/schema.prisma</path>
+        <kind>Database schema</kind>
+        <symbol>Slice model</symbol>
+        <lines>48-81</lines>
+        <reason>Target database table for slice uploads. Required fields: filename, r2Key, r2Url, fileSize, contentType, metadataExtracted (defaults to false). Optional fields for Epic 3: metadataJson, curated fields (layerHeight, nozzleTemp, etc.), relationships (sliceModels, sliceFilaments, sliceVariants).</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@tanstack/react-router">^1.132.33</package>
+        <package name="@tanstack/react-start">^1.132.36</package>
+        <package name="@prisma/client">^6.18.0</package>
+        <package name="@prisma/adapter-pg">^6.17.1</package>
+        <package name="@aws-sdk/client-s3">^3.911.0</package>
+        <package name="minio">^8.0.6</package>
+        <package name="pg">^8.16.3</package>
+      </node>
+      <frameworks>
+        <framework>TanStack Start - Full-stack React framework with file-based routing</framework>
+        <framework>Cloudflare Workers - Serverless execution environment for API routes</framework>
+        <framework>Prisma - Database ORM with dual generators (Cloudflare WASM + local binary)</framework>
+        <framework>R2 - Cloudflare object storage for file uploads</framework>
+        <framework>Xata - PostgreSQL database with automatic branching</framework>
+      </frameworks>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+### Development Constraints
+
+1. **Atomic Operations Pattern (NFR-4)**
+   - Upload to R2 FIRST, create database record SECOND
+   - If database creation fails, DELETE R2 file (cleanup)
+   - Never create orphaned database records pointing to missing files
+   - Order matters: R2 → DB → cleanup on failure
+
+2. **File Extension Validation**
+   - CRITICAL: .gcode.3mf has TWO dots - extension checking must handle this correctly
+   - Use: `ALLOWED_EXTENSIONS.some(ext => filename.toLowerCase().endsWith(ext))`
+   - NOT: `file.name.split('.').pop()` (would return '3mf', missing .gcode)
+   - Check .gcode.3mf BEFORE .gcode to avoid false positives
+   - Case-insensitive matching required
+
+3. **TanStack Start API Route Pattern**
+   - Use createFileRoute() from @tanstack/react-router
+   - Define handlers in server.handlers object with HTTP methods (GET, POST, etc.)
+   - Use json() from @tanstack/react-start for responses
+   - No separate controller files - everything in route file
+
+4. **Cloudflare Workers Environment Access**
+   - Use process.env (NOT getContext('cloudflare')) for Node.js compatibility
+   - TanStack Start adapter automatically injects R2 bindings into process.env.FILES_BUCKET
+   - Environment detection: process.env.ENVIRONMENT or process.env.CLOUDFLARE_ENV
+
+5. **Database Client Management**
+   - Use getPrismaClient(databaseUrl) factory (NOT singleton from ~/lib/db/client)
+   - Per-request client pattern required for Cloudflare Workers WASM compatibility
+   - MUST cleanup connection pool in finally block: await pool.end()
+   - Prevents connection leaks on any error path
+
+6. **Storage Abstraction Layer**
+   - Use getStorageClient() factory for environment-appropriate storage
+   - MinIO for development (local Docker), R2 for staging/production
+   - Provides uploadFile() and getPublicUrl() methods
+   - Storage cleanup on DB failure: await storage.delete(r2Key)
+
+7. **Error Handling Standards (NFR-6)**
+   - Use createErrorResponse() utility for consistent error format
+   - Never expose stack traces to clients (sanitize errors)
+   - Log full error details server-side with logError()
+   - Return appropriate HTTP status codes: 400 (client error), 413 (too large), 500 (server error)
+
+8. **Structured Logging (NFR-9)**
+   - Log lifecycle events: slice_upload_start, slice_upload_complete, slice_upload_error
+   - Include performance metrics: duration_ms for all events
+   - Use log() for informational events, logError() for errors, logPerformance() for metrics
+   - Context-rich metadata: filename, size, content_type, storage_type, error_phase
+
+9. **R2 Header Configuration (FR-16)**
+   - Set explicit httpMetadata when uploading to R2
+   - contentType: file.type || 'application/octet-stream'
+   - contentDisposition: `attachment; filename="${file.name}"`
+   - Forces browser download (not display) for .gcode files
+
+10. **MVP Scope Limitations**
+    - metadataExtracted defaults to false (Epic 3 will handle extraction)
+    - No metadata parsing in this story - only upload raw file to R2
+    - No slice-to-model association yet (Epic 4)
+    - No UI in this story (optional test UI at /test/upload-slice)
+
+11. **TypeScript Configuration**
+    - Strict mode enabled
+    - Path alias: ~/* → src/*
+    - Use File type from web APIs (not Buffer)
+    - FormData parsing from request: await request.formData()
+
+12. **Testing Standards**
+    - Validation logic tests required (file type, size, key generation)
+    - Integration tests acceptable to defer due to TanStack Router complexity
+    - Test coverage goal: >80% for critical business logic (NFR-8)
+    - Use Vitest with React Testing Library
+  </constraints>
+  <interfaces>
+### API Interfaces and Signatures
+
+**Endpoint Signature:**
+```typescript
+POST /api/slices/upload
+Content-Type: multipart/form-data
+FormData field: 'file' (File object)
+```
+
+**Success Response (201 Created):**
+```typescript
+{
+  id: string;              // UUID
+  filename: string;        // Original filename
+  r2Url: string;          // Full R2 URL for download
+  metadataExtracted: boolean; // false in MVP
+  fileSize: number;        // bytes
+  createdAt: string;       // ISO 8601 timestamp
+}
+```
+
+**Error Responses:**
+```typescript
+// 400 MISSING_FILE
+{ error: { code: "MISSING_FILE", message: "No file provided in request" } }
+
+// 400 INVALID_FILE_TYPE
+{ error: { code: "INVALID_FILE_TYPE", message: "File type not allowed. Only .gcode.3mf, .gcode files are accepted", field: "file", details: { extension: string, allowedExtensions: string[] } } }
+
+// 413 FILE_TOO_LARGE
+{ error: { code: "FILE_TOO_LARGE", message: "File size exceeds maximum allowed size of 50MB", field: "file", details: { fileSize: number, maxSize: number } } }
+
+// 500 UPLOAD_FAILED
+{ error: { code: "UPLOAD_FAILED", message: "Failed to upload file to storage" } }
+
+// 500 DATABASE_ERROR
+{ error: { code: "DATABASE_ERROR", message: "Failed to create file record" } }
+```
+
+**Storage Client Interface (reuse from Story 2.2):**
+```typescript
+interface StorageClient {
+  uploadFile(key: string, file: File, options: { contentType: string; contentDisposition: string }): Promise<void>;
+  getPublicUrl(key: string): string;
+  delete(key: string): Promise<void>;
+  getStorageType(): 'minio' | 'r2';
+}
+```
+
+**Database Client Interface (reuse from Story 2.1):**
+```typescript
+interface PrismaClient {
+  slice: {
+    create(args: { data: SliceCreateInput }): Promise<Slice>;
+  };
+}
+
+interface SliceCreateInput {
+  filename: string;
+  r2Key: string;
+  r2Url: string;
+  fileSize: number;
+  contentType: string;
+  metadataExtracted: boolean; // default: false
+  // Optional fields for Epic 3
+  metadataJson?: object;
+  layerHeight?: number;
+  nozzleTemp?: number;
+  bedTemp?: number;
+  printSpeed?: number;
+  infillPercent?: number;
+  supportsEnabled?: boolean;
+  estimatedTimeSec?: number;
+  filamentUsedG?: number;
+}
+```
+
+**Logger Interface (reuse from Story 1.5):**
+```typescript
+function log(event: string, data?: Record<string, unknown>): void;
+function logError(event: string, error: Error | string, data?: Record<string, unknown>): void;
+function logPerformance(event: string, durationMs: number, data?: Record<string, unknown>): void;
+```
+
+**Error Response Utility (reuse from Story 2.2):**
+```typescript
+function createErrorResponse(
+  code: string,
+  message: string,
+  statusCode: number,
+  options?: {
+    field?: string;
+    details?: Record<string, unknown>;
+    originalError?: Error | unknown;
+  }
+): Response;
+```
+  </interfaces>
+  <tests>
+    <standards>
+The project uses Vitest as the testing framework with React Testing Library for component testing. Per NFR-8, the system maintains >80% test coverage for critical business logic including: metadata extraction, filament matching, recipe generation, API endpoints, and core utility functions. Basic unit tests are prioritized in MVP; integration tests are deferred to Phase 2.
+
+Testing approach follows Story 2.2 pattern:
+- Validation logic tests: File extension validation (case-insensitive, multiple dots like .gcode.3mf), file size validation (boundary testing), storage key generation (UUID format), content-type handling, content-disposition formatting
+- E2E integration tests: Deferred due to TanStack Router's complex route structure (documented acceptable for MVP)
+- Test organization: Tests located in src/__tests__/ directory mirroring source structure
+- Test commands: npm test (watch mode), npm run test:run (CI mode)
+- TypeScript strict mode: All tests must pass type checking
+- Validation constants: Intentionally duplicated in tests for test isolation (not imported from source)
+    </standards>
+    <locations>
+- src/__tests__/api/slices/upload.test.ts - Validation logic tests for slice upload endpoint
+- src/__tests__/routes/api/slices/upload.test.ts - Alternative location following route structure
+- Reference: src/__tests__/api/models/upload.test.ts - 24 validation tests for model upload (template)
+    </locations>
+    <ideas>
+**AC #2, #3: File Type and Size Validation**
+- Test: valid .gcode.3mf upload succeeds
+- Test: valid .gcode upload succeeds
+- Test: file too large (>50MB) returns 413 FILE_TOO_LARGE
+- Test: invalid file type (.stl, .zip, .txt, .3mf) returns 400 INVALID_FILE_TYPE
+- Test: missing file returns 400 MISSING_FILE
+- Test: case-insensitive extension matching (.GCODE, .Gcode, .GCODE.3MF)
+- Test: filename with multiple dots (baby-whale.red.gcode.3mf) correctly validates
+- Test: zero-byte file handling (edge case)
+
+**AC #4, #5: R2 Upload and Headers**
+- Test: storage key generation follows pattern slices/{uuid}{extension}
+- Test: UUID format validation in storage key
+- Test: content-type fallback to application/octet-stream when file.type empty
+- Test: content-disposition header format matches `attachment; filename="{filename}"`
+- Test: filename with spaces in content-disposition header
+
+**AC #6, #7: Database Record Creation**
+- Test: database record contains all required fields (filename, r2Key, r2Url, fileSize, contentType)
+- Test: metadataExtracted defaults to false
+- Test: response includes all required fields (id, filename, r2Url, metadataExtracted, fileSize, createdAt)
+
+**AC #9, #10: Atomic Operations and Cleanup**
+- Test: R2 upload failure handling (returns 500 UPLOAD_FAILED)
+- Test: database creation failure triggers R2 cleanup (mock storage.delete called)
+- Test: cleanup success logged as model_upload_cleanup_success
+- Test: cleanup failure logged as model_upload_cleanup_failed
+
+**AC #11: Structured Logging**
+- Test: slice_upload_start event logged with filename, size, content_type
+- Test: slice_upload_complete event logged with slice_id, filename, size, duration_ms
+- Test: slice_upload_error event logged with error details and duration_ms
+- Test: storage_type included in completion logs (minio vs r2)
+
+**Edge Cases and Boundary Testing**
+- Test: file size exactly 50MB (50 * 1024 * 1024 bytes) succeeds
+- Test: file size 50MB + 1 byte returns 413
+- Test: filename with special characters (unicode, spaces, apostrophes)
+- Test: concurrent upload handling (if time permits, otherwise defer)
+    </ideas>
+  </tests>
+</story-context>

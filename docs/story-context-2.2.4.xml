@@ -1,0 +1,358 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>2</epicId>
+    <storyId>2.4</storyId>
+    <title>Implement File Selection and Bulk Import UI</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-25</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-2.4.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>an owner</asA>
+    <iWant>to review extracted files and select which ones to import</iWant>
+    <soThat>I can exclude unwanted files (promos, alternate versions)</soThat>
+    <tasks>
+- Create File Selection UI Component
+  - Design grid layout for file display (responsive: 4 cols desktop → 2 tablet → 1 mobile)
+  - Implement thumbnail rendering for images (actual preview)
+  - Add placeholder icon for model files (.stl, .3mf)
+  - Add checkbox component for each file
+  - Implement Select All / Deselect All bulk actions
+  - Display file metadata (name, size, type)
+  - Add file count summary (X files selected / Y total)
+
+- Implement Bulk Import API Endpoint
+  - Create POST /api/models/import-zip endpoint
+  - Accept re-uploaded zip file + selected file paths JSON
+  - Re-extract zip using client-extractor utility
+  - Filter extracted files to selected paths only
+  - Upload each selected file to R2 with proper headers
+  - Create database records for each uploaded file (atomic per-file)
+  - Return success/error status for each file
+  - Handle partial failures gracefully (some files succeed, some fail)
+
+- Integrate with Story 2.3 Extraction Flow
+  - Modify /test/upload-zip.tsx to show file selection UI after extraction
+  - Keep extracted file list in component state
+  - Pass selected file paths to import endpoint
+  - Keep original zip file in browser memory for re-upload
+
+- Implement Progress Tracking
+  - Add upload progress state (percentage, current file)
+  - Display progress bar during import
+  - Update progress as each file completes
+  - Handle cancellation gracefully (if time permits, otherwise defer)
+
+- Create Success Confirmation View
+  - Display list of successfully imported files
+  - Show thumbnails for each imported file
+  - Include file counts and total size imported
+  - Provide "Import Another Zip" button to reset flow
+  - Show error summary if any files failed
+
+- Add Client-Side Validation and Error Handling
+  - Validate at least one file selected before import
+  - Display clear error messages for validation failures
+  - Handle network errors during upload
+  - Show per-file error details if upload fails
+  - Add retry mechanism for failed uploads (optional)
+
+- Write Unit Tests
+  - Test file selection state management
+  - Test Select All / Deselect All logic
+  - Test filtering by file type
+  - Test import API endpoint with mock files
+  - Test partial failure scenarios
+  - Test progress calculation logic</tasks>
+  </story>
+
+  <acceptanceCriteria>
+1. UI displays all extracted files in grid layout with thumbnails
+2. Image files show actual thumbnail previews
+3. Model files (.stl, .3mf) show default 3D model icon placeholder
+4. Each file has checkbox for selection (all selected by default)
+5. Bulk actions: Select All, Deselect All
+6. File info displayed: name, size, type
+7. "Import Selected" button triggers bulk upload
+8. Selected files uploaded to R2 and database records created (reuse Story 2.2 logic)
+9. Progress indicator shows upload status (percentage-based per NFR-5)
+10. Success confirmation lists imported files with thumbnails</acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="/home/taylor/projects/printfarm-manager/docs/tech-spec-epic-2.md" section="Story 2.4: Implement File Selection and Bulk Import UI" lines="699-860">
+        Complete implementation specification for Story 2.4 including:
+        - Simplified client-side approach: Keep zip in browser memory, re-extract selected files, upload individually
+        - File selection UI with grid layout, thumbnails, and checkboxes
+        - Bulk import API endpoint accepting re-uploaded zip + selected file paths JSON
+        - Progress tracking (percentage-based) per NFR-5
+        - Success confirmation view with imported file list and thumbnails
+        - Per-file atomic upload pattern (R2 + DB) from Story 2.2
+        - Error response format with imported/failed arrays and summary
+      </doc>
+
+      <doc path="/home/taylor/projects/printfarm-manager/docs/epics.md" section="Story 2.4" lines="269-294">
+        User story and acceptance criteria:
+        - UI displays all extracted files in grid layout with thumbnails
+        - Image files show actual thumbnail previews; model files show 3D icon placeholder
+        - Checkbox selection (all selected by default) with Select All/Deselect All bulk actions
+        - File info displayed: name, size, type
+        - Import Selected button triggers bulk upload to R2/DB (reuse Story 2.2 logic)
+        - Progress indicator shows percentage-based status
+        - Success confirmation lists imported files with thumbnails
+      </doc>
+
+      <doc path="/home/taylor/projects/printfarm-manager/docs/ux-specification.md" section="Visual-First Navigation Principle" lines="12,100-101,124,126">
+        UX Principle 1 establishes visual-first browsing:
+        - Large thumbnails as primary navigation (users recognize products visually, not by name)
+        - Grid layouts dominate list views
+        - Thumbnails enable instant recognition without reading names
+        Key quote: "Thumbnails are the primary navigation mechanism, supplemented by clear product names."
+      </doc>
+
+      <doc path="/home/taylor/projects/printfarm-manager/docs/ux-specification.md" section="Responsive Grid Layout" lines="1507-1508,1522,1528,2577-2579">
+        Grid responsiveness pattern:
+        - Desktop: 4-column grid
+        - Tablet: 2-column grid
+        - Mobile: 1-column grid
+        - Large thumbnails (200x200px minimum) as primary visual element
+        Example: `&lt;div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"&gt;`
+      </doc>
+
+      <doc path="/home/taylor/projects/printfarm-manager/docs/ux-specification.md" section="Progress Indicators" lines="136,2077,2295-2304">
+        Progress feedback for operations &gt;3 seconds:
+        - Percentage-based progress bar with smooth width transitions
+        - Visual progress updates as operations complete
+        - Users always know what's happening (Principle 4: Responsive Feedback)
+      </doc>
+
+      <doc path="/home/taylor/projects/printfarm-manager/docs/stories/story-2.2.md" section="File Upload Pattern and Atomicity" lines="54-66,80-88,187-195">
+        Atomic file upload pattern from Story 2.2:
+        1. Upload to R2 first with explicit headers (contentType, contentDisposition)
+        2. Create database record second
+        3. Cleanup R2 on DB failure
+        This ordering ensures no orphaned database records pointing to missing files.
+        R2 header configuration required: httpMetadata with contentType and contentDisposition per FR-16.
+      </doc>
+
+      <doc path="/home/taylor/projects/printfarm-manager/docs/stories/story-2.3.md" section="Client-Side Extraction Pivot" lines="75-124,137-148">
+        Story 2.3 architectural pivot rationale:
+        - Problem: Cloudflare Workers 128MB memory limit cannot handle 500MB zip extraction
+        - Solution: Move extraction to client-side (browser has GB-scale memory)
+        - Extraction flow: User uploads zip → CLIENT extracts → CLIENT displays file list → USER selects files → CLIENT uploads selected files
+        - JSZip library works identically in browser and server environments
+        - Simplified MVP approach: Keep zip in browser memory, re-extract selected files for upload
+      </doc>
+    </docs>
+
+    <code>
+      <artifact path="/home/taylor/projects/printfarm-manager/src/lib/zip/client-extractor.ts" kind="utility" reason="Provides zip extraction functionality that Story 2.4 must reuse for re-extracting selected files from the zip">
+        Client-side zip extractor utility from Story 2.3 (202 lines):
+        - extractZipFile(zipFile, onProgress?) → Promise&lt;ExtractionResult&gt;
+        - Returns: { files: ExtractedFile[], totalFiles, models, images }
+        - ExtractedFile: { path, filename, type, size, content: Blob }
+        - Features: CRC32 validation, recursive directory scanning, file type filtering, progress callback
+        - File whitelists: MODEL_EXTENSIONS ['.stl', '.3mf'], IMAGE_EXTENSIONS ['.png', '.jpg', '.jpeg']
+        - System file exclusion patterns for .DS_Store, __MACOSX, Thumbs.db, hidden files
+      </artifact>
+
+      <artifact path="/home/taylor/projects/printfarm-manager/src/routes/api/models/upload.ts" kind="api-endpoint" reason="Story 2.2's atomic upload pattern must be replicated for bulk import in Story 2.4">
+        Single model upload API endpoint implementing atomic upload pattern (258 lines):
+        - Validation constants: ALLOWED_EXTENSIONS ['.stl', '.3mf'], MAX_FILE_SIZE 500MB
+        - Atomic pattern: storage.uploadFile() → prisma.model.create() → cleanup on DB failure
+        - Storage abstraction: getStorageClient() (MinIO for dev, R2 for staging/prod)
+        - Error handling: createErrorResponse() with status codes 400, 413, 500
+        - Logging: log('model_upload_start/complete/error') with performance metrics
+        - R2 upload headers: contentType, contentDisposition (per FR-16)
+      </artifact>
+
+      <artifact path="/home/taylor/projects/printfarm-manager/src/lib/storage/types.ts" kind="interface" reason="StorageClient interface defines uploadFile() method that Story 2.4 will use for bulk uploads">
+        Storage client interface (82 lines):
+        - StorageClient.uploadFile(key, file, metadata) → Promise&lt;void&gt;
+        - StorageClient.getPublicUrl(key) → string
+        - StorageClient.delete(key) → Promise&lt;void&gt;
+        - Metadata: { contentType: string, contentDisposition: string }
+        - Environment bindings: FILES_BUCKET (R2), MINIO_* env vars
+      </artifact>
+
+      <artifact path="/home/taylor/projects/printfarm-manager/src/routes/test/upload-zip.tsx" kind="test-ui" reason="Existing test UI that Story 2.4 must extend with file selection grid and import functionality">
+        Test UI for zip extraction from Story 2.3:
+        - Currently: File upload → client-side extraction → displays file list
+        - Story 2.4 extension: Add file selection grid → checkboxes → Import Selected button → progress tracking → success confirmation
+        - Uses extractZipFile() from client-extractor.ts with progress callback
+        - Stores extracted files in component state for selection
+      </artifact>
+    </code>
+
+    <dependencies>
+      <node>
+        <package name="jszip" version="^3.10.1">Pure JavaScript zip library for client-side extraction (Story 2.3)</package>
+        <package name="@types/jszip" version="^3.4.0">TypeScript types for JSZip</package>
+        <package name="@tanstack/react-router" version="^1.132.33">File-based routing and API endpoints</package>
+        <package name="@tanstack/react-start" version="^1.132.36">Full-stack React framework with SSR</package>
+        <package name="@tanstack/react-query" version="^5.66.0">Server state management and mutations</package>
+        <package name="react" version="^19.0.0">React 19 with automatic JSX runtime</package>
+        <package name="@prisma/client" version="^6.18.0">Database ORM for Xata PostgreSQL</package>
+        <package name="tailwind-merge" version="^2.6.0">Utility for merging Tailwind CSS classes</package>
+      </node>
+      <cloudflare>
+        <binding name="FILES_BUCKET" type="R2">R2 bucket for file storage (configured in wrangler.jsonc)</binding>
+        <binding name="ENVIRONMENT" type="env-var">Deployment environment (development, staging, production)</binding>
+      </cloudflare>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="architecture">CLIENT-SIDE ARCHITECTURE: Story 2.3 moved zip extraction to client-side due to Cloudflare Workers 128MB memory limit. Story 2.4 continues this pattern: client extracts → user selects → client uploads selected files. Do NOT attempt server-side zip handling.</constraint>
+
+    <constraint type="architecture">SIMPLIFIED MVP APPROACH: Per tech spec lines 712-719, avoid temporary storage complexity. Keep zip in browser memory, re-extract selected files when user clicks Import, upload individually. This is simpler than storing extracted Blobs in temporary R2 location.</constraint>
+
+    <constraint type="atomicity">ATOMIC OPERATIONS (NFR-4): Each file upload must be atomic: R2 upload first, database record second, R2 cleanup on DB failure. This prevents orphaned database records. See Story 2.2 pattern. The BATCH is not atomic (some files may succeed while others fail), but each individual file is atomic.</constraint>
+
+    <constraint type="performance">CLOUDFLARE WORKERS LIMITS: 30-second execution time for HTTP requests (CPU time). For bulk imports with many files, consider chunking or streaming uploads to stay within limits. Individual file uploads (Story 2.2 pattern) typically complete in &lt;5 seconds.</constraint>
+
+    <constraint type="validation">FILE TYPE VALIDATION: Only .stl, .3mf (models), .png, .jpg, .jpeg (images) allowed per FR-1. Extension-based validation is more reliable than MIME type for zip archives. Case-insensitive matching required (.STL, .stl, .Stl all valid).</constraint>
+
+    <constraint type="validation">FILE SIZE LIMITS: Individual files ≤500MB per NFR-2. Total zip ≤500MB recommended for browser performance. Story 2.4 inherits these limits from Stories 2.2 and 2.3.</constraint>
+
+    <constraint type="error-handling">NO STACK TRACES (NFR-6): Use createErrorResponse() utility to sanitize errors. Return error codes ('R2_UPLOAD_FAILED', 'DB_CREATE_FAILED') not raw exception messages. Log full errors server-side with logError().</constraint>
+
+    <constraint type="logging">STRUCTURED LOGGING (NFR-9): Use log() and logPerformance() utilities. Include duration_ms for all operations. Events: import_start, import_complete, import_error, file_upload_success, file_upload_failed.</constraint>
+
+    <constraint type="ui-ux">VISUAL-FIRST NAVIGATION (UX Principle 1): Thumbnails are primary navigation. Grid layout with 200x200px minimum thumbnails. Show actual image previews for .png/.jpg/.jpeg files. Use placeholder icon for .stl/.3mf model files.</constraint>
+
+    <constraint type="ui-ux">RESPONSIVE GRID (UX Principle 9): 4 columns desktop → 2 tablet → 1 mobile. Use Tailwind classes: grid-cols-1 md:grid-cols-2 lg:grid-cols-4. Consistent with Product Catalog and Model Library grids.</constraint>
+
+    <constraint type="ui-ux">PROGRESS FEEDBACK (UX Principle 4): Operations &gt;3 seconds require progress indicators. Show percentage-based progress (e.g., "Importing 3/10 files... 30%"). Update as each file completes. Per NFR-5 and AC#9.</constraint>
+
+    <constraint type="testing">NO 'ANY' TYPE (CLAUDE.md): TypeScript strict mode enforced. Never use 'any' to fix type issues. All code must pass type checking.</constraint>
+
+    <constraint type="testing">ALL TESTS MUST PASS (CLAUDE.md): Do not ignore unrelated test failures. All 131 existing tests must continue passing after Story 2.4 implementation.</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="extractZipFile" kind="function" signature="extractZipFile(zipFile: File | Blob, onProgress?: (progress: number) =&gt; void): Promise&lt;ExtractionResult&gt;" path="/home/taylor/projects/printfarm-manager/src/lib/zip/client-extractor.ts">
+      Client-side zip extraction utility from Story 2.3. Story 2.4 must call this to re-extract the zip file and filter to selected file paths when user clicks Import Selected.
+    </interface>
+
+    <interface name="StorageClient.uploadFile" kind="method" signature="uploadFile(key: string, file: File, metadata: { contentType: string; contentDisposition: string }): Promise&lt;void&gt;" path="/home/taylor/projects/printfarm-manager/src/lib/storage/types.ts">
+      Upload a file to storage (R2 or MinIO) with metadata headers. Story 2.4 must call this for each selected file during bulk import. Reuse from Story 2.2 pattern.
+    </interface>
+
+    <interface name="getStorageClient" kind="function" signature="getStorageClient(): Promise&lt;StorageClient&gt;" path="/home/taylor/projects/printfarm-manager/src/lib/storage/index.ts">
+      Factory function returning environment-appropriate storage client (MinIO for dev, R2 for staging/prod). Call at start of import API endpoint.
+    </interface>
+
+    <interface name="getPrismaClient" kind="function" signature="getPrismaClient(databaseUrl: string): { prisma: PrismaClient; pool: Pool }" path="/home/taylor/projects/printfarm-manager/src/lib/db.ts">
+      Factory function for per-request Prisma client with connection pool. Call to create database records for imported files. Must clean up pool in finally block.
+    </interface>
+
+    <interface name="createErrorResponse" kind="function" signature="createErrorResponse(code: string, message: string, status: number, metadata?: object): Response" path="/home/taylor/projects/printfarm-manager/src/lib/utils/errors.ts">
+      Standardized error response utility. Returns sanitized error JSON without stack traces (NFR-6 compliance). Use for all API error responses.
+    </interface>
+
+    <interface name="log" kind="function" signature="log(event: string, metadata: object): void" path="/home/taylor/projects/printfarm-manager/src/lib/utils/logger.ts">
+      Structured logging utility. Events: import_start, import_complete, import_error, file_upload_success, file_upload_failed. Include duration_ms for performance tracking.
+    </interface>
+
+    <interface name="logPerformance" kind="function" signature="logPerformance(event: string, durationMs: number, metadata: object): void" path="/home/taylor/projects/printfarm-manager/src/lib/utils/logger.ts">
+      Performance logging utility. Logs event with duration_ms and metadata. Use for tracking bulk import performance.
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+Testing framework: Vitest v3.2.4 with React Testing Library v16.3.0
+Testing patterns established in Story 2.2 and Story 2.3:
+- Unit tests for validation logic, state management, and utility functions
+- Integration tests for API endpoints with mocked storage/database
+- E2E tests deferred due to TanStack Router complexity (acceptable for MVP)
+- Test coverage requirements: All 131 existing tests must continue passing
+- No 'any' type usage in tests (TypeScript strict mode)
+- Test file naming: src/__tests__/[category]/[filename].test.ts
+- Test structure: describe blocks with clear "should X when Y" test names
+- Mock usage: vi.fn() for callbacks, mocked storage/DB clients for integration tests
+
+Story 2.2 testing approach (24 tests):
+- Validation logic tests: File extension, size limits, storage key generation, content headers
+- Edge cases: Uppercase extensions, multiple dots, boundary sizes, zero-byte files
+
+Story 2.3 testing approach (27 tests):
+- Client-side extraction: Valid zips, nested directories, file filtering, corrupted zips
+- Progress callbacks: Invocation, optional callback handling
+- Edge cases: Empty zips, hidden files, special characters in filenames
+    </standards>
+
+    <locations>
+      <location>src/__tests__/api/models/</location>
+      <location>src/__tests__/components/</location>
+      <location>src/__tests__/lib/zip/</location>
+    </locations>
+
+    <ideas>
+      <test-idea ac="1,2,3,4,5,6">File Selection Grid Component Tests:
+- Should display files in responsive grid (4→2→1 columns)
+- Should show actual thumbnail preview for image files (.png, .jpg, .jpeg)
+- Should show placeholder icon for model files (.stl, .3mf)
+- Should render checkbox for each file (all checked by default)
+- Should implement Select All bulk action (check all checkboxes)
+- Should implement Deselect All bulk action (uncheck all checkboxes)
+- Should display file metadata: name, size, type
+- Should show file count summary (X selected / Y total)
+- Should update count when checkbox selection changes
+- Should handle empty file list gracefully
+      </test-idea>
+
+      <test-idea ac="7,8">Bulk Import API Endpoint Tests:
+- Should accept FormData with file and selectedPaths JSON
+- Should validate required fields (file, selectedPaths)
+- Should re-extract zip using client-extractor utility
+- Should filter extracted files to selected paths only
+- Should upload each file to storage with proper headers
+- Should create database record for each uploaded file
+- Should return success array with imported file details
+- Should return failed array with error details
+- Should handle partial failures (some succeed, some fail)
+- Should cleanup R2 on database failure (atomic per-file)
+- Should return 400 if missing required fields
+- Should return 422 if zip re-extraction fails
+- Should return 500 on unexpected errors
+      </test-idea>
+
+      <test-idea ac="9">Progress Tracking Tests:
+- Should initialize progress state at 0%
+- Should update progress as each file completes
+- Should calculate percentage correctly (completed / total * 100)
+- Should display current file being uploaded
+- Should show final 100% when all files complete
+- Should reset progress state on new import
+      </test-idea>
+
+      <test-idea ac="10">Success Confirmation View Tests:
+- Should display list of successfully imported files
+- Should show thumbnail for each imported file
+- Should show file count summary (X imported, Y failed)
+- Should calculate total size imported
+- Should display error summary if any files failed
+- Should provide "Import Another Zip" reset button
+- Should clear state when reset button clicked
+      </test-idea>
+
+      <test-idea ac="general">Client-Side Validation Tests:
+- Should validate at least one file selected before import
+- Should display error if no files selected
+- Should validate file selection state management
+- Should handle network errors during upload
+- Should show per-file error details if upload fails
+      </test-idea>
+
+      <test-idea ac="integration">End-to-End Flow Tests (optional):
+- Should complete full flow: extract → select → import → confirm
+- Should handle large file count (50+ files) without performance issues
+- Should maintain state through multi-step workflow
+- Should recover gracefully from mid-flow errors
+      </test-idea>
+    </ideas>
+  </tests>
+</story-context>
