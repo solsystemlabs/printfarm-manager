@@ -171,9 +171,12 @@ describe("Database Schema", () => {
     });
 
     it("should enforce unique constraint on product name", async () => {
+      // Use timestamp to ensure unique names across test runs
+      const uniqueName = `Unique Product ${Date.now()}`;
+
       const product = await prisma.product.create({
         data: {
-          name: "Unique Product",
+          name: uniqueName,
         },
       });
 
@@ -183,7 +186,7 @@ describe("Database Schema", () => {
       await expect(
         prisma.product.create({
           data: {
-            name: "Unique Product",
+            name: uniqueName,
           },
         }),
       ).rejects.toThrow();
