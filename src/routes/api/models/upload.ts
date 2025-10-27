@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
-import { getContext } from "vinxi/http";
 import { getPrismaClient } from "~/lib/db";
-import { getStorageClient } from "~/lib/storage";
+import { getStorageClient, type CloudflareEnv } from "~/lib/storage";
 import { createErrorResponse } from "~/lib/utils/errors";
 import { log, logPerformance } from "~/lib/utils/logger";
 
@@ -29,16 +28,14 @@ export const Route = createFileRoute("/api/models/upload")({
           null;
 
         try {
-          // Get Cloudflare context for R2 binding access (staging/production)
+          // Access Cloudflare bindings from request context (staging/production)
+          // In TanStack Start, bindings are available via request.context.cloudflare.env
           // In development, getStorageClient() will use MinIO from process.env instead
-          let cfEnv;
-          try {
-            const cf = getContext("cloudflare");
-            cfEnv = cf?.env;
-          } catch {
-            // getContext not available in development - that's OK, will use MinIO
-            cfEnv = undefined;
-          }
+          // TypeScript doesn't know about context on Request, so we use type assertion
+          const requestWithContext = request as typeof request & {
+            context?: { cloudflare?: { env?: CloudflareEnv } };
+          };
+          const cfEnv = requestWithContext.context?.cloudflare?.env;
 
           // Get environment-appropriate storage client (MinIO for dev, R2 for staging/prod)
           const storage = await getStorageClient(cfEnv);

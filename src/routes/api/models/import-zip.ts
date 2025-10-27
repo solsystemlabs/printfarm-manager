@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
-import { getContext } from "vinxi/http";
 import { getPrismaClient } from "~/lib/db";
-import { getStorageClient } from "~/lib/storage";
+import { getStorageClient, type CloudflareEnv } from "~/lib/storage";
 import { createErrorResponse } from "~/lib/utils/errors";
 import { log, logPerformance } from "~/lib/utils/logger";
 
@@ -140,27 +139,38 @@ export const Route = createFileRoute("/api/models/import-zip")({
             totalSize: files.reduce((sum, f) => sum + f.size, 0),
           });
 
-          // Get Cloudflare context for R2 binding access (staging/production)
+          // Access Cloudflare bindings from request context (staging/production)
+          // In TanStack Start, bindings are available via request.context.cloudflare.env
           // In development, getStorageClient() will use MinIO from process.env instead
           let cfEnv;
           try {
-            const cf = getContext("cloudflare");
-            cfEnv = cf?.env;
+            // TypeScript doesn't know about context on Request, so we use type assertion
+            const requestWithContext = request as typeof request & {
+              context?: { cloudflare?: { env?: CloudflareEnv } };
+            };
+            cfEnv = requestWithContext.context?.cloudflare?.env;
 
             // Debug logging to understand what's available
-            console.log(`[import-zip] Cloudflare context available:`, !!cf);
             console.log(
-              `[import-zip] cf.env keys:`,
-              cf?.env ? Object.keys(cf.env) : "undefined",
+              `[import-zip] request.context available:`,
+              !!requestWithContext.context,
             );
             console.log(
-              `[import-zip] cf.env.FILES_BUCKET type:`,
-              typeof cf?.env?.FILES_BUCKET,
+              `[import-zip] request.context.cloudflare available:`,
+              !!requestWithContext.context?.cloudflare,
+            );
+            console.log(
+              `[import-zip] cfEnv keys:`,
+              cfEnv ? Object.keys(cfEnv) : "undefined",
+            );
+            console.log(
+              `[import-zip] cfEnv.FILES_BUCKET type:`,
+              typeof cfEnv?.FILES_BUCKET,
             );
           } catch (error) {
-            // getContext not available in development - that's OK, will use MinIO
+            // Context not available in development - that's OK, will use MinIO
             console.log(
-              `[import-zip] getContext failed (development mode):`,
+              `[import-zip] Failed to access Cloudflare context (development mode):`,
               error,
             );
             cfEnv = undefined;
