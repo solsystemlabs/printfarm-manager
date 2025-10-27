@@ -4,20 +4,14 @@ import { extractZipFile, type ExtractedFile } from "~/lib/zip/client-extractor";
 import { FileSelectionGrid } from "~/components/FileSelectionGrid";
 import { ImportProgress } from "~/components/ImportProgress";
 import { ImportSuccess } from "~/components/ImportSuccess";
+import { formatBytes } from "~/lib/utils/format";
+import { uploadWithProgress } from "~/lib/utils/upload";
 
 export const Route = createFileRoute("/test/upload-zip")({
   component: ZipUploadTester,
 });
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
-}
 
 // Workflow states
 type WorkflowState =
@@ -60,6 +54,7 @@ function ZipUploadTester() {
     currentIndex: 0,
     currentFileName: "",
     totalBytes: 0,
+    bytesUploaded: 0,
   });
 
   // Success state
@@ -77,7 +72,12 @@ function ZipUploadTester() {
     setExtractionProgress(0);
     setExtractedFiles([]);
     setSelectedFiles([]);
-    setImportProgress({ currentIndex: 0, currentFileName: "", totalBytes: 0 });
+    setImportProgress({
+      currentIndex: 0,
+      currentFileName: "",
+      totalBytes: 0,
+      bytesUploaded: 0,
+    });
     setImportedFiles([]);
     setFailedFiles([]);
     setTotalImportedBytes(0);
@@ -136,8 +136,9 @@ function ZipUploadTester() {
     const totalBytes = selectedFiles.reduce((sum, f) => sum + f.size, 0);
     setImportProgress({
       currentIndex: 0,
-      currentFileName: "",
+      currentFileName: selectedFiles[0]?.filename || "",
       totalBytes,
+      bytesUploaded: 0,
     });
 
     try {
@@ -154,19 +155,8 @@ function ZipUploadTester() {
         formData.append(`file_${index}`, file);
       });
 
-      // Update progress to show first file
-      setImportProgress({
-        currentIndex: 0,
-        currentFileName: selectedFiles[0]?.filename || "",
-        totalBytes,
-      });
-
-      const response = await fetch("/api/models/import-zip", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = (await response.json()) as {
+      // Upload with real-time progress tracking
+      const data = await uploadWithProgress<{
         imported: ImportedFile[];
         failed: FailedFile[];
         summary: {
@@ -175,12 +165,15 @@ function ZipUploadTester() {
           failed: number;
           totalBytes: number;
         };
-        error?: { message: string };
-      };
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || "Failed to import files");
-      }
+      }>("/api/models/import-zip", formData, {
+        onProgress: (progress) => {
+          // Update progress with real-time bytes uploaded
+          setImportProgress((prev) => ({
+            ...prev,
+            bytesUploaded: progress.loaded,
+          }));
+        },
+      });
 
       // Success!
       setImportedFiles(data.imported);
@@ -345,10 +338,7 @@ function ZipUploadTester() {
           currentFileIndex={importProgress.currentIndex}
           totalFiles={selectedFiles.length}
           currentFileName={importProgress.currentFileName}
-          bytesUploaded={
-            (importProgress.currentIndex * importProgress.totalBytes) /
-            selectedFiles.length
-          }
+          bytesUploaded={importProgress.bytesUploaded}
           totalBytes={importProgress.totalBytes}
         />
       )}

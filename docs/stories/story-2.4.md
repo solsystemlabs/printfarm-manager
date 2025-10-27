@@ -78,11 +78,11 @@ so that I can exclude unwanted files (promos, alternate versions).
 
 ### Review Follow-ups (AI)
 
-- [ ] [AI-Review][MED] Implement Real-Time Upload Progress Tracking (AC#9 enhancement)
-- [ ] [AI-Review][MED] Add Maximum Files Per Batch Validation (risk mitigation)
-- [ ] [AI-Review][MED] Extract formatBytes() to Shared Utility (code quality)
-- [ ] [AI-Review][LOW] Improve Progress Accuracy with Cumulative Byte Tracking
-- [ ] [AI-Review][LOW] Add ARIA Labels for Enhanced Accessibility
+- [x] [AI-Review][MED] Implement Real-Time Upload Progress Tracking (AC#9 enhancement)
+- [x] [AI-Review][MED] Add Maximum Files Per Batch Validation (risk mitigation)
+- [x] [AI-Review][MED] Extract formatBytes() to Shared Utility (code quality)
+- [x] [AI-Review][LOW] Improve Progress Accuracy with Cumulative Byte Tracking
+- [x] [AI-Review][LOW] Add ARIA Labels for Enhanced Accessibility
 
 ## Dev Notes
 
@@ -397,6 +397,13 @@ Key architectural decisions:
 - Fixed to send extracted file Blobs directly from client (files sent as `file_0`, `file_1`, etc. in FormData)
 - Server now receives ready-to-upload files, avoiding zip extraction entirely
 
+**Review follow-ups completed (2025-10-26):**
+- Implemented real-time upload progress tracking using XMLHttpRequest (`src/lib/utils/upload.ts`)
+- Added maximum files per batch validation (50 files limit) to prevent Cloudflare Workers timeout
+- Extracted `formatBytes()` utility to shared location (`src/lib/utils/format.ts`)
+- Fixed progress accuracy to use real-time bytes uploaded instead of approximation
+- Added comprehensive ARIA labels for enhanced accessibility (bulk action buttons, checkboxes, file cards with keyboard navigation support)
+
 ### File List
 
 **New files created:**
@@ -406,12 +413,22 @@ Key architectural decisions:
 - src/routes/api/models/import-zip.ts
 - src/components/__tests__/FileSelectionGrid.test.tsx
 - src/routes/api/models/__tests__/import-zip.test.ts
+- src/lib/utils/format.ts (shared formatBytes utility)
+- src/lib/utils/upload.ts (XMLHttpRequest-based upload with progress tracking)
 
 **Modified files:**
-- src/routes/test/upload-zip.tsx (integrated workflow with new components)
+- src/routes/test/upload-zip.tsx (integrated workflow with new components, real-time progress tracking)
 - src/lib/db/__tests__/schema.test.ts (fixed flaky test with timestamp)
 
 ### Change Log
+
+**2025-10-26:** Resolved all AI review follow-ups
+- Implemented real-time upload progress tracking with XMLHttpRequest
+- Added maximum files per batch validation (50 files limit)
+- Extracted formatBytes() to shared utility module
+- Fixed progress accuracy to use actual bytes uploaded instead of approximation
+- Enhanced accessibility with ARIA labels and keyboard navigation support
+- All tests passing (162 passed, 3 skipped), build and linting successful
 
 **2025-10-25:** Senior Developer Review notes appended
 

@@ -10,6 +10,7 @@ const MODEL_EXTENSIONS = [".stl", ".3mf"];
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"];
 const ALLOWED_EXTENSIONS = [...MODEL_EXTENSIONS, ...IMAGE_EXTENSIONS];
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB per file
+const MAX_FILES_PER_BATCH = 50; // Limit to prevent Cloudflare Workers 30-second timeout
 
 /**
  * Determines file type based on extension
@@ -114,6 +115,21 @@ export const Route = createFileRoute("/api/models/import-zip")({
             return createErrorResponse(
               "NO_FILES_PROVIDED",
               "No files provided for import",
+              400,
+            );
+          }
+
+          // Validation: Maximum files per batch
+          if (files.length > MAX_FILES_PER_BATCH) {
+            log("bulk_import_error", {
+              error: "too_many_files",
+              fileCount: files.length,
+              maxAllowed: MAX_FILES_PER_BATCH,
+              durationMs: Date.now() - startTime,
+            });
+            return createErrorResponse(
+              "TOO_MANY_FILES",
+              `Maximum ${MAX_FILES_PER_BATCH} files allowed per import. Please select fewer files or import in multiple batches.`,
               400,
             );
           }

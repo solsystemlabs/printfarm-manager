@@ -1,17 +1,10 @@
 import { useState, useEffect } from "react";
 import type { ExtractedFile } from "~/lib/zip/client-extractor";
+import { formatBytes } from "~/lib/utils/format";
 
 interface FileSelectionGridProps {
   files: ExtractedFile[];
   onSelectionChange: (selectedFiles: ExtractedFile[]) => void;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
 
 /**
@@ -109,6 +102,7 @@ export function FileSelectionGrid({
           <button
             onClick={selectAll}
             disabled={selectedCount === totalCount}
+            aria-label={`Select all ${totalCount} files for import`}
             className="px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed border border-blue-200 disabled:border-gray-200 rounded transition-colors"
           >
             Select All
@@ -116,6 +110,7 @@ export function FileSelectionGrid({
           <button
             onClick={deselectAll}
             disabled={selectedCount === 0}
+            aria-label={`Deselect all selected files (${selectedCount} currently selected)`}
             className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed border border-gray-200 rounded transition-colors"
           >
             Deselect All
@@ -124,7 +119,11 @@ export function FileSelectionGrid({
       </div>
 
       {/* File grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        role="group"
+        aria-label="File selection grid"
+      >
         {files.map((file) => {
           const isSelected = selectedPaths.has(file.path);
           const thumbnailUrl = thumbnailUrls.get(file.path);
@@ -133,6 +132,15 @@ export function FileSelectionGrid({
             <div
               key={file.path}
               onClick={() => toggleFile(file.path)}
+              role="button"
+              tabIndex={0}
+              aria-label={`File card for ${file.filename}. ${isSelected ? "Currently selected" : "Not selected"}. Click to toggle selection.`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleFile(file.path);
+                }
+              }}
               className={`
                 relative bg-white border-2 rounded-lg p-3 cursor-pointer
                 transition-all duration-200 hover:shadow-lg
@@ -150,6 +158,7 @@ export function FileSelectionGrid({
                   checked={isSelected}
                   onChange={() => toggleFile(file.path)}
                   onClick={(e) => e.stopPropagation()} // Prevent double-toggle
+                  aria-label={`${isSelected ? "Deselect" : "Select"} ${file.filename} for import`}
                   className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
                 />
               </div>
