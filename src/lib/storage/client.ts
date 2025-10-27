@@ -1,4 +1,4 @@
-import type { StorageClient } from "./types";
+import type { StorageClient, CloudflareEnv } from "./types";
 import { R2StorageClient } from "./r2-client";
 
 /**
@@ -9,7 +9,9 @@ import { R2StorageClient } from "./r2-client";
  * @returns StorageClient instance configured for current environment
  * @throws Error if required configuration is missing
  */
-export async function getStorageClient(cfEnv?: any): Promise<StorageClient> {
+export async function getStorageClient(
+  cfEnv?: CloudflareEnv,
+): Promise<StorageClient> {
   const environment = process.env.ENVIRONMENT || "development";
 
   if (environment === "development") {
