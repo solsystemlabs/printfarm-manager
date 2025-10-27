@@ -5,6 +5,9 @@ import { R2StorageClient } from "./r2-client";
  * Storage client factory - returns environment-appropriate storage client
  * Follows the same pattern as src/lib/db.ts getPrismaClient()
  *
+ * In Cloudflare Workers, bindings are accessed via getContext('cloudflare').env
+ * from vinxi/http. The caller should pass this as cfEnv parameter.
+ *
  * @param cfEnv - Optional Cloudflare environment object containing bindings (for staging/production)
  * @returns StorageClient instance configured for current environment
  * @throws Error if required configuration is missing
@@ -41,8 +44,8 @@ export async function getStorageClient(
 
     return new MinIOStorageClient(minioClient, bucket, environment);
   } else {
-    // Staging/Production: Use Cloudflare R2 via binding
-    // The binding is accessed through Cloudflare context (getContext('cloudflare').env)
+    // Staging/Production: Use Cloudflare R2 via binding from getContext('cloudflare')
+    // Cloudflare bindings must be accessed via vinxi's getContext, not process.env
     const bucket = cfEnv?.FILES_BUCKET;
 
     if (!bucket) {

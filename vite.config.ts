@@ -19,10 +19,5 @@ export default defineConfig(() => {
     ],
     // Include WASM files as assets for Cloudflare Workers
     assetsInclude: ["**/*.wasm"],
-    build: {
-      rollupOptions: {
-        external: ["vinxi/http"],
-      },
-    },
   };
 });
