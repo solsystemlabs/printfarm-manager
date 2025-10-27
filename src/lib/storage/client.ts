@@ -44,14 +44,33 @@ export async function getStorageClient(
 
     return new MinIOStorageClient(minioClient, bucket, environment);
   } else {
-    // Staging/Production: Use Cloudflare R2 via binding from getContext('cloudflare')
-    // Cloudflare bindings must be accessed via vinxi's getContext, not process.env
-    const bucket = cfEnv?.FILES_BUCKET;
+    // Staging/Production: Use Cloudflare R2 via binding
+    // Try multiple methods to access the binding (TanStack Start adapter may inject it differently)
+    let bucket = cfEnv?.FILES_BUCKET;
+
+    // Fallback: Try process.env if cfEnv doesn't have it
+    // TanStack Start's Cloudflare adapter may inject bindings into process.env
+    if (!bucket) {
+      console.log(
+        `[Storage] FILES_BUCKET not found in cfEnv, trying process.env fallback`,
+      );
+      bucket = process.env.FILES_BUCKET;
+    }
 
     if (!bucket) {
+      // Log what we actually received to help debug
+      console.error(
+        `[Storage] Failed to find FILES_BUCKET. cfEnv keys:`,
+        cfEnv ? Object.keys(cfEnv) : "undefined",
+      );
+      console.error(
+        `[Storage] process.env.FILES_BUCKET type:`,
+        typeof process.env.FILES_BUCKET,
+      );
+
       throw new Error(
         `FILES_BUCKET binding not available in ${environment} environment. ` +
-          `Ensure Cloudflare context is passed to getStorageClient(cfEnv). ` +
+          `Tried cfEnv.FILES_BUCKET and process.env.FILES_BUCKET. ` +
           `Check that R2 bucket is bound in Cloudflare dashboard and wrangler.jsonc is configured correctly.`,
       );
     }

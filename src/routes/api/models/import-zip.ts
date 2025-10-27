@@ -146,8 +146,23 @@ export const Route = createFileRoute("/api/models/import-zip")({
           try {
             const cf = getContext("cloudflare");
             cfEnv = cf?.env;
-          } catch {
+
+            // Debug logging to understand what's available
+            console.log(`[import-zip] Cloudflare context available:`, !!cf);
+            console.log(
+              `[import-zip] cf.env keys:`,
+              cf?.env ? Object.keys(cf.env) : "undefined",
+            );
+            console.log(
+              `[import-zip] cf.env.FILES_BUCKET type:`,
+              typeof cf?.env?.FILES_BUCKET,
+            );
+          } catch (error) {
             // getContext not available in development - that's OK, will use MinIO
+            console.log(
+              `[import-zip] getContext failed (development mode):`,
+              error,
+            );
             cfEnv = undefined;
           }
 
