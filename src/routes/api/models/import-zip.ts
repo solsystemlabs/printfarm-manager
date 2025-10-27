@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
+import { getContext } from "vinxi/http";
 import { getPrismaClient } from "~/lib/db";
 import { getStorageClient } from "~/lib/storage";
 import { createErrorResponse } from "~/lib/utils/errors";
@@ -139,8 +140,19 @@ export const Route = createFileRoute("/api/models/import-zip")({
             totalSize: files.reduce((sum, f) => sum + f.size, 0),
           });
 
+          // Get Cloudflare context for R2 binding access (staging/production)
+          // In development, getStorageClient() will use MinIO from process.env instead
+          let cfEnv;
+          try {
+            const cf = getContext("cloudflare");
+            cfEnv = cf?.env;
+          } catch {
+            // getContext not available in development - that's OK, will use MinIO
+            cfEnv = undefined;
+          }
+
           // Get environment-appropriate storage client
-          const storage = await getStorageClient();
+          const storage = await getStorageClient(cfEnv);
 
           // Get database configuration
           const databaseUrl = process.env.DATABASE_URL;

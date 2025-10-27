@@ -5,13 +5,15 @@ import { R2StorageClient } from "./r2-client";
  * Storage client factory - returns environment-appropriate storage client
  * Follows the same pattern as src/lib/db.ts getPrismaClient()
  *
+ * @param cfEnv - Optional Cloudflare environment object containing bindings (for staging/production)
  * @returns StorageClient instance configured for current environment
  * @throws Error if required configuration is missing
  */
-export async function getStorageClient(): Promise<StorageClient> {
+export async function getStorageClient(cfEnv?: any): Promise<StorageClient> {
   const environment = process.env.ENVIRONMENT || "development";
 
   if (environment === "development") {
+    // Development: Use MinIO with process.env configuration
     const { MinIOStorageClient } = await import("./minio-client");
     const { Client: MinioClient } = await import("minio");
 
@@ -37,12 +39,15 @@ export async function getStorageClient(): Promise<StorageClient> {
 
     return new MinIOStorageClient(minioClient, bucket, environment);
   } else {
-    // Use Cloudflare R2 for staging/production
-    const bucket = process.env.FILES_BUCKET;
+    // Staging/Production: Use Cloudflare R2 via binding
+    // The binding is accessed through Cloudflare context (getContext('cloudflare').env)
+    const bucket = cfEnv?.FILES_BUCKET;
 
     if (!bucket) {
       throw new Error(
-        `FILES_BUCKET binding not available in ${environment} environment - check wrangler.jsonc configuration`,
+        `FILES_BUCKET binding not available in ${environment} environment. ` +
+          `Ensure Cloudflare context is passed to getStorageClient(cfEnv). ` +
+          `Check that R2 bucket is bound in Cloudflare dashboard and wrangler.jsonc is configured correctly.`,
       );
     }
 

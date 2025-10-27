@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
+import { getContext } from "vinxi/http";
 import { getStorageClient } from "~/lib/storage";
 
 export const Route = createFileRoute("/api/test-r2")({
@@ -7,8 +8,19 @@ export const Route = createFileRoute("/api/test-r2")({
     handlers: {
       GET: async () => {
         try {
+          // Get Cloudflare context for R2 binding access (staging/production)
+          // In development, getStorageClient() will use MinIO from process.env instead
+          let cfEnv;
+          try {
+            const cf = getContext("cloudflare");
+            cfEnv = cf?.env;
+          } catch {
+            // getContext not available in development - that's OK, will use MinIO
+            cfEnv = undefined;
+          }
+
           // Get environment-appropriate storage client
-          const storage = await getStorageClient();
+          const storage = await getStorageClient(cfEnv);
 
           const key = "test/test.txt";
           const testContent = `Hello from ${storage.getStorageType()}!`;
