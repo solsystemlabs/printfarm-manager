@@ -21,6 +21,7 @@ import { Route as AdminStorageRouteImport } from './routes/admin/storage'
 import { Route as PathlessLayoutNestedLayoutRouteImport } from './routes/_pathlessLayout/_nested-layout'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users.$id'
 import { Route as ApiModelsUploadRouteImport } from './routes/api/models/upload'
+import { Route as ApiModelsImportZipRouteImport } from './routes/api/models/import-zip'
 import { Route as ApiAdminStorageRouteImport } from './routes/api/admin/storage'
 import { Route as PathlessLayoutNestedLayoutRouteBRouteImport } from './routes/_pathlessLayout/_nested-layout/route-b'
 import { Route as PathlessLayoutNestedLayoutRouteARouteImport } from './routes/_pathlessLayout/_nested-layout/route-a'
@@ -84,6 +85,11 @@ const ApiModelsUploadRoute = ApiModelsUploadRouteImport.update({
   path: '/api/models/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiModelsImportZipRoute = ApiModelsImportZipRouteImport.update({
+  id: '/api/models/import-zip',
+  path: '/api/models/import-zip',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminStorageRoute = ApiAdminStorageRouteImport.update({
   id: '/api/admin/storage',
   path: '/api/admin/storage',
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
   '/api/admin/storage': typeof ApiAdminStorageRoute
+  '/api/models/import-zip': typeof ApiModelsImportZipRoute
   '/api/models/upload': typeof ApiModelsUploadRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
@@ -129,6 +136,7 @@ export interface FileRoutesByTo {
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
   '/api/admin/storage': typeof ApiAdminStorageRoute
+  '/api/models/import-zip': typeof ApiModelsImportZipRoute
   '/api/models/upload': typeof ApiModelsUploadRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/_pathlessLayout/_nested-layout/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/_pathlessLayout/_nested-layout/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
   '/api/admin/storage': typeof ApiAdminStorageRoute
+  '/api/models/import-zip': typeof ApiModelsImportZipRoute
   '/api/models/upload': typeof ApiModelsUploadRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/route-a'
     | '/route-b'
     | '/api/admin/storage'
+    | '/api/models/import-zip'
     | '/api/models/upload'
     | '/api/users/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/route-a'
     | '/route-b'
     | '/api/admin/storage'
+    | '/api/models/import-zip'
     | '/api/models/upload'
     | '/api/users/$id'
   id:
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/_pathlessLayout/_nested-layout/route-a'
     | '/_pathlessLayout/_nested-layout/route-b'
     | '/api/admin/storage'
+    | '/api/models/import-zip'
     | '/api/models/upload'
     | '/api/users/$id'
   fileRoutesById: FileRoutesById
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   ApiUsersRoute: typeof ApiUsersRouteWithChildren
   TestUploadZipRoute: typeof TestUploadZipRoute
   ApiAdminStorageRoute: typeof ApiAdminStorageRoute
+  ApiModelsImportZipRoute: typeof ApiModelsImportZipRoute
   ApiModelsUploadRoute: typeof ApiModelsUploadRoute
 }
 
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiModelsUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/models/import-zip': {
+      id: '/api/models/import-zip'
+      path: '/api/models/import-zip'
+      fullPath: '/api/models/import-zip'
+      preLoaderRoute: typeof ApiModelsImportZipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/storage': {
       id: '/api/admin/storage'
       path: '/api/admin/storage'
@@ -377,6 +397,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUsersRoute: ApiUsersRouteWithChildren,
   TestUploadZipRoute: TestUploadZipRoute,
   ApiAdminStorageRoute: ApiAdminStorageRoute,
+  ApiModelsImportZipRoute: ApiModelsImportZipRoute,
   ApiModelsUploadRoute: ApiModelsUploadRoute,
 }
 export const routeTree = rootRouteImport
