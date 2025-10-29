@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { StorageClient, UploadOptions } from "./types";
 
 /**
@@ -127,6 +128,28 @@ export class R2StorageClient implements StorageClient {
 
   getPublicUrl(key: string): string {
     return `${this.publicUrl}/${key}`;
+  }
+
+  async generatePresignedUploadUrl(
+    key: string,
+    contentType: string,
+    expiresIn: number = 3600,
+  ): Promise<string> {
+    console.log(`[R2] Generating presigned upload URL for key: ${key}`);
+
+    const command = new PutObjectCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      ContentType: contentType,
+    });
+
+    const presignedUrl = await getSignedUrl(this.s3Client, command, {
+      expiresIn,
+    });
+
+    console.log(`[R2] Presigned URL generated, expires in ${expiresIn} seconds`);
+
+    return presignedUrl;
   }
 
   getStorageType(): "MinIO" | "Cloudflare R2" {

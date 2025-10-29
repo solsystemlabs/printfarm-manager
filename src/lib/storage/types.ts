@@ -28,6 +28,18 @@ export interface StorageClient {
    * Get public URL for a stored file
    */
   getPublicUrl(key: string): string;
+  /**
+   * Generate a presigned URL for direct client upload to storage
+   * @param key Storage key where file will be uploaded
+   * @param contentType MIME type of the file
+   * @param expiresIn Expiration time in seconds (default 3600 = 1 hour)
+   * @returns Presigned URL that client can use to upload directly
+   */
+  generatePresignedUploadUrl(
+    key: string,
+    contentType: string,
+    expiresIn?: number,
+  ): Promise<string>;
   getEnvironment(): string;
   getStorageType(): "MinIO" | "Cloudflare R2";
 }

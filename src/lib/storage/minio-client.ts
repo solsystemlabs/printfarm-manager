@@ -120,6 +120,24 @@ export class MinIOStorageClient implements StorageClient {
     return `http://localhost:9000/${this.bucket}/${key}`;
   }
 
+  async generatePresignedUploadUrl(
+    key: string,
+    contentType: string,
+    expiresIn: number = 3600,
+  ): Promise<string> {
+    console.log(`[MinIO] Generating presigned upload URL for key: ${key}`);
+
+    const presignedUrl = await this.client.presignedPutObject(
+      this.bucket,
+      key,
+      expiresIn,
+    );
+
+    console.log(`[MinIO] Presigned URL generated, expires in ${expiresIn} seconds`);
+
+    return presignedUrl;
+  }
+
   getStorageType(): "MinIO" | "Cloudflare R2" {
     return "MinIO";
   }

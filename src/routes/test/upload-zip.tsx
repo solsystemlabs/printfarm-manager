@@ -5,7 +5,7 @@ import { FileSelectionGrid } from "~/components/FileSelectionGrid";
 import { ImportProgress } from "~/components/ImportProgress";
 import { ImportSuccess } from "~/components/ImportSuccess";
 import { formatBytes } from "~/lib/utils/format";
-import { uploadWithProgress } from "~/lib/utils/upload";
+import { uploadModelFile } from "~/lib/utils/upload";
 
 export const Route = createFileRoute("/test/upload-zip")({
   component: ZipUploadTester,
@@ -49,12 +49,19 @@ function ZipUploadTester() {
   // Selection state
   const [selectedFiles, setSelectedFiles] = useState<ExtractedFile[]>([]);
 
-  // Import state
-  const [importProgress, setImportProgress] = useState({
+  // Import state - track per-file progress
+  const [importProgress, setImportProgress] = useState<{
+    currentIndex: number;
+    currentFileName: string;
+    totalBytes: number;
+    bytesUploaded: number;
+    fileProgress: Record<string, number>; // filename -> percentage
+  }>({
     currentIndex: 0,
     currentFileName: "",
     totalBytes: 0,
     bytesUploaded: 0,
+    fileProgress: {},
   });
 
   // Success state
@@ -77,6 +84,7 @@ function ZipUploadTester() {
       currentFileName: "",
       totalBytes: 0,
       bytesUploaded: 0,
+      fileProgress: {},
     });
     setImportedFiles([]);
     setFailedFiles([]);
@@ -136,51 +144,93 @@ function ZipUploadTester() {
     const totalBytes = selectedFiles.reduce((sum, f) => sum + f.size, 0);
     setImportProgress({
       currentIndex: 0,
-      currentFileName: selectedFiles[0]?.filename || "",
+      currentFileName: "",
       totalBytes,
       bytesUploaded: 0,
+      fileProgress: {},
     });
 
+    const imported: ImportedFile[] = [];
+    const failed: FailedFile[] = [];
+    let totalUploadedBytes = 0;
+
     try {
-      // Create form data with extracted file Blobs
-      // IMPORTANT: Send the already-extracted Blobs, NOT the zip file!
-      // Cloudflare Workers cannot handle zip extraction due to 128MB memory limit
-      const formData = new FormData();
+      // Upload each file individually using direct-to-R2 pattern
+      // This bypasses Netlify's 6MB function payload limit
+      const uploadPromises = selectedFiles.map(async (extractedFile, index) => {
+        try {
+          // Convert extracted Blob to File with proper metadata
+          const file = new File([extractedFile.content], extractedFile.filename, {
+            type: extractedFile.content.type || "application/octet-stream",
+          });
 
-      selectedFiles.forEach((extractedFile, index) => {
-        // Convert extracted Blob to File with proper metadata
-        const file = new File([extractedFile.content], extractedFile.filename, {
-          type: extractedFile.content.type || "application/octet-stream",
-        });
-        formData.append(`file_${index}`, file);
-      });
-
-      // Upload with real-time progress tracking
-      const data = await uploadWithProgress<{
-        imported: ImportedFile[];
-        failed: FailedFile[];
-        summary: {
-          total: number;
-          succeeded: number;
-          failed: number;
-          totalBytes: number;
-        };
-      }>("/api/models/import-zip", formData, {
-        onProgress: (progress) => {
-          // Update progress with real-time bytes uploaded
+          // Update current file being processed
           setImportProgress((prev) => ({
             ...prev,
-            bytesUploaded: progress.loaded,
+            currentIndex: index,
+            currentFileName: extractedFile.filename,
           }));
-        },
+
+          // Upload using direct-to-R2 pattern with progress tracking
+          const result = await uploadModelFile(file, {
+            onProgress: (progress) => {
+              // Track per-file progress
+              setImportProgress((prev) => {
+                const newFileProgress = {
+                  ...prev.fileProgress,
+                  [extractedFile.filename]: progress.percentage,
+                };
+
+                // Calculate total bytes uploaded across all files
+                const bytesForThisFile = (progress.percentage / 100) * file.size;
+                const previousBytes = Object.entries(prev.fileProgress)
+                  .filter(([name]) => name !== extractedFile.filename)
+                  .reduce((sum, [name]) => {
+                    const f = selectedFiles.find((sf) => sf.filename === name);
+                    return sum + (f ? (prev.fileProgress[name] / 100) * f.size : 0);
+                  }, 0);
+
+                return {
+                  ...prev,
+                  fileProgress: newFileProgress,
+                  bytesUploaded: Math.round(previousBytes + bytesForThisFile),
+                };
+              });
+            },
+          });
+
+          // Success - add to imported list
+          imported.push({
+            id: result.id,
+            filename: result.filename,
+            r2Url: result.r2Url,
+            type: extractedFile.type,
+            size: result.fileSize,
+          });
+
+          totalUploadedBytes += result.fileSize;
+        } catch (err) {
+          // Failure - add to failed list
+          failed.push({
+            filename: extractedFile.filename,
+            error: err instanceof Error ? err.name : "UNKNOWN_ERROR",
+            message:
+              err instanceof Error ? err.message : "An unexpected error occurred",
+          });
+        }
       });
 
-      // Success!
-      setImportedFiles(data.imported);
-      setFailedFiles(data.failed);
-      setTotalImportedBytes(data.summary.totalBytes);
+      // Wait for all uploads to complete
+      await Promise.all(uploadPromises);
+
+      // Success! Show results
+      setImportedFiles(imported);
+      setFailedFiles(failed);
+      setTotalImportedBytes(totalUploadedBytes);
       setWorkflowState("success");
     } catch (err) {
+      // This shouldn't happen since we catch errors per-file,
+      // but handle it just in case
       setError(
         err instanceof Error
           ? err.message
