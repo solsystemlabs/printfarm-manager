@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
 import { getPrismaClient } from "~/lib/db";
-import { getStorageClient, type CloudflareEnv } from "~/lib/storage";
+import { getStorageClient } from "~/lib/storage";
 import { createErrorResponse } from "~/lib/utils/errors";
 import { log, logPerformance } from "~/lib/utils/logger";
 
@@ -148,36 +148,8 @@ export const Route = createFileRoute("/api/models/import-zip")({
             totalSize: files.reduce((sum, f) => sum + f.size, 0),
           });
 
-          // Access Cloudflare bindings - try multiple methods
-          // Method 1: Check if env is passed directly in handler context
-          const contextWithEnv = handlerContext as typeof handlerContext & {
-            env?: CloudflareEnv;
-          };
-          let cfEnv = contextWithEnv.env;
-          console.log("[import-zip] Method 1 - handlerContext.env:", !!cfEnv);
-          console.log(
-            "[import-zip] Method 1 - env keys:",
-            cfEnv ? Object.keys(cfEnv) : "undefined",
-          );
-
-          // Method 2: Try request.context (TanStack Start documentation pattern)
-          if (!cfEnv) {
-            try {
-              const requestWithContext = request as typeof request & {
-                context?: { cloudflare?: { env?: CloudflareEnv } };
-              };
-              cfEnv = requestWithContext.context?.cloudflare?.env;
-              console.log(
-                "[import-zip] Method 2 - request.context.cloudflare.env:",
-                !!cfEnv,
-              );
-            } catch (error) {
-              console.log("[import-zip] Method 2 failed:", error);
-            }
-          }
-
           // Get environment-appropriate storage client
-          const storage = await getStorageClient(cfEnv);
+          const storage = await getStorageClient();
 
           // Get database configuration
           const databaseUrl = process.env.DATABASE_URL;

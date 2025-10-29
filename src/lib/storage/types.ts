@@ -40,21 +40,8 @@ export interface UploadOptions {
   contentDisposition?: string;
 }
 
-/**
- * Cloudflare environment bindings and variables
- * In Workers runtime, bindings are injected into process.env by TanStack Start adapter
- */
-export type CloudflareEnv = {
-  FILES_BUCKET?: R2Bucket;
-  MINIO_ACCESS_KEY?: string;
-  MINIO_SECRET_KEY?: string;
-  MINIO_BUCKET?: string;
-  ENVIRONMENT?: string;
-  XATA_BRANCH?: string;
-};
-
 declare global {
-  // Augment NodeJS ProcessEnv with Cloudflare environment variables
+  // Augment NodeJS ProcessEnv with application environment variables
   // Using namespace is required for global type augmentation in Node.js
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
@@ -62,10 +49,14 @@ declare global {
       // Database configuration
       DATABASE_URL?: string;
 
-      // Cloudflare R2 binding (injected by TanStack Start Cloudflare adapter)
-      FILES_BUCKET?: R2Bucket;
+      // Cloudflare R2 configuration (via AWS SDK)
+      R2_ACCOUNT_ID?: string;
+      R2_ACCESS_KEY_ID?: string;
+      R2_SECRET_ACCESS_KEY?: string;
+      R2_BUCKET_NAME?: string;
+      R2_PUBLIC_URL?: string;
 
-      // R2 / MinIO configuration
+      // MinIO configuration (development)
       MINIO_ENDPOINT?: string;
       MINIO_PORT?: string;
       MINIO_USE_SSL?: string;

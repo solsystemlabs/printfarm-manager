@@ -67,9 +67,6 @@ jobs:
 
       - name: Build application
         run: npm run build
-        env:
-          # Use staging environment for CI builds
-          CLOUDFLARE_ENV: staging
 
       - name: Check formatting
         run: npm run format:check

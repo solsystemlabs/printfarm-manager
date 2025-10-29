@@ -10,10 +10,6 @@
     "dev": "vite dev",
     "build": "prisma generate && vite build && tsc --noEmit",
     "preview": "vite preview",
-    "deploy": "wrangler deploy",
-    "deploy:staging": "wrangler deploy --env staging",
-    "deploy:production": "wrangler deploy --env production",
-    "cf-typegen": "wrangler types",
     "test": "prisma generate && vitest",
     "test:run": "prisma generate && vitest run",
     "lint": "eslint .",
@@ -41,8 +37,8 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.13.10",
     "@eslint/js": "^9.37.0",
+    "@netlify/vite-plugin-tanstack-start": "^1.1.7",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -65,7 +61,6 @@
     "vinxi": "^0.5.8",
     "vite": "^7.1.7",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.4",
-    "wrangler": "^4.42.0"
+    "vitest": "^3.2.4"
   }
 }

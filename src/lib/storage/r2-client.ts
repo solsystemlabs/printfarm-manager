@@ -1,15 +1,37 @@
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import type { StorageClient, UploadOptions } from "./types";
 
 /**
- * R2 storage client implementation for staging/production
+ * R2 storage client implementation using AWS SDK (S3-compatible)
+ * Works with Cloudflare R2 from any environment (Netlify, Node.js, etc.)
  */
 export class R2StorageClient implements StorageClient {
-  private bucket: R2Bucket;
+  private s3Client: S3Client;
+  private bucketName: string;
   private environment: string;
+  private publicUrl: string;
 
-  constructor(bucket: R2Bucket, environment: string) {
-    this.bucket = bucket;
-    this.environment = environment;
+  constructor(config: {
+    accountId: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    bucketName: string;
+    environment: string;
+    publicUrl?: string;
+  }) {
+    // Create S3 client configured for Cloudflare R2
+    this.s3Client = new S3Client({
+      region: "auto",
+      endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+    });
+
+    this.bucketName = config.bucketName;
+    this.environment = config.environment;
+    this.publicUrl = config.publicUrl || `https://${config.bucketName}.r2.cloudflarestorage.com`;
   }
 
   async put(
@@ -17,18 +39,19 @@ export class R2StorageClient implements StorageClient {
     content: string | Buffer,
     options?: UploadOptions,
   ): Promise<void> {
-    const contentStr = Buffer.isBuffer(content)
-      ? content.toString("utf-8")
-      : content;
+    const body = Buffer.isBuffer(content) ? content : Buffer.from(content);
 
     console.log(`[R2] Uploading key: ${key}`);
 
-    await this.bucket.put(key, contentStr, {
-      httpMetadata: {
-        contentType: options?.contentType,
-        contentDisposition: options?.contentDisposition,
-      },
-    });
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        Body: body,
+        ContentType: options?.contentType,
+        ContentDisposition: options?.contentDisposition,
+      })
+    );
 
     console.log(`[R2] Upload successful`);
   }
@@ -36,23 +59,40 @@ export class R2StorageClient implements StorageClient {
   async get(key: string): Promise<string | null> {
     console.log(`[R2] Downloading key: ${key}`);
 
-    const object = await this.bucket.get(key);
+    try {
+      const response = await this.s3Client.send(
+        new GetObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+        })
+      );
 
-    if (!object) {
-      return null;
+      if (!response.Body) {
+        return null;
+      }
+
+      const content = await response.Body.transformToString();
+
+      console.log(`[R2] Download successful, size: ${content.length} bytes`);
+
+      return content;
+    } catch (error: any) {
+      if (error.name === "NoSuchKey") {
+        return null;
+      }
+      throw error;
     }
-
-    const content = await object.text();
-
-    console.log(`[R2] Download successful, size: ${content.length} bytes`);
-
-    return content;
   }
 
   async delete(key: string): Promise<void> {
     console.log(`[R2] Deleting key: ${key}`);
 
-    await this.bucket.delete(key);
+    await this.s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      })
+    );
 
     console.log(`[R2] Delete successful`);
   }
@@ -68,22 +108,25 @@ export class R2StorageClient implements StorageClient {
   ): Promise<void> {
     console.log(`[R2] Uploading file key: ${key}, size: ${file.size} bytes`);
 
-    // R2 can handle File streams directly
-    await this.bucket.put(key, file.stream(), {
-      httpMetadata: {
-        contentType: metadata.contentType,
-        contentDisposition: metadata.contentDisposition,
-      },
-    });
+    // Convert File to Buffer for S3 upload
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        Body: buffer,
+        ContentType: metadata.contentType,
+        ContentDisposition: metadata.contentDisposition,
+      })
+    );
 
     console.log(`[R2] File upload successful`);
   }
 
   getPublicUrl(key: string): string {
-    // R2 public URL based on environment
-    const bucketName =
-      this.environment === "production" ? "pm-files" : "pm-staging-files";
-    return `https://${bucketName}.r2.cloudflarestorage.com/${key}`;
+    return `${this.publicUrl}/${key}`;
   }
 
   getStorageType(): "MinIO" | "Cloudflare R2" {

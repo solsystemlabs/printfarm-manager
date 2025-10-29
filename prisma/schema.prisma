@@ -1,24 +1,14 @@
 // Prisma schema for PrintFarm Manager
-// Database: Local PostgreSQL (dev) / Xata (staging, production)
-// Branch strategy: local docker, xata staging branch, xata production branch
+// Database: PostgreSQL
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Generator for Cloudflare Workers (WASM-based, used in production)
-generator cloudflare {
-  provider   = "prisma-client"
-  output     = "./generated/cloudflare"
-  engineType = "client"
-  runtime    = "workerd"
-}
-
-// Generator for local development and tests (binary engine, works with Node.js)
-generator local {
+// Standard Prisma Client generator
+generator client {
   provider = "prisma-client-js"
-  output   = "./generated/local"
 }
 
 // ============================================================================

@@ -1,20 +1,17 @@
-import type { StorageClient, CloudflareEnv } from "./types";
+import type { StorageClient } from "./types";
 import { R2StorageClient } from "./r2-client";
 
 /**
  * Storage client factory - returns environment-appropriate storage client
- * Follows the same pattern as src/lib/db.ts getPrismaClient()
  *
- * In Cloudflare Workers, bindings are accessed via getContext('cloudflare').env
- * from vinxi/http. The caller should pass this as cfEnv parameter.
+ * Uses environment variables for configuration:
+ * - Development: MinIO (local)
+ * - Staging/Production: Cloudflare R2 (via AWS SDK)
  *
- * @param cfEnv - Optional Cloudflare environment object containing bindings (for staging/production)
  * @returns StorageClient instance configured for current environment
  * @throws Error if required configuration is missing
  */
-export async function getStorageClient(
-  cfEnv?: CloudflareEnv,
-): Promise<StorageClient> {
+export async function getStorageClient(): Promise<StorageClient> {
   const environment = process.env.ENVIRONMENT || "development";
 
   if (environment === "development") {
@@ -44,42 +41,36 @@ export async function getStorageClient(
 
     return new MinIOStorageClient(minioClient, bucket, environment);
   } else {
-    // Staging/Production: Use Cloudflare R2 via binding
-    // Try multiple methods to access the binding (TanStack Start adapter may inject it differently)
-    let bucket = cfEnv?.FILES_BUCKET;
+    // Staging/Production: Use Cloudflare R2 via AWS SDK (S3-compatible API)
+    const accountId = process.env.R2_ACCOUNT_ID;
+    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+    const bucketName = process.env.R2_BUCKET_NAME;
+    const publicUrl = process.env.R2_PUBLIC_URL;
 
-    // Fallback: Try process.env if cfEnv doesn't have it
-    // TanStack Start's Cloudflare adapter may inject bindings into process.env
-    if (!bucket) {
-      console.log(
-        `[Storage] FILES_BUCKET not found in cfEnv, trying process.env fallback`,
-      );
-      bucket = process.env.FILES_BUCKET;
-    }
-
-    if (!bucket) {
-      // Log what we actually received to help debug
-      console.error(
-        `[Storage] Failed to find FILES_BUCKET. cfEnv keys:`,
-        cfEnv ? Object.keys(cfEnv) : "undefined",
-      );
-      console.error(
-        `[Storage] process.env.FILES_BUCKET type:`,
-        typeof process.env.FILES_BUCKET,
-      );
+    if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
+      console.error(`[Storage] Missing R2 configuration in ${environment} environment`);
+      console.error(`R2_ACCOUNT_ID: ${accountId ? 'set' : 'missing'}`);
+      console.error(`R2_ACCESS_KEY_ID: ${accessKeyId ? 'set' : 'missing'}`);
+      console.error(`R2_SECRET_ACCESS_KEY: ${secretAccessKey ? 'set' : 'missing'}`);
+      console.error(`R2_BUCKET_NAME: ${bucketName ? 'set' : 'missing'}`);
 
       throw new Error(
-        `FILES_BUCKET binding not available in ${environment} environment. ` +
-          `Tried cfEnv.FILES_BUCKET and process.env.FILES_BUCKET. ` +
-          `Check that R2 bucket is bound in Cloudflare dashboard and wrangler.jsonc is configured correctly.`,
+        `Missing required R2 configuration for ${environment} environment. ` +
+          `Required environment variables: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME`
       );
     }
 
-    console.log(
-      `[Storage] Initializing R2 client for environment: ${environment}`,
-    );
-    console.log(`[Storage] R2 binding: FILES_BUCKET`);
+    console.log(`[Storage] Initializing R2 client for environment: ${environment}`);
+    console.log(`[Storage] R2 bucket: ${bucketName}`);
 
-    return new R2StorageClient(bucket, environment);
+    return new R2StorageClient({
+      accountId,
+      accessKeyId,
+      secretAccessKey,
+      bucketName,
+      environment,
+      publicUrl,
+    });
   }
 }

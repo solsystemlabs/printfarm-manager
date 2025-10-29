@@ -1,5 +1,5 @@
-// Use local generator for development and tests (binary engine, Node.js compatible)
-import { PrismaClient } from "../../../prisma/generated/local";
+// Standard Prisma Client with PostgreSQL adapter
+import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
@@ -15,7 +15,7 @@ const pool =
     connectionString: process.env.DATABASE_URL,
   });
 
-// Create Prisma adapter for Cloudflare Workers compatibility
+// Create Prisma adapter for serverless environment compatibility
 const adapter = new PrismaPg(pool);
 
 // Initialize Prisma client with adapter
