@@ -11,14 +11,21 @@ yarn.lock
 .xatarc
 .vercel
 .output
+.netlify
 /build/
 /dist/
 /api/
 /server/build
-/public/build# Sentry Config File
+/public/build
+
+# Sentry Config File
 .env.sentry-build-plugin
+
+# Test artifacts
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Prisma
 /prisma/generated/

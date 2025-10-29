@@ -2,25 +2,15 @@
 # TanStack Start application deployment
 
 [build]
-  # Build command - same as local development
+  # Build command
   command = "npm run build"
 
-  # Publish directory - TanStack Start outputs to .output
-  publish = ".output/public"
-
-  # Functions directory - TanStack Start generates server functions
-  functions = ".output/server"
+  # Publish directory - TanStack Start with Netlify plugin outputs client assets here
+  publish = "dist/client"
 
 [build.environment]
   # Node.js version
   NODE_VERSION = "22"
-
-# Redirect all requests to server functions (SSR)
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/server/:splat"
-  status = 200
-  force = true
 
 # Headers for security and performance
 [[headers]]
