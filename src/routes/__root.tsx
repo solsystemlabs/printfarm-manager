@@ -99,6 +99,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             Test Zip Upload
           </Link>
           <Link
+            to="/test/upload-slice"
+            activeProps={{ className: "font-bold" }}
+          >
+            Test Slice Upload
+          </Link>
+          <Link
             to="/route-a"
             activeProps={{
               className: "font-bold",

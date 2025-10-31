@@ -14,12 +14,15 @@ import { Route as DeferredRouteImport } from './routes/deferred'
 import { Route as PathlessLayoutRouteImport } from './routes/_pathlessLayout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TestUploadZipRouteImport } from './routes/test/upload-zip'
+import { Route as TestUploadSliceRouteImport } from './routes/test/upload-slice'
 import { Route as ApiUsersRouteImport } from './routes/api/users'
 import { Route as ApiTestR2RouteImport } from './routes/api/test-r2'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AdminStorageRouteImport } from './routes/admin/storage'
 import { Route as PathlessLayoutNestedLayoutRouteImport } from './routes/_pathlessLayout/_nested-layout'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users.$id'
+import { Route as ApiSlicesUploadUrlRouteImport } from './routes/api/slices/upload-url'
+import { Route as ApiSlicesUploadCompleteRouteImport } from './routes/api/slices/upload-complete'
 import { Route as ApiModelsUploadUrlRouteImport } from './routes/api/models/upload-url'
 import { Route as ApiModelsUploadCompleteRouteImport } from './routes/api/models/upload-complete'
 import { Route as ApiModelsUploadRouteImport } from './routes/api/models/upload'
@@ -52,6 +55,11 @@ const TestUploadZipRoute = TestUploadZipRouteImport.update({
   path: '/test/upload-zip',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TestUploadSliceRoute = TestUploadSliceRouteImport.update({
+  id: '/test/upload-slice',
+  path: '/test/upload-slice',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiUsersRoute = ApiUsersRouteImport.update({
   id: '/api/users',
   path: '/api/users',
@@ -81,6 +89,16 @@ const ApiUsersIdRoute = ApiUsersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiUsersRoute,
+} as any)
+const ApiSlicesUploadUrlRoute = ApiSlicesUploadUrlRouteImport.update({
+  id: '/api/slices/upload-url',
+  path: '/api/slices/upload-url',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSlicesUploadCompleteRoute = ApiSlicesUploadCompleteRouteImport.update({
+  id: '/api/slices/upload-complete',
+  path: '/api/slices/upload-complete',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiModelsUploadUrlRoute = ApiModelsUploadUrlRouteImport.update({
   id: '/api/models/upload-url',
@@ -128,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/test-r2': typeof ApiTestR2Route
   '/api/users': typeof ApiUsersRouteWithChildren
+  '/test/upload-slice': typeof TestUploadSliceRoute
   '/test/upload-zip': typeof TestUploadZipRoute
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
@@ -136,6 +155,8 @@ export interface FileRoutesByFullPath {
   '/api/models/upload': typeof ApiModelsUploadRoute
   '/api/models/upload-complete': typeof ApiModelsUploadCompleteRoute
   '/api/models/upload-url': typeof ApiModelsUploadUrlRoute
+  '/api/slices/upload-complete': typeof ApiSlicesUploadCompleteRoute
+  '/api/slices/upload-url': typeof ApiSlicesUploadUrlRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
 export interface FileRoutesByTo {
@@ -146,6 +167,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/test-r2': typeof ApiTestR2Route
   '/api/users': typeof ApiUsersRouteWithChildren
+  '/test/upload-slice': typeof TestUploadSliceRoute
   '/test/upload-zip': typeof TestUploadZipRoute
   '/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
@@ -154,6 +176,8 @@ export interface FileRoutesByTo {
   '/api/models/upload': typeof ApiModelsUploadRoute
   '/api/models/upload-complete': typeof ApiModelsUploadCompleteRoute
   '/api/models/upload-url': typeof ApiModelsUploadUrlRoute
+  '/api/slices/upload-complete': typeof ApiSlicesUploadCompleteRoute
+  '/api/slices/upload-url': typeof ApiSlicesUploadUrlRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
 export interface FileRoutesById {
@@ -167,6 +191,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/test-r2': typeof ApiTestR2Route
   '/api/users': typeof ApiUsersRouteWithChildren
+  '/test/upload-slice': typeof TestUploadSliceRoute
   '/test/upload-zip': typeof TestUploadZipRoute
   '/_pathlessLayout/_nested-layout/route-a': typeof PathlessLayoutNestedLayoutRouteARoute
   '/_pathlessLayout/_nested-layout/route-b': typeof PathlessLayoutNestedLayoutRouteBRoute
@@ -175,6 +200,8 @@ export interface FileRoutesById {
   '/api/models/upload': typeof ApiModelsUploadRoute
   '/api/models/upload-complete': typeof ApiModelsUploadCompleteRoute
   '/api/models/upload-url': typeof ApiModelsUploadUrlRoute
+  '/api/slices/upload-complete': typeof ApiSlicesUploadCompleteRoute
+  '/api/slices/upload-url': typeof ApiSlicesUploadUrlRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
 export interface FileRouteTypes {
@@ -187,6 +214,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/test-r2'
     | '/api/users'
+    | '/test/upload-slice'
     | '/test/upload-zip'
     | '/route-a'
     | '/route-b'
@@ -195,6 +223,8 @@ export interface FileRouteTypes {
     | '/api/models/upload'
     | '/api/models/upload-complete'
     | '/api/models/upload-url'
+    | '/api/slices/upload-complete'
+    | '/api/slices/upload-url'
     | '/api/users/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -205,6 +235,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/test-r2'
     | '/api/users'
+    | '/test/upload-slice'
     | '/test/upload-zip'
     | '/route-a'
     | '/route-b'
@@ -213,6 +244,8 @@ export interface FileRouteTypes {
     | '/api/models/upload'
     | '/api/models/upload-complete'
     | '/api/models/upload-url'
+    | '/api/slices/upload-complete'
+    | '/api/slices/upload-url'
     | '/api/users/$id'
   id:
     | '__root__'
@@ -225,6 +258,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/test-r2'
     | '/api/users'
+    | '/test/upload-slice'
     | '/test/upload-zip'
     | '/_pathlessLayout/_nested-layout/route-a'
     | '/_pathlessLayout/_nested-layout/route-b'
@@ -233,6 +267,8 @@ export interface FileRouteTypes {
     | '/api/models/upload'
     | '/api/models/upload-complete'
     | '/api/models/upload-url'
+    | '/api/slices/upload-complete'
+    | '/api/slices/upload-url'
     | '/api/users/$id'
   fileRoutesById: FileRoutesById
 }
@@ -245,12 +281,15 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiTestR2Route: typeof ApiTestR2Route
   ApiUsersRoute: typeof ApiUsersRouteWithChildren
+  TestUploadSliceRoute: typeof TestUploadSliceRoute
   TestUploadZipRoute: typeof TestUploadZipRoute
   ApiAdminStorageRoute: typeof ApiAdminStorageRoute
   ApiModelsImportZipRoute: typeof ApiModelsImportZipRoute
   ApiModelsUploadRoute: typeof ApiModelsUploadRoute
   ApiModelsUploadCompleteRoute: typeof ApiModelsUploadCompleteRoute
   ApiModelsUploadUrlRoute: typeof ApiModelsUploadUrlRoute
+  ApiSlicesUploadCompleteRoute: typeof ApiSlicesUploadCompleteRoute
+  ApiSlicesUploadUrlRoute: typeof ApiSlicesUploadUrlRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -288,6 +327,13 @@ declare module '@tanstack/react-router' {
       path: '/test/upload-zip'
       fullPath: '/test/upload-zip'
       preLoaderRoute: typeof TestUploadZipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test/upload-slice': {
+      id: '/test/upload-slice'
+      path: '/test/upload-slice'
+      fullPath: '/test/upload-slice'
+      preLoaderRoute: typeof TestUploadSliceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/users': {
@@ -331,6 +377,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/users/$id'
       preLoaderRoute: typeof ApiUsersIdRouteImport
       parentRoute: typeof ApiUsersRoute
+    }
+    '/api/slices/upload-url': {
+      id: '/api/slices/upload-url'
+      path: '/api/slices/upload-url'
+      fullPath: '/api/slices/upload-url'
+      preLoaderRoute: typeof ApiSlicesUploadUrlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/slices/upload-complete': {
+      id: '/api/slices/upload-complete'
+      path: '/api/slices/upload-complete'
+      fullPath: '/api/slices/upload-complete'
+      preLoaderRoute: typeof ApiSlicesUploadCompleteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/models/upload-url': {
       id: '/api/models/upload-url'
@@ -435,12 +495,15 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiTestR2Route: ApiTestR2Route,
   ApiUsersRoute: ApiUsersRouteWithChildren,
+  TestUploadSliceRoute: TestUploadSliceRoute,
   TestUploadZipRoute: TestUploadZipRoute,
   ApiAdminStorageRoute: ApiAdminStorageRoute,
   ApiModelsImportZipRoute: ApiModelsImportZipRoute,
   ApiModelsUploadRoute: ApiModelsUploadRoute,
   ApiModelsUploadCompleteRoute: ApiModelsUploadCompleteRoute,
   ApiModelsUploadUrlRoute: ApiModelsUploadUrlRoute,
+  ApiSlicesUploadCompleteRoute: ApiSlicesUploadCompleteRoute,
+  ApiSlicesUploadUrlRoute: ApiSlicesUploadUrlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
