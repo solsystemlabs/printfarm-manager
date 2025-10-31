@@ -25,3 +25,19 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Environment-specific configurations
+# Staging site (master branch → pm-staging.solsystemlabs.com)
+[context.master]
+  [context.master.environment]
+    ENVIRONMENT = "staging"
+
+# Production site (production branch → pm.solsystemlabs.com)
+[context.production]
+  [context.production.environment]
+    ENVIRONMENT = "production"
+
+# Deploy Previews (PR branches)
+[context.deploy-preview]
+  [context.deploy-preview.environment]
+    ENVIRONMENT = "staging"
