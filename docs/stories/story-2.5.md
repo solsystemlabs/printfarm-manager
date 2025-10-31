@@ -2,6 +2,12 @@
 
 Status: ContextReadyDraft
 
+**Platform Migration Note (2025-10-31):** This story has been revised to reflect the Netlify Functions platform migration documented in Story 1.8. Key changes from original Cloudflare Workers approach:
+- R2 access via AWS SDK S3-compatible API (not native bindings)
+- Environment variables via `process.env` (not `getContext('cloudflare')`)
+- Netlify Functions runtime (1GB memory, 10s timeout, Node.js 20)
+- Neon PostgreSQL database (not Xata)
+
 ## Story
 
 As an owner,
@@ -27,16 +33,17 @@ so that I can attach sliced configurations to my models.
 - [ ] Create Slice Upload API Endpoint (AC: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11)
   - [ ] Create `/src/routes/api/slices/upload.ts` file
   - [ ] Implement POST handler following TanStack Start pattern
-  - [ ] Access Cloudflare context and R2 bucket binding
+  - [ ] Initialize AWS SDK S3 client for R2 access using environment variables
   - [ ] Validate file presence in FormData
   - [ ] Validate file extension (.gcode.3mf, .gcode) - case-insensitive
   - [ ] Validate file size (≤50MB max)
   - [ ] Generate unique R2 key with UUID prefix
-  - [ ] Upload file to R2 with proper httpMetadata headers
+  - [ ] Convert file to Buffer and upload to R2 with PutObjectCommand
+  - [ ] Set ContentType and ContentDisposition metadata in PutObjectCommand
   - [ ] Create Prisma database record (slice table)
   - [ ] Set metadataExtracted = false (default for MVP)
   - [ ] Return 201 response with slice metadata
-  - [ ] Implement R2 cleanup on database failure (try-catch around DB create)
+  - [ ] Implement R2 cleanup on database failure using DeleteObjectCommand
   - [ ] Add structured logging (start, complete, error events)
 
 - [ ] Implement File Validation Utilities (AC: #2, #3)
@@ -100,17 +107,51 @@ This story implements slice file upload API following the same atomic pattern es
 Per NFR-4 and Story 2.2 pattern, the upload must be atomic (R2 + DB):
 
 ```typescript
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+
+// Initialize R2 client
+const r2Client = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+})
+
 try {
   // 1. Upload to R2 first
-  await bucket.put(r2Key, file, { httpMetadata: {...} })
+  const fileBuffer = await file.arrayBuffer()
+  await r2Client.send(new PutObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME,
+    Key: r2Key,
+    Body: Buffer.from(fileBuffer),
+    ContentType: file.type || 'application/octet-stream',
+    ContentDisposition: `attachment; filename="${file.name}"`,
+  }))
+
+  // Generate R2 public URL
+  const r2Url = `https://${process.env.R2_BUCKET_NAME}.r2.cloudflarestorage.com/${r2Key}`
 
   // 2. Create database record second
   try {
-    const slice = await prisma.slice.create({...})
+    const slice = await prisma.slice.create({
+      data: {
+        filename: file.name,
+        r2Key,
+        r2Url,
+        fileSize: file.size,
+        contentType: file.type || 'application/octet-stream',
+        metadataExtracted: false,
+      },
+    })
     return json(slice, { status: 201 })
   } catch (dbError) {
     // 3. Cleanup R2 on DB failure
-    await bucket.delete(r2Key)
+    await r2Client.send(new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: r2Key,
+    }))
     throw dbError
   }
 } catch (error) {
@@ -159,15 +200,16 @@ Epic 3 Story 3.1 will parse .gcode.3mf files and populate:
 Per FR-16 and Story 2.2 pattern, R2 uploads must set explicit headers:
 
 ```typescript
-await bucket.put(r2Key, file, {
-  httpMetadata: {
-    contentType: file.type || 'application/octet-stream',
-    contentDisposition: `attachment; filename="${file.name}"`,
-  },
-})
+await r2Client.send(new PutObjectCommand({
+  Bucket: process.env.R2_BUCKET_NAME,
+  Key: r2Key,
+  Body: Buffer.from(fileBuffer),
+  ContentType: file.type || 'application/octet-stream',
+  ContentDisposition: `attachment; filename="${file.name}"`,
+}))
 ```
 
-The `contentDisposition: attachment` header forces browsers to **download** (not display) slice files when accessed via R2 URL. This is critical for .gcode files which browsers might try to render as text.
+The `ContentDisposition: attachment` header forces browsers to **download** (not display) slice files when accessed via R2 URL. This is critical for .gcode files which browsers might try to render as text.
 
 **R2 Key Naming Strategy:**
 
@@ -179,25 +221,34 @@ Following Story 2.2 pattern:
 
 ### Architecture Constraints
 
-**Cloudflare Workers Context:**
+**Netlify Functions Context:**
 
-Per CLAUDE.md, the API endpoint runs on Cloudflare Workers with:
-- **Memory limit**: 128MB per request (slice files ≤50MB, well within limit)
-- **Execution limit**: 30 seconds CPU time (file upload happens asynchronously)
-- **R2 access**: Via `cf.env.FILES_BUCKET` binding
-- **Database**: Prisma client targeting Xata PostgreSQL
-- **Environment**: Accessed via `getContext('cloudflare')`
+Per CLAUDE.md (updated for Netlify pivot in Story 1.8), the API endpoint runs on Netlify Functions with:
+- **Memory limit**: 1024MB (1GB) per request (slice files ≤50MB, well within limit)
+- **Execution limit**: 10 seconds timeout (file upload typically completes in <5 seconds)
+- **R2 access**: Via AWS SDK S3 client using environment variables
+- **Database**: Prisma client targeting Neon PostgreSQL
+- **Environment**: Accessed via `process.env` (standard Node.js runtime)
 
 **R2 Bucket Configuration:**
 
-Per Story 1.3 (Epic 1) and wrangler.jsonc:
-- Bucket binding name: `FILES_BUCKET`
+Per Story 1.8 (Netlify migration) and CLAUDE.md:
+- Access method: AWS SDK S3 client with S3-compatible API
+- Environment variables: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
 - Environment-specific buckets:
   - Development: `pm-dev-files`
   - Staging: `pm-staging-files`
   - Production: `pm-files`
 - Versioning enabled (for disaster recovery per NFR-12)
 - CORS configured for application domains
+
+**Database Configuration:**
+
+Per Story 1.8 (Netlify migration):
+- Database: Neon PostgreSQL with instant branching
+- Connection: Via Prisma client using `DATABASE_URL` environment variable
+- Branches: `development`, `staging`, `production` (environment-specific)
+- Migration approach: Standard Prisma migrations (no WASM generator)
 
 **Database Schema:**
 
@@ -248,7 +299,7 @@ Per NFR-6 and Story 2.2 patterns:
 
 **Logging Standards:**
 
-Per NFR-9 and Story 2.2 patterns, log structured events:
+Per NFR-9 and Story 2.2 patterns, log structured events (accessible in Netlify Dashboard):
 
 ```typescript
 // Start event
@@ -272,7 +323,7 @@ logError('slice_upload_error', error, {
 })
 ```
 
-All events include `duration_ms` for performance monitoring.
+All events include `duration_ms` for performance monitoring. Logs are automatically captured by Netlify Functions and viewable in the Netlify Dashboard Functions tab (retained for 1 hour on free tier, 30 days on paid tiers).
 
 ### Implementation Differences from Story 2.2
 
@@ -351,11 +402,12 @@ Test structure should mirror Story 2.2 tests:
 
 **Source Documents:**
 
-- [Source: docs/epics.md, Story 2.5, lines 295-318] - User story and acceptance criteria
-- [Source: docs/tech-spec-epic-2.md, Story 2.5, lines 1075-1224] - Complete implementation specification
+- [Source: docs/epics.md, Story 2.5, lines 349-370] - User story and acceptance criteria
+- [Source: docs/tech-spec-epic-2.md, Story 2.5, lines 1075-1224] - Complete implementation specification (needs Netlify update)
 - [Source: docs/stories/story-2.2.md] - Model upload pattern (template for this story)
 - [Source: docs/stories/story-2.1.md] - Database schema reference
-- [Source: CLAUDE.md, Cloudflare Workers Context] - Environment access and bindings
+- [Source: docs/stories/story-1.8.md] - Netlify migration documentation
+- [Source: CLAUDE.md, Netlify Deployment] - Environment access and R2 configuration
 
 **Technical Standards:**
 
@@ -402,7 +454,7 @@ Per tech spec lines 1183-1193, success response (201) includes:
 
 ### Context Reference
 
-- [Story Context 2.5](/home/taylor/projects/printfarm-manager/docs/story-context-2.2.5.xml) - Generated 2025-10-25
+- [Story Context 2.5](/home/taylor/projects/printfarm-manager/docs/story-context-2.2.5.xml) - Generated 2025-10-31 (Updated for Netlify migration)
 
 ### Agent Model Used
 
