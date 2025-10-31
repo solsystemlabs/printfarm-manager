@@ -21,6 +21,12 @@ npm run build
 # Preview production build
 npm run preview
 
+# Database (Prisma)
+npm run db:migrate:dev  # Create and apply new migration in development
+npm run db:migrate      # Apply pending migrations (production-safe)
+npm run db:push         # Push schema changes without migration (dev only)
+npm run db:studio       # Open Prisma Studio (database GUI)
+
 # Testing
 npm test              # Run tests in watch mode
 npm run test:run      # Run tests once (for CI)
@@ -30,10 +36,6 @@ npm run lint          # Check code for lint errors
 npm run lint:fix      # Fix auto-fixable lint errors
 npm run format        # Format code with Prettier
 npm run format:check  # Check code formatting (for CI)
-
-# Deployment
-npm run deploy        # Deploy using default wrangler config
-npm run cf-typegen    # Generate Cloudflare Workers types
 ```
 
 ## Architecture

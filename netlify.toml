@@ -2,8 +2,8 @@
 # TanStack Start application deployment
 
 [build]
-  # Build command
-  command = "npm run build"
+  # Build command - includes database migrations
+  command = "npx prisma migrate deploy && npm run build"
 
   # Publish directory - TanStack Start with Netlify plugin outputs client assets here
   publish = "dist/client"
