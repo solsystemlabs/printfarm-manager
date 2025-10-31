@@ -1,4 +1,9 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { StorageClient, UploadOptions } from "./types";
 
@@ -32,7 +37,9 @@ export class R2StorageClient implements StorageClient {
 
     this.bucketName = config.bucketName;
     this.environment = config.environment;
-    this.publicUrl = config.publicUrl || `https://${config.bucketName}.r2.cloudflarestorage.com`;
+    this.publicUrl =
+      config.publicUrl ||
+      `https://${config.bucketName}.r2.cloudflarestorage.com`;
   }
 
   async put(
@@ -51,7 +58,7 @@ export class R2StorageClient implements StorageClient {
         Body: body,
         ContentType: options?.contentType,
         ContentDisposition: options?.contentDisposition,
-      })
+      }),
     );
 
     console.log(`[R2] Upload successful`);
@@ -65,7 +72,7 @@ export class R2StorageClient implements StorageClient {
         new GetObjectCommand({
           Bucket: this.bucketName,
           Key: key,
-        })
+        }),
       );
 
       if (!response.Body) {
@@ -77,8 +84,13 @@ export class R2StorageClient implements StorageClient {
       console.log(`[R2] Download successful, size: ${content.length} bytes`);
 
       return content;
-    } catch (error: any) {
-      if (error.name === "NoSuchKey") {
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "name" in error &&
+        error.name === "NoSuchKey"
+      ) {
         return null;
       }
       throw error;
@@ -92,7 +104,7 @@ export class R2StorageClient implements StorageClient {
       new DeleteObjectCommand({
         Bucket: this.bucketName,
         Key: key,
-      })
+      }),
     );
 
     console.log(`[R2] Delete successful`);
@@ -120,7 +132,7 @@ export class R2StorageClient implements StorageClient {
         Body: buffer,
         ContentType: metadata.contentType,
         ContentDisposition: metadata.contentDisposition,
-      })
+      }),
     );
 
     console.log(`[R2] File upload successful`);
@@ -147,7 +159,9 @@ export class R2StorageClient implements StorageClient {
       expiresIn,
     });
 
-    console.log(`[R2] Presigned URL generated, expires in ${expiresIn} seconds`);
+    console.log(
+      `[R2] Presigned URL generated, expires in ${expiresIn} seconds`,
+    );
 
     return presignedUrl;
   }

@@ -4,7 +4,7 @@ import { describe, it, expect } from "vitest";
  * Unit tests for bulk import API endpoint logic.
  *
  * These tests verify file type classification and validation logic used by the endpoint.
- * Full integration tests would require a running Cloudflare Worker environment.
+ * Full integration tests would require a running Netlify Functions environment.
  */
 describe("Bulk Import API Endpoint Logic", () => {
   // Helper functions extracted from the endpoint for testing

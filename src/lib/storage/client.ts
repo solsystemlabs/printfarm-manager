@@ -49,19 +49,25 @@ export async function getStorageClient(): Promise<StorageClient> {
     const publicUrl = process.env.R2_PUBLIC_URL;
 
     if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
-      console.error(`[Storage] Missing R2 configuration in ${environment} environment`);
-      console.error(`R2_ACCOUNT_ID: ${accountId ? 'set' : 'missing'}`);
-      console.error(`R2_ACCESS_KEY_ID: ${accessKeyId ? 'set' : 'missing'}`);
-      console.error(`R2_SECRET_ACCESS_KEY: ${secretAccessKey ? 'set' : 'missing'}`);
-      console.error(`R2_BUCKET_NAME: ${bucketName ? 'set' : 'missing'}`);
+      console.error(
+        `[Storage] Missing R2 configuration in ${environment} environment`,
+      );
+      console.error(`R2_ACCOUNT_ID: ${accountId ? "set" : "missing"}`);
+      console.error(`R2_ACCESS_KEY_ID: ${accessKeyId ? "set" : "missing"}`);
+      console.error(
+        `R2_SECRET_ACCESS_KEY: ${secretAccessKey ? "set" : "missing"}`,
+      );
+      console.error(`R2_BUCKET_NAME: ${bucketName ? "set" : "missing"}`);
 
       throw new Error(
         `Missing required R2 configuration for ${environment} environment. ` +
-          `Required environment variables: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME`
+          `Required environment variables: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME`,
       );
     }
 
-    console.log(`[Storage] Initializing R2 client for environment: ${environment}`);
+    console.log(
+      `[Storage] Initializing R2 client for environment: ${environment}`,
+    );
     console.log(`[Storage] R2 bucket: ${bucketName}`);
 
     return new R2StorageClient({

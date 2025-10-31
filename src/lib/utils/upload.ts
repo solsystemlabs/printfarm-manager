@@ -191,7 +191,9 @@ export async function uploadModelFile(
 
       // Handle network errors
       xhr.addEventListener("error", () => {
-        const error = new Error("Network error during direct upload to storage");
+        const error = new Error(
+          "Network error during direct upload to storage",
+        );
         if (options.onError) {
           options.onError(error);
         }

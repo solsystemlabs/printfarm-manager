@@ -5,7 +5,7 @@ import { getStorageClient } from "~/lib/storage";
 export const Route = createFileRoute("/api/test-r2")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
+      GET: async () => {
         try {
           // Get environment-appropriate storage client
           const storage = await getStorageClient();

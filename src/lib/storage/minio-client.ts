@@ -133,7 +133,9 @@ export class MinIOStorageClient implements StorageClient {
       expiresIn,
     );
 
-    console.log(`[MinIO] Presigned URL generated, expires in ${expiresIn} seconds`);
+    console.log(
+      `[MinIO] Presigned URL generated, expires in ${expiresIn} seconds`,
+    );
 
     return presignedUrl;
   }

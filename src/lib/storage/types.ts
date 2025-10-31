@@ -78,7 +78,6 @@ declare global {
 
       // Environment settings
       ENVIRONMENT?: string;
-      XATA_BRANCH?: string;
     }
   }
 }

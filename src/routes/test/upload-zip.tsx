@@ -160,9 +160,13 @@ function ZipUploadTester() {
       const uploadPromises = selectedFiles.map(async (extractedFile, index) => {
         try {
           // Convert extracted Blob to File with proper metadata
-          const file = new File([extractedFile.content], extractedFile.filename, {
-            type: extractedFile.content.type || "application/octet-stream",
-          });
+          const file = new File(
+            [extractedFile.content],
+            extractedFile.filename,
+            {
+              type: extractedFile.content.type || "application/octet-stream",
+            },
+          );
 
           // Update current file being processed
           setImportProgress((prev) => ({
@@ -182,12 +186,15 @@ function ZipUploadTester() {
                 };
 
                 // Calculate total bytes uploaded across all files
-                const bytesForThisFile = (progress.percentage / 100) * file.size;
+                const bytesForThisFile =
+                  (progress.percentage / 100) * file.size;
                 const previousBytes = Object.entries(prev.fileProgress)
                   .filter(([name]) => name !== extractedFile.filename)
                   .reduce((sum, [name]) => {
                     const f = selectedFiles.find((sf) => sf.filename === name);
-                    return sum + (f ? (prev.fileProgress[name] / 100) * f.size : 0);
+                    return (
+                      sum + (f ? (prev.fileProgress[name] / 100) * f.size : 0)
+                    );
                   }, 0);
 
                 return {
@@ -215,7 +222,9 @@ function ZipUploadTester() {
             filename: extractedFile.filename,
             error: err instanceof Error ? err.name : "UNKNOWN_ERROR",
             message:
-              err instanceof Error ? err.message : "An unexpected error occurred",
+              err instanceof Error
+                ? err.message
+                : "An unexpected error occurred",
           });
         }
       });
