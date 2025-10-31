@@ -1,6 +1,4 @@
-// Use cloudflare generator for API routes (runs in Workers)
-// Import from client.ts directly since cloudflare generator doesn't have package.json
-import { PrismaClient } from "../../../prisma/generated/cloudflare/client";
+import { PrismaClient } from "@prisma/client";
 
 /**
  * Storage usage breakdown by file type

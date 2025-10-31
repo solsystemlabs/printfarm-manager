@@ -1,0 +1,43 @@
+# Netlify configuration for PrintFarm Manager
+# TanStack Start application deployment
+
+[build]
+  # Build command - includes database migrations
+  command = "npx prisma migrate deploy && npm run build"
+
+  # Publish directory - TanStack Start with Netlify plugin outputs client assets here
+  publish = "dist/client"
+
+[build.environment]
+  # Node.js version
+  NODE_VERSION = "22"
+
+# Headers for security and performance
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Environment-specific configurations
+# Staging site (master branch → pm-staging.solsystemlabs.com)
+[context.master]
+  [context.master.environment]
+    ENVIRONMENT = "staging"
+
+# Production site (production branch → pm.solsystemlabs.com)
+[context.production]
+  [context.production.environment]
+    ENVIRONMENT = "production"
+
+# Deploy Previews (PR branches)
+[context.deploy-preview]
+  [context.deploy-preview.environment]
+    ENVIRONMENT = "staging"

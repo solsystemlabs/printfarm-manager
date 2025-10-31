@@ -1,8 +1,8 @@
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vite";
-import { cloudflare } from "@cloudflare/vite-plugin";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 import viteReact from "@vitejs/plugin-react";
+import netlify from "@netlify/vite-plugin-tanstack-start";
 
 export default defineConfig(() => {
   return {
@@ -10,14 +10,12 @@ export default defineConfig(() => {
       port: 3000,
     },
     plugins: [
-      cloudflare({ viteEnvironment: { name: "ssr" } }),
       tsConfigPaths({
         projects: ["./tsconfig.json"],
       }),
       tanstackStart(),
       viteReact(),
+      netlify(),
     ],
-    // Include WASM files as assets for Cloudflare Workers
-    assetsInclude: ["**/*.wasm"],
   };
 });

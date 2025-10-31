@@ -1,0 +1,223 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.8</storyId>
+    <title>Migrate from Cloudflare Workers to Netlify Functions</title>
+    <status>Pending</status>
+    <generatedAt>2025-10-30</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-1.8.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>developer</asA>
+    <iWant>to migrate the deployment platform from Cloudflare Workers to Netlify Functions</iWant>
+    <soThat>we can support larger file processing and use standard Node.js runtime patterns</soThat>
+    <tasks>
+      - Set Up Netlify Site (AC: #1-5)
+      - Migrate to Neon PostgreSQL (AC: #6-10)
+      - Update R2 Access to S3 SDK (AC: #11-15)
+      - Update Code Patterns (AC: #16-19)
+      - Update Documentation (AC: #20-25)
+      - Simplify Epic 2 Code (AC: #26-29)
+      - Verify Migration (AC: #30-34)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    ### Platform Migration
+    1. Netlify site created and connected to GitHub repository
+    2. Build configuration defined in netlify.toml with environment contexts (development, staging, production)
+    3. Custom domains configured and SSL certificates active
+    4. Deploy previews enabled for all pull requests
+    5. Branch deploys configured for master (staging) and production branches
+
+    ### Database Migration
+    6. Neon PostgreSQL project created with three branches: development, staging, production
+    7. Database connection strings configured in Netlify environment variables per deployment context
+    8. Prisma schema updated to use standard generator (remove Cloudflare WASM generator)
+    9. Database migrations tested in all three environments
+    10. Prisma client working with standard Node.js patterns (no per-request factory needed)
+
+    ### R2 Storage Access Update
+    11. R2 API tokens created with read/write permissions for each bucket
+    12. Environment variables configured in Netlify Dashboard (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME)
+    13. AWS SDK S3 client configured for R2 access (replace native bindings)
+    14. Test upload/download confirmed working in all environments
+    15. Storage client abstraction updated to use S3 SDK patterns
+
+    ### Code Updates
+    16. All getContext('cloudflare') patterns replaced with process.env access
+    17. Environment variable access standardized across codebase
+    18. Netlify Functions limits documented (10s timeout, 1GB memory)
+    19. Local development environment updated (.env.local for credentials)
+
+    ### Documentation Updates
+    20. CLAUDE.md deployment section replaced with Netlify documentation
+    21. PRD infrastructure references updated
+    22. epics.md updated with deprecation notice on Stories 1.1-1.5
+    23. solution-architecture.md updated with new platform architecture
+    24. New NETLIFY_SETUP.md created with step-by-step setup guide
+    25. CLOUDFLARE_PRISMA_SETUP.md moved to archive
+
+    ### Code Simplifications (Epic 2)
+    26. Story 2.2 code simplified: remove WASM generator, per-request connection factory
+    27. Story 2.3 reverted to server-side extraction (remove client-side extraction utility)
+    28. Story 2.4 simplified: server handles zip extraction (remove blob-sending workaround)
+    29. All tests updated and passing
+
+    ### Verification
+    30. Successful deployment to all three environments
+    31. End-to-end test: upload file → store in R2 → save to database → retrieve successfully
+    32. Logs visible in Netlify Dashboard with function-level observability
+    33. Deploy preview URL tested with PR branch
+    34. Performance acceptable: deployments ≤5 minutes, function execution &lt;10s
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc path="docs/PRD.md" section="Deployment Intent" relevance="Defines target deployment platforms and three-environment strategy">
+        MVP deployment requires three environments: development (local), staging (pm-staging.solsystemlabs.com), production (pm.solsystemlabs.com). Story 1.8 migrates from Cloudflare Workers to Netlify Functions to support 1GB memory for large file processing.
+      </doc>
+      <doc path="docs/PRD.md" section="Non-Functional Requirements - NFR-2" relevance="Defines file size requirements driving platform migration">
+        System must handle zip file uploads up to 500MB and slice files up to 50MB. Cloudflare Workers 128MB memory limit insufficient, forcing migration to Netlify Functions (1GB memory).
+      </doc>
+      <doc path="docs/PRD.md" section="Non-Functional Requirements - NFR-10" relevance="Deployment performance requirements">
+        System shall support three environments with automated Git-based deployments. Deployments must complete in ≤5 minutes. Environment-specific configuration with separate database branches and R2 buckets required.
+      </doc>
+      <doc path="docs/solution-architecture.md" section="Architecture Pattern" relevance="Current Cloudflare-specific architecture to be replaced">
+        Current architecture uses Cloudflare Workers with getContext('cloudflare') patterns, R2 native bindings, and Xata database. Migration to Netlify Functions requires process.env patterns and AWS S3 SDK for R2 access.
+      </doc>
+      <doc path="docs/tech-spec-epic-1.md" section="Story 1.2" relevance="Database infrastructure to be migrated">
+        Xata database with branch-per-environment strategy already implemented. Migration requires updating connection patterns from Cloudflare-specific to standard Prisma client with Node.js runtime.
+      </doc>
+      <doc path="docs/tech-spec-epic-1.md" section="Story 1.3" relevance="R2 storage bindings to be updated">
+        R2 buckets already created per environment (pm-dev-files, pm-staging-files, pm-files). Migration requires replacing native R2 bindings with S3-compatible API access via AWS SDK.
+      </doc>
+      <doc path="docs/DEPLOYMENT.md" section="All" relevance="Current Cloudflare Workers Builds deployment process">
+        Complete documentation of current Cloudflare-based deployment. To be replaced with Netlify Git-based deployment workflows for master→staging and production→production.
+      </doc>
+      <doc path="CLAUDE.md" section="Netlify Deployment" relevance="Target deployment architecture already documented">
+        Comprehensive Netlify deployment documentation already exists (lines 92-403). Migration implements this documented architecture, including environment contexts, branch deploys, and environment variable access.
+      </doc>
+      <doc path="docs/stories/story-1.8.md" section="Dev Notes" relevance="Migration strategy and platform comparison">
+        Documents rationale for migration: Cloudflare Workers incompatible with TanStack Start full-stack requirements (128MB memory, V8 isolate runtime requires WASM Prisma). Netlify provides 1GB memory, standard Node.js 20 runtime, S3-compatible R2 access.
+      </doc>
+      <doc path="docs/stories/story-2.3.md" section="Context" relevance="Story revealing memory constraint">
+        Story 2.3 hit hard 128MB memory limit during 500MB zip extraction, forcing emergency pivot to client-side processing. Story 1.8 migration enables returning to server-side extraction as originally designed.
+      </doc>
+    </docs>
+    <code>
+      <artifact path="src/lib/storage/r2-client.ts" kind="module" reason="Uses Cloudflare native R2 bindings via getContext('cloudflare')">
+        Current implementation accesses R2 via cf.env.FILES_BUCKET binding. Migration requires replacing with AWS S3Client using R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY from process.env.
+      </artifact>
+      <artifact path="src/lib/storage/usage.ts" kind="module" reason="Uses Cloudflare context for R2 GraphQL API access">
+        Storage usage calculation uses getContext('cloudflare') to access R2 GraphQL Analytics API. Migration requires updating to use process.env for account ID and API token.
+      </artifact>
+      <artifact path="src/routes/api/admin/storage.ts" kind="api-route" reason="Server-side API route using Cloudflare context">
+        API route accesses Cloudflare environment via getContext. Migration pattern: replace cf.env.* with process.env.* throughout all API routes.
+      </artifact>
+      <artifact path="netlify.toml" kind="config" reason="Target Netlify configuration already exists">
+        Netlify configuration already defines build command, environment contexts for master/production branches, and ENVIRONMENT variable setup. Migration implements this existing configuration.
+      </artifact>
+      <artifact path="src/lib/db.ts" kind="module" reason="Database client using standard Prisma pattern">
+        Already implements singleton Prisma client compatible with Node.js runtime. No changes needed - works immediately with Netlify Functions standard Node.js environment.
+      </artifact>
+    </code>
+    <dependencies>
+      <node>
+        <package name="@aws-sdk/client-s3" version="^3.0.0" reason="Required for S3-compatible R2 access from Netlify Functions">
+          Replaces Cloudflare native R2 bindings. Provides S3Client, PutObjectCommand, GetObjectCommand for R2 operations via S3-compatible API.
+        </package>
+        <package name="@tanstack/react-start" version="^1.132.36" reason="Framework with Netlify adapter support">
+          Already installed. TanStack Start provides Netlify adapter for generating correct Netlify Functions build output.
+        </package>
+        <package name="@prisma/client" version="^6.1.0" reason="Standard Prisma client for Node.js runtime">
+          Already installed. Works with standard prisma-client-js generator (no WASM needed) in Netlify Functions Node.js 20 runtime.
+        </package>
+      </node>
+      <infrastructure>
+        <service name="Netlify" reason="Target deployment platform">
+          Git-based CI/CD with automatic deployments on push to master (staging) and production branches. Free tier: 125k function invocations/month, 100 hours execution time, 1GB memory per function.
+        </service>
+        <service name="Neon PostgreSQL" reason="Database with branching support">
+          Already configured with development, staging, production branches. Standard PostgreSQL connection strings work with Node.js Prisma client.
+        </service>
+        <service name="Cloudflare R2" reason="Object storage accessed via S3 API">
+          Existing R2 buckets (pm-dev-files, pm-staging-files, pm-files) remain unchanged. Access method changes from native bindings to S3-compatible API.
+        </service>
+      </infrastructure>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint type="runtime" priority="critical">
+      Netlify Functions have 10-second timeout limit (vs 30s for Cloudflare Workers). Metadata extraction and zip processing must complete within 10 seconds. Current implementation already meets this constraint.
+    </constraint>
+    <constraint type="memory" priority="high">
+      Netlify Functions provide 1GB memory (8x more than Cloudflare Workers 128MB). This is the primary driver for migration, enabling server-side zip extraction for files up to 500MB.
+    </constraint>
+    <constraint type="deployment" priority="critical">
+      Must maintain three isolated environments (development, staging, production) with independent database branches and R2 buckets. No cross-environment data contamination.
+    </constraint>
+    <constraint type="compatibility" priority="critical">
+      Must use process.env for all environment variable access (standard Node.js pattern). Cannot use Cloudflare-specific getContext('cloudflare') patterns.
+    </constraint>
+    <constraint type="testing" priority="high">
+      All tests must pass after migration. NFR-8 requires >80% test coverage for critical business logic. Migration must not break existing test suite.
+    </constraint>
+    <constraint type="code-pattern" priority="high">
+      Prisma client must use standard generator (prisma-client-js) with singleton pattern. Remove Cloudflare WASM generator and per-request factory patterns from Story 2.2.
+    </constraint>
+    <constraint type="deployment-strategy" priority="medium">
+      Deployments must complete in ≤5 minutes (NFR-10). Netlify Git-based deployments automatically meet this requirement with typical 3-5 minute build times.
+    </constraint>
+  </constraints>
+
+  <interfaces>
+    <interface name="Environment Variable Access" kind="pattern" signature="process.env.VARIABLE_NAME">
+      Standard Node.js environment variable access pattern. Replaces Cloudflare-specific getContext('cloudflare').env.VARIABLE_NAME pattern throughout codebase.
+    </interface>
+    <interface name="R2 S3 Client" kind="aws-sdk" signature="new S3Client({ endpoint, credentials })">
+      AWS SDK S3Client for R2 access. Initialize with: region='auto', endpoint=https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com, credentials with R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY.
+    </interface>
+    <interface name="Prisma Client Singleton" kind="database" signature="import { prisma } from '~/lib/db'" path="src/lib/db.ts">
+      Singleton Prisma client already implemented in src/lib/db.ts. Export single instance: export const prisma = new PrismaClient(). No changes needed - compatible with Netlify Functions.
+    </interface>
+    <interface name="Netlify Configuration" kind="config" signature="netlify.toml" path="netlify.toml">
+      Netlify configuration defining build command (npm run build), publish directory (.netlify), and environment contexts for master (staging) and production branches.
+    </interface>
+    <interface name="TanStack Start Server Functions" kind="api-pattern" signature="Route.createFileRoute('/api/path')({ server: { handlers: { GET, POST } } })">
+      TanStack Start API route pattern. Access environment via process.env. No getContext needed. Return responses using json() helper.
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Project uses Vitest with React Testing Library for testing. Per NFR-8, maintain >80% test coverage for critical business logic including metadata extraction, filament matching, recipe generation, API endpoints, and core utility functions. Integration tests required for Epic 2 file upload workflows. Story 1.8 migration must ensure all existing tests continue passing with updated environment access patterns.
+    </standards>
+    <locations>
+      - src/__tests__/ - Component and route tests
+      - src/lib/**/__tests__/ - Unit tests for utility modules
+      - src/routes/**/__tests__/ - API route tests
+      Test commands: npm test (watch mode), npm run test:run (CI mode)
+    </locations>
+    <ideas>
+      <test ac="16,17" description="Test environment variable access pattern migration">
+        Verify all getContext('cloudflare') patterns replaced with process.env. Mock process.env in tests. Ensure R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY accessible.
+      </test>
+      <test ac="13,14,15" description="Test R2 S3 client integration">
+        Unit test S3Client initialization with R2 endpoint and credentials. Integration test upload/download operations. Verify proper error handling when credentials missing.
+      </test>
+      <test ac="8,9,10" description="Test Prisma client singleton pattern">
+        Verify Prisma client uses standard generator (not WASM). Test singleton ensures single instance across requests. Confirm migrations work in all environments.
+      </test>
+      <test ac="30,31,32" description="Integration test for full deployment pipeline">
+        Deploy to staging environment. Test file upload → R2 storage → database save → retrieval. Verify logs visible in Netlify Dashboard. Confirm deploy preview URL generation.
+      </test>
+      <test ac="26,27,28,29" description="Test Epic 2 code simplifications">
+        After migration, verify Story 2.2 database client simplified (no per-request factory). Confirm Story 2.3 client-side extraction removed. Ensure all Epic 2 tests passing with server-side patterns.
+      </test>
+    </ideas>
+  </tests>
+</story-context>

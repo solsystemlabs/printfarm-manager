@@ -20,6 +20,8 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AdminStorageRouteImport } from './routes/admin/storage'
 import { Route as PathlessLayoutNestedLayoutRouteImport } from './routes/_pathlessLayout/_nested-layout'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users.$id'
+import { Route as ApiModelsUploadUrlRouteImport } from './routes/api/models/upload-url'
+import { Route as ApiModelsUploadCompleteRouteImport } from './routes/api/models/upload-complete'
 import { Route as ApiModelsUploadRouteImport } from './routes/api/models/upload'
 import { Route as ApiModelsImportZipRouteImport } from './routes/api/models/import-zip'
 import { Route as ApiAdminStorageRouteImport } from './routes/api/admin/storage'
@@ -80,6 +82,16 @@ const ApiUsersIdRoute = ApiUsersIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiUsersRoute,
 } as any)
+const ApiModelsUploadUrlRoute = ApiModelsUploadUrlRouteImport.update({
+  id: '/api/models/upload-url',
+  path: '/api/models/upload-url',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiModelsUploadCompleteRoute = ApiModelsUploadCompleteRouteImport.update({
+  id: '/api/models/upload-complete',
+  path: '/api/models/upload-complete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiModelsUploadRoute = ApiModelsUploadRouteImport.update({
   id: '/api/models/upload',
   path: '/api/models/upload',
@@ -122,6 +134,8 @@ export interface FileRoutesByFullPath {
   '/api/admin/storage': typeof ApiAdminStorageRoute
   '/api/models/import-zip': typeof ApiModelsImportZipRoute
   '/api/models/upload': typeof ApiModelsUploadRoute
+  '/api/models/upload-complete': typeof ApiModelsUploadCompleteRoute
+  '/api/models/upload-url': typeof ApiModelsUploadUrlRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
 export interface FileRoutesByTo {
@@ -138,6 +152,8 @@ export interface FileRoutesByTo {
   '/api/admin/storage': typeof ApiAdminStorageRoute
   '/api/models/import-zip': typeof ApiModelsImportZipRoute
   '/api/models/upload': typeof ApiModelsUploadRoute
+  '/api/models/upload-complete': typeof ApiModelsUploadCompleteRoute
+  '/api/models/upload-url': typeof ApiModelsUploadUrlRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
 export interface FileRoutesById {
@@ -157,6 +173,8 @@ export interface FileRoutesById {
   '/api/admin/storage': typeof ApiAdminStorageRoute
   '/api/models/import-zip': typeof ApiModelsImportZipRoute
   '/api/models/upload': typeof ApiModelsUploadRoute
+  '/api/models/upload-complete': typeof ApiModelsUploadCompleteRoute
+  '/api/models/upload-url': typeof ApiModelsUploadUrlRoute
   '/api/users/$id': typeof ApiUsersIdRoute
 }
 export interface FileRouteTypes {
@@ -175,6 +193,8 @@ export interface FileRouteTypes {
     | '/api/admin/storage'
     | '/api/models/import-zip'
     | '/api/models/upload'
+    | '/api/models/upload-complete'
+    | '/api/models/upload-url'
     | '/api/users/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -191,6 +211,8 @@ export interface FileRouteTypes {
     | '/api/admin/storage'
     | '/api/models/import-zip'
     | '/api/models/upload'
+    | '/api/models/upload-complete'
+    | '/api/models/upload-url'
     | '/api/users/$id'
   id:
     | '__root__'
@@ -209,6 +231,8 @@ export interface FileRouteTypes {
     | '/api/admin/storage'
     | '/api/models/import-zip'
     | '/api/models/upload'
+    | '/api/models/upload-complete'
+    | '/api/models/upload-url'
     | '/api/users/$id'
   fileRoutesById: FileRoutesById
 }
@@ -225,6 +249,8 @@ export interface RootRouteChildren {
   ApiAdminStorageRoute: typeof ApiAdminStorageRoute
   ApiModelsImportZipRoute: typeof ApiModelsImportZipRoute
   ApiModelsUploadRoute: typeof ApiModelsUploadRoute
+  ApiModelsUploadCompleteRoute: typeof ApiModelsUploadCompleteRoute
+  ApiModelsUploadUrlRoute: typeof ApiModelsUploadUrlRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -305,6 +331,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/users/$id'
       preLoaderRoute: typeof ApiUsersIdRouteImport
       parentRoute: typeof ApiUsersRoute
+    }
+    '/api/models/upload-url': {
+      id: '/api/models/upload-url'
+      path: '/api/models/upload-url'
+      fullPath: '/api/models/upload-url'
+      preLoaderRoute: typeof ApiModelsUploadUrlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/models/upload-complete': {
+      id: '/api/models/upload-complete'
+      path: '/api/models/upload-complete'
+      fullPath: '/api/models/upload-complete'
+      preLoaderRoute: typeof ApiModelsUploadCompleteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/models/upload': {
       id: '/api/models/upload'
@@ -399,6 +439,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminStorageRoute: ApiAdminStorageRoute,
   ApiModelsImportZipRoute: ApiModelsImportZipRoute,
   ApiModelsUploadRoute: ApiModelsUploadRoute,
+  ApiModelsUploadCompleteRoute: ApiModelsUploadCompleteRoute,
+  ApiModelsUploadUrlRoute: ApiModelsUploadUrlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

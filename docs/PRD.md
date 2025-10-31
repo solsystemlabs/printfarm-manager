@@ -16,7 +16,7 @@ This system addresses the fundamental business challenge that blocks scaling: th
 
 The solution centers on automatic metadata extraction from Bambu Lab `.gcode.3mf` files, creating permanent "recipes" that capture the exact configuration needed to reproduce any product: models, filaments with AMS slot assignments, and slicer settings. This automation transforms assistants from dependent workers requiring constant guidance into autonomous operators who can independently execute production using simple recipe cards.
 
-The system uses a product-centric architecture where physical inventory items are first-class entities served by digital files (models and slices), naturally supporting business operations rather than just hobby file storage. Built on TanStack Start and Cloudflare Workers with R2 storage, it requires zero monetary investment beyond development time.
+The system uses a product-centric architecture where physical inventory items are first-class entities served by digital files (models and slices), naturally supporting business operations rather than just hobby file storage. Built on TanStack Start and Netlify Functions with Cloudflare R2 storage, it requires zero monetary investment beyond development time.
 
 The MVP focuses on core automation features that deliver immediate operational ROI, with advanced capabilities (inventory tracking, version history, SaaS transformation) deferred to future phases based on validated real-world usage.
 
@@ -48,7 +48,7 @@ The print farm business has reached a critical inflection point where the curren
 
 **Business Growth Inflection (Operations):** Measurable cost of delay through lost revenue—items literally don't get printed because operational overhead is too high. Customer orders unfulfilled, products unlaunched due to complexity barriers. Six months of delay risks collapse under our own growth.
 
-**Technical Readiness (Infrastructure):** TanStack Start, Cloudflare Workers, and R2 storage are production-ready now with zero hosting costs. These conditions weren't true 2 years ago. Waiting doesn't improve the technical foundation—it's optimal today.
+**Technical Readiness (Infrastructure):** TanStack Start, Netlify Functions, and Cloudflare R2 storage are production-ready now with zero hosting costs. These conditions weren't true 2 years ago. Waiting doesn't improve the technical foundation—it's optimal today.
 
 **Market Validation Pathway (Future SaaS):** Building for personal use first creates authentic proof before any SaaS investment. 3-6 months of operational validation generates real metrics and battle-tested workflows that de-risk future decisions. The timing creates credible marketing material and customer confidence.
 
@@ -58,7 +58,7 @@ The print farm business has reached a critical inflection point where the curren
 
 *What depends on this system:* Business growth capacity (adding products currently blocked), assistant autonomy (100% blocked without recipe info), operational efficiency (hours lost weekly to reslicing), printer uptime (idle while searching for files), and future SaaS opportunity (requires operational proof first). This isn't an optimization—it's a prerequisite for growth.
 
-*What this system depends on:* All upstream dependencies are ready or owner-controlled. Technical infrastructure is production-ready (TanStack Start, Cloudflare Workers/R2, Prisma). Domain knowledge is documented (Bambu Lab metadata format, recipe repository model, AMS slot tracking requirements). Operational inputs are owner-controlled (model uploads, sliced files, product definitions). Zero external blockers—no waiting on vendors, approvals, or unproven technology.
+*What this system depends on:* All upstream dependencies are ready or owner-controlled. Technical infrastructure is production-ready (TanStack Start, Netlify Functions, Cloudflare R2, Prisma with Neon PostgreSQL). Domain knowledge is documented (Bambu Lab metadata format, recipe repository model, AMS slot tracking requirements). Operational inputs are owner-controlled (model uploads, sliced files, product definitions). Zero external blockers—no waiting on vendors, approvals, or unproven technology.
 
 *Circular dependency risk:* Business growth demands the system, but growth also limits development time. The system must be built NOW while operational pain is high but not yet catastrophic. Waiting until business is larger means LESS time available for development.
 
@@ -275,15 +275,15 @@ The window is closing, not opening. The system must exist before the business sc
 - System shall handle individual slice file uploads up to 50MB (typical `.gcode.3mf` range: 5-50MB)
 - System shall accept images larger than 2MB/1024x1024 and automatically resize to fit limits (max 2MB file size, max 1024x1024 dimensions) to reduce storage load
 - System shall provide storage usage visibility dashboard showing total R2 storage consumed and file counts by type
-- System shall operate within Cloudflare Workers free tier limits initially (10GB R2 storage, 100k requests/day) with acceptable overage as usage grows
+- System shall operate within Netlify and R2 free tier limits initially (125k function invocations/month, 10GB R2 storage) with acceptable overage as usage grows
 - Note: Free tier usage monitoring performed manually by owner via Cloudflare Dashboard
 
 **NFR-3: Reliability and Uptime**
 - System shall maintain 99% uptime (24/7 availability target)
-- System shall handle Cloudflare Workers cold starts gracefully (acceptable 1-2 second initial delay)
+- System shall handle Netlify Functions cold starts gracefully (acceptable 1-2 second initial delay)
 - System shall validate all file uploads before committing to R2 storage (prevent partial uploads)
 - System shall maintain referential integrity between database records and R2 files at all times
-- System shall log all errors to Cloudflare Workers logs for debugging and monitoring
+- System shall log all errors to Netlify Functions logs for debugging and monitoring
 
 **NFR-4: Data Integrity and Consistency**
 - System shall ensure atomic operations for file upload + metadata extraction + database insertion (R2 upload first, DB record second, cleanup R2 on DB failure)
@@ -313,8 +313,8 @@ The window is closing, not opening. The system must exist before the business sc
 - System shall validate all file uploads for type and size before processing (prevent malicious uploads)
 - System shall scan uploaded files for executable content if straightforward to implement; otherwise defer to Phase 2
 - System shall sanitize all user inputs to prevent XSS attacks (React handles most escaping, validate server-side)
-- System shall rate-limit upload endpoints to prevent abuse (Cloudflare Workers built-in protection)
-- System shall use HTTPS/TLS encryption for all connections (provided automatically by Cloudflare)
+- System shall rate-limit upload endpoints to prevent abuse (Netlify Functions built-in protection)
+- System shall use HTTPS/TLS encryption for all connections (provided automatically by Netlify)
 - Note: Phase 2 will add authentication and authorization; Phase 3 will add multi-tenant data isolation for SaaS transformation
 
 **NFR-8: Maintainability and Code Quality**
@@ -325,30 +325,30 @@ The window is closing, not opening. The system must exist before the business sc
 - System shall use consistent naming conventions and file organization per TanStack Start patterns
 
 **NFR-9: Observability and Debugging**
-- System shall log all metadata extraction attempts with success/failure status to Cloudflare Workers logs
+- System shall log all metadata extraction attempts with success/failure status to Netlify Functions logs
 - System shall log all file upload operations (filename, size, user selections, outcome)
 - System shall log performance metrics (upload times, extraction times, search query times) for optimization analysis
-- System shall provide request tracing through Cloudflare's 100% head sampling rate
+- System shall provide request tracing through Netlify Functions logging and monitoring
 - System shall expose environment indicator in UI footer (development/staging/production) for context awareness; will move to dashboard in Phase 2
 - System shall enable debug mode toggle for displaying complete metadata in recipe cards, accessible to all users (production troubleshooting)
 
 **NFR-10: Deployment and Environment Management**
 - System shall support three environments: development (local), staging (pm-staging.solsystemlabs.com), production (pm.solsystemlabs.com)
-- System shall use Cloudflare Workers Builds for automated deployments (staging on master branch, production on production branch)
+- System shall use Netlify's Git-based deployments for automated deployments (staging on master branch, production on production branch)
 - System shall generate isolated preview URLs for all pull requests without affecting staging/production
-- System shall use environment-specific configuration with separate R2 buckets per environment and leverage Xata's database branching infrastructure for PR-specific database branches
+- System shall use environment-specific configuration with separate Cloudflare R2 buckets per environment and Neon database branches for PR-specific database isolation
 - System shall complete deployments in ≤5 minutes from git push to live environment
 
 **NFR-11: Scalability and Future Growth**
 - System shall support catalog of 1000+ products with 500+ models and 3000+ slices without performance degradation
 - System shall use pagination for product lists when catalog exceeds 50 items (deferred to Phase 2 if not needed initially)
 - System shall design database schema to support multi-tenant architecture for future SaaS transformation (tenant_id columns included in MVP schema, even if unused)
-- System shall use Cloudflare Smart Placement (configured in wrangler.jsonc) to optimize latency as usage grows
+- System shall leverage Netlify's global edge network to optimize latency as usage grows
 - System shall use smart database indexes as needed for query optimization (determined during development based on query patterns)
-- System shall monitor Cloudflare Workers metrics (CPU time, memory usage) to identify optimization opportunities before hitting limits
+- System shall monitor Netlify Functions metrics (execution time, memory usage) to identify optimization opportunities before hitting limits
 
 **NFR-12: Backup and Disaster Recovery**
-- System shall use managed database with automated daily backups (Xata provides automatic backups)
+- System shall use managed database with automated daily backups (Neon provides automatic backups)
 - System shall maintain R2 file versioning to recover from accidental deletions (Cloudflare R2 versioning enabled)
 - System shall document database restoration procedure for catastrophic failure scenarios
 - System shall test recovery process quarterly to ensure RTO (Recovery Time Objective) of ≤4 hours (not a major focus for MVP)
@@ -741,7 +741,7 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 
 **Epic 1: Deployment & Operations Foundation** (Stories: 6-8, Priority: CRITICAL)
 - Establishes three environments (dev/staging/production) with automated deployments
-- Configures Cloudflare Workers Builds, Xata database branching, R2 buckets
+- Configures Netlify Functions, Neon database branches, Cloudflare R2 buckets
 - Implements logging, monitoring, and observability
 - Enables development team to work efficiently with proper CI/CD pipeline
 - **Rationale:** Without deployment infrastructure, no features can be tested or released
@@ -907,7 +907,7 @@ Since this is a Level 3 project, you need solution architecture before story imp
 4. **Metadata Example:** `/home/taylor/projects/printfarm-manager/docs/bambu-lab-metadata-example.json`
 
 **Ask architect to:**
-- Design solution architecture for TanStack Start + Cloudflare Workers + Xata + R2
+- Design solution architecture for TanStack Start + Netlify Functions + Neon + R2
 - Define database schema (tables, relationships, indexes) based on Epic 2 Story 2.1 requirements
 - Create API endpoint specifications for all file operations
 - Design metadata extraction pipeline architecture
@@ -935,14 +935,14 @@ This is a user-facing system with complex UI workflows. After architecture is co
 
 - [ ] **Environment Setup Verification**
   - Confirm all three environments operational (dev/staging/production)
-  - Test Cloudflare Workers Builds deployment pipeline
-  - Verify Xata branching works for PR previews
+  - Test Netlify Git deployment pipeline
+  - Verify Neon branching works for PR previews
   - Validate R2 buckets accessible from all environments
 
 - [ ] **Technical Spikes (if needed)**
-  - Spike: Xata database branching integration with Cloudflare builds
+  - Spike: Neon database branching integration with Netlify deployments
   - Spike: R2 file header configuration for forced downloads
-  - Spike: Fuzzy search options (Xata full-text vs Levenshtein)
+  - Spike: Fuzzy search options (PostgreSQL full-text vs Levenshtein)
   - Spike: Image resizing library selection (sharp vs canvas)
   - Spike: Zip extraction performance with 500MB files
 
@@ -956,7 +956,7 @@ This is a user-facing system with complex UI workflows. After architecture is co
 
 **Sprint Structure: 2-Week Sprints**
 
-**Sprint 0 (Pre-Development):** Epic 1 - Deployment & Operations Foundation
+**Sprint 0 (Pre-Development):** Epic 1 - Deployment & Operations Foundation (Netlify)
 - Complete environment setup before feature development
 - Validate CI/CD pipeline working end-to-end
 - Ensure logging and monitoring operational
@@ -1065,7 +1065,7 @@ This is a user-facing system with complex UI workflows. After architecture is co
 
 **Total Pages:** ~350 lines (PRD) + ~1000 lines (epics.md)
 **Estimated Implementation:** 6-8 weeks (8 sprints)
-**Target Deployment:** Staging (pm-staging.solsystemlabs.com), Production (pm.solsystemlabs.com)
+**Target Deployment:** Staging (pm-staging.solsystemlabs.com via Netlify), Production (pm.solsystemlabs.com via Netlify)
 
 _Note: Technical decisions and clarifications captured throughout elicitation rounds are embedded in requirements and epic stories_
 

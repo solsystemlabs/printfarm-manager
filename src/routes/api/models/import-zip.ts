@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
 import { getPrismaClient } from "~/lib/db";
-import { getStorageClient, type CloudflareEnv } from "~/lib/storage";
+import { getStorageClient } from "~/lib/storage";
 import { createErrorResponse } from "~/lib/utils/errors";
 import { log, logPerformance } from "~/lib/utils/logger";
 
@@ -10,7 +10,7 @@ const MODEL_EXTENSIONS = [".stl", ".3mf"];
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"];
 const ALLOWED_EXTENSIONS = [...MODEL_EXTENSIONS, ...IMAGE_EXTENSIONS];
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB per file
-const MAX_FILES_PER_BATCH = 50; // Limit to prevent Cloudflare Workers 30-second timeout
+const MAX_FILES_PER_BATCH = 50; // Limit to prevent timeout (Netlify Functions: 10s max)
 
 /**
  * Determines file type based on extension
@@ -65,12 +65,12 @@ interface ImportResponse {
 /**
  * Bulk Import API Endpoint
  *
- * Imports multiple files that were already extracted client-side (Story 2.3).
+ * Imports multiple files that were already extracted client-side.
  * This endpoint receives the extracted file Blobs directly, NOT a zip file.
  *
- * CRITICAL: Client-side extraction is required because Cloudflare Workers
- * has only 128MB memory, insufficient for large zip files. The client must
- * extract files in the browser and send the Blobs to this endpoint.
+ * NOTE: Client-side extraction is currently used to maintain compatibility
+ * with the existing upload flow. With Netlify Functions' 1GB memory limit,
+ * server-side extraction is now feasible and could be implemented in a future story.
  *
  * For each file:
  * 1. Validates file type and size
@@ -78,7 +78,7 @@ interface ImportResponse {
  * 3. Creates database record
  * 4. Returns mixed success/failure results (partial success supported)
  *
- * Reuses Story 2.2 atomic upload pattern per file:
+ * Atomic upload pattern per file:
  * - Upload to storage first
  * - Create database record second
  * - Cleanup storage on DB failure
@@ -148,36 +148,8 @@ export const Route = createFileRoute("/api/models/import-zip")({
             totalSize: files.reduce((sum, f) => sum + f.size, 0),
           });
 
-          // Access Cloudflare bindings - try multiple methods
-          // Method 1: Check if env is passed directly in handler context
-          const contextWithEnv = handlerContext as typeof handlerContext & {
-            env?: CloudflareEnv;
-          };
-          let cfEnv = contextWithEnv.env;
-          console.log("[import-zip] Method 1 - handlerContext.env:", !!cfEnv);
-          console.log(
-            "[import-zip] Method 1 - env keys:",
-            cfEnv ? Object.keys(cfEnv) : "undefined",
-          );
-
-          // Method 2: Try request.context (TanStack Start documentation pattern)
-          if (!cfEnv) {
-            try {
-              const requestWithContext = request as typeof request & {
-                context?: { cloudflare?: { env?: CloudflareEnv } };
-              };
-              cfEnv = requestWithContext.context?.cloudflare?.env;
-              console.log(
-                "[import-zip] Method 2 - request.context.cloudflare.env:",
-                !!cfEnv,
-              );
-            } catch (error) {
-              console.log("[import-zip] Method 2 failed:", error);
-            }
-          }
-
           // Get environment-appropriate storage client
-          const storage = await getStorageClient(cfEnv);
+          const storage = await getStorageClient();
 
           // Get database configuration
           const databaseUrl = process.env.DATABASE_URL;

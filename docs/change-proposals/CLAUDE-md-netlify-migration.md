@@ -1,95 +1,50 @@
-# CLAUDE.md
+# CLAUDE.md Change Proposal: Cloudflare → Netlify Migration
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**Document**: `/CLAUDE.md`
+**Change Type**: Complete replacement of deployment documentation (lines 91-268)
+**Scope**: Replace 178 lines of Cloudflare Workers documentation with Netlify Functions equivalent
 
-## Project Overview
+---
 
+## Change 1: Project Overview Line
+
+**Location**: Line 7
+
+**OLD**:
+```
+This is a TanStack Start application - a type-safe, client-first, full-stack React framework built on TanStack Router. It's configured for deployment on Cloudflare Workers.
+```
+
+**NEW**:
+```
 This is a TanStack Start application - a type-safe, client-first, full-stack React framework built on TanStack Router. It's configured for deployment on Netlify.
-
-## Development Commands
-
-```sh
-# Install dependencies (uses npm)
-npm install
-
-# Run development server (starts on http://localhost:3000)
-npm run dev
-
-# Build and type-check
-npm run build
-
-# Preview production build
-npm run preview
-
-# Database (Prisma)
-npm run db:migrate:dev  # Create and apply new migration in development
-npm run db:migrate      # Apply pending migrations (production-safe)
-npm run db:push         # Push schema changes without migration (dev only)
-npm run db:studio       # Open Prisma Studio (database GUI)
-
-# Testing
-npm test              # Run tests in watch mode
-npm run test:run      # Run tests once (for CI)
-
-# Linting and Formatting
-npm run lint          # Check code for lint errors
-npm run lint:fix      # Fix auto-fixable lint errors
-npm run format        # Format code with Prettier
-npm run format:check  # Check code formatting (for CI)
 ```
 
-## Architecture
+---
 
-### Tech Stack
-- **Frontend**: React 19, TanStack Router, TanStack Query (React Query)
-- **Styling**: TailwindCSS with tailwind-merge
-- **Build**: Vite with TypeScript
-- **Testing**: Vitest with React Testing Library
-- **Linting**: ESLint v9 (flat config) with TypeScript and React plugins
-- **Formatting**: Prettier
+## Change 2: Tech Stack - Deployment
+
+**Location**: Line 48
+
+**OLD**:
+```
+- **Deployment**: Cloudflare Workers (via Wrangler)
+```
+
+**NEW**:
+```
 - **Deployment**: Netlify Functions
-- **HTTP Client**: redaxios (lightweight axios alternative)
-
-### Project Structure
-
-```
-src/
-├── routes/           # File-based routing
-│   ├── __root.tsx    # Root layout with navigation, devtools, error boundaries
-│   ├── api/          # Server-side API handlers (run on Cloudflare Workers)
-│   ├── *.route.tsx   # Layout routes
-│   └── *.tsx         # Page routes
-├── components/       # Shared React components
-├── utils/            # Utility functions and helpers
-├── styles/           # CSS files
-└── router.tsx        # Router configuration with QueryClient integration
 ```
 
-### Key Architecture Patterns
+---
 
-**File-Based Routing**: Routes are automatically generated from `src/routes/` directory structure:
-- `__root.tsx` - Root layout component
-- `posts.route.tsx` - Layout route (wrapper)
-- `posts.index.tsx` - Index route at `/posts`
-- `posts.$postId.tsx` - Dynamic route at `/posts/:postId`
-- `_pathlessLayout.tsx` - Pathless layout (wraps child routes without changing URL)
-- `api/users.ts` - Server-side API route at `/api/users`
+## Change 3: Complete Deployment Section Replacement
 
-**Router + Query Integration**: `src/router.tsx` sets up TanStack Router with React Query SSR integration using `setupRouterSsrQueryIntegration()`. The QueryClient is provided via router context.
+**Location**: Lines 91-268 (DELETE entire Cloudflare section, REPLACE with Netlify documentation)
 
-**Server-Side API Routes**: Routes in `src/routes/api/` define server-side handlers that run on Cloudflare Workers. Use `server.handlers` object with HTTP methods (GET, POST, etc).
+**NEW CONTENT**:
 
-**Path Aliases**: TypeScript configured with `~/*` alias mapping to `src/*`
-
-**Route Tree Generation**: `src/routeTree.gen.ts` is auto-generated - do not manually edit
-
-## TypeScript Configuration
-
-- Strict mode enabled
-- Path alias: `~/*` → `src/*`
-- Target: ES2022
-- JSX: react-jsx (React 19 automatic runtime)
-
+```markdown
 ## Netlify Deployment
 
 This project uses **Netlify's Git-based deployments** for CI/CD. All deployments are handled automatically by Netlify when you push to specific branches.
@@ -402,3 +357,29 @@ Before first deployment:
 - [ ] R2 buckets created and accessible
 - [ ] Neon database branches created
 - [ ] Test deployment succeeds
+```
+
+---
+
+## Summary
+
+**Lines Deleted**: 178 (lines 91-268 of original Cloudflare documentation)
+**Lines Added**: ~250 (comprehensive Netlify documentation)
+**Net Change**: +72 lines (more detailed for clarity)
+
+**Major Sections Replaced**:
+1. Cloudflare Workers Deployment → Netlify Deployment
+2. Wrangler configuration → netlify.toml configuration
+3. `getContext('cloudflare')` patterns → `process.env` patterns
+4. Cloudflare-specific features → Netlify equivalents
+5. Wrangler secrets → Netlify environment variables
+6. Added: R2 access via S3 SDK (new section needed)
+7. Added: Neon database setup (replaces Xata)
+
+**Key Improvements**:
+- Simpler environment variable access (`process.env` vs `getContext`)
+- Standard Node.js patterns (no Workers-specific code)
+- Clear R2 access via AWS SDK documentation
+- Comprehensive deployment checklist
+
+**Next Steps**: Apply full replacement to CLAUDE.md lines 91-268

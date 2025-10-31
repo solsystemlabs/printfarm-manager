@@ -1,13 +1,10 @@
-// Use cloudflare generator for Workers runtime (WASM engine)
-// Import from client.ts directly since cloudflare generator doesn't have package.json
-import { PrismaClient } from "../../prisma/generated/cloudflare/client";
+// Database client factory for serverless environments
+import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
-// Database client factory for Cloudflare Workers edge runtime
-// Note: In Workers, we need to be careful about connection pooling
-// For now, we create instances per-request and clean them up
-// Future optimization: Use Cloudflare Hyperdrive for connection pooling
+// Note: In serverless environments, we create instances per-request and clean them up
+// to avoid connection pool exhaustion
 
 export function getPrismaClient(databaseUrl: string): {
   prisma: PrismaClient;

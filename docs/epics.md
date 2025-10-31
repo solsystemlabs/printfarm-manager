@@ -9,11 +9,11 @@
 
 ## Epic Overview
 
-The PrintFarm Manager MVP is delivered through **5 epics** spanning approximately **30-35 user stories**. Epic sequencing prioritizes infrastructure foundation before feature development to ensure proper development workflow from day one.
+The PrintFarm Manager MVP is delivered through **5 epics** spanning approximately **31-36 user stories**. Epic sequencing prioritizes infrastructure foundation before feature development to ensure proper development workflow from day one.
 
 ### Delivery Timeline: 6-8 Weeks
 
-**Epic 1: Deployment & Operations Foundation** (6 stories, Weeks 1-2, CRITICAL)
+**Epic 1: Deployment & Operations Foundation** (7 stories, Weeks 1-2, CRITICAL)
 **Epic 2: Core File Management** (7-9 stories, Weeks 3-4, HIGH)
 **Epic 3: Metadata Extraction & Filament Matching** (6-8 stories, Weeks 4-5, HIGH)
 **Epic 4: Product & Recipe System** (8-10 stories, Weeks 6-7, HIGH)
@@ -29,9 +29,11 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 
 **Success Criteria:**
 - Three environments operational (dev/staging/production) with independent databases and R2 buckets
-- Automated deployments working via Cloudflare Workers Builds
-- PR preview URLs generating automatically
-- Logs accessible in Cloudflare Dashboard with 100% request sampling
+- Automated deployments working via Netlify Git integration
+- PR deploy preview URLs generating automatically
+- Logs accessible in Netlify Dashboard with function-level observability
+
+**Platform Evolution Note (2025-10-30)**: Stories 1.1-1.5 documented the original Cloudflare Workers infrastructure approach. During Epic 2 implementation, Cloudflare Workers memory limitations (128MB vs 500MB file processing requirement) proved incompatible with MVP needs. Story 1.8 documents the migration to Netlify Functions, which supersedes the Cloudflare-specific stories while preserving R2 for object storage.
 
 ### Story 1.1: Configure Cloudflare Workers Environments
 
@@ -53,6 +55,8 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 **Technical Notes:**
 - Use single wrangler.jsonc with `env` blocks for staging/production
 - See CLAUDE.md for wrangler.jsonc structure reference
+
+> **DEPRECATED (2025-10-30)**: This story was superseded by Story 1.8 (Netlify Migration) due to Cloudflare Workers memory limitations discovered during Epic 2 (Stories 2.2, 2.3, 2.4). See Story 1.8 for current deployment infrastructure. This story remains as historical documentation of the original platform choice.
 
 ---
 
@@ -78,6 +82,8 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 - Database migrations handled via Xata CLI or Prisma (decide during implementation)
 - Connection strings stored as Cloudflare secrets (not in wrangler.jsonc)
 
+> **DEPRECATED (2025-10-30)**: This story was superseded by Story 1.8, which migrates to Neon PostgreSQL with instant branching capabilities. The Xata-specific branching infrastructure described here is no longer in use. This story remains as historical documentation.
+
 ---
 
 ### Story 1.3: Configure Cloudflare R2 Buckets
@@ -99,6 +105,8 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 **Technical Notes:**
 - R2 free tier: 10GB storage, 1M class A ops/month, 10M class B ops/month
 - Bucket bindings syntax: `[[r2_buckets]]` in wrangler.jsonc
+
+> **DEPRECATED (Partially, 2025-10-30)**: R2 buckets remain in use, but access method changed. Story 1.8 documents R2 access via S3-compatible API using AWS SDK (replacing Wrangler native bindings described here). This story remains as historical documentation of the original R2 binding approach.
 
 ---
 
@@ -125,6 +133,8 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 - Preview URLs format: `<branch-name>-pm-staging.<subdomain>.workers.dev`
 - See CLOUDFLARE_SETUP.md for detailed configuration steps
 
+> **DEPRECATED (2025-10-30)**: This story was superseded by Story 1.8, which uses Netlify's Git-based deployments instead of Cloudflare Workers Builds. The CI/CD concepts (branch-based deployments, PR previews) remain the same, but implementation differs. This story remains as historical documentation.
+
 ---
 
 ### Story 1.5: Implement Logging and Observability
@@ -149,6 +159,8 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 - Structured logging preferred: `console.log(JSON.stringify({ event, data }))`
 - Cloudflare retains logs for 24 hours on free tier
 
+> **DEPRECATED (2025-10-30)**: This story was superseded by Story 1.8, which uses Netlify Functions logging instead of Cloudflare Workers Dashboard. The observability goals remain the same, but implementation differs. This story remains as historical documentation.
+
 ---
 
 ### Story 1.7: Implement Storage Usage Visibility Dashboard
@@ -166,12 +178,53 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 4. Storage displayed in human-readable format (GB/MB)
 5. Visual indicator showing percentage of free tier limit (10GB)
 6. Refresh button to recalculate storage usage on demand
-7. Link to Cloudflare Dashboard for detailed usage analytics
+7. Link to Cloudflare R2 Dashboard for detailed R2 usage analytics
 
 **Technical Notes:**
 - Storage calculated by querying database for all file records and summing sizes
 - R2 doesn't provide automatic storage metrics API on free tier
 - Consider caching storage calculations (expensive to recompute frequently)
+
+---
+
+### Story 1.8: Migrate from Cloudflare Workers to Netlify Functions
+
+**As a** developer
+**I want** to migrate the deployment platform from Cloudflare Workers to Netlify Functions
+**So that** we can support larger file processing and use standard Node.js runtime patterns
+
+**Prerequisites:** Stories 1.1-1.5 (understanding of original Cloudflare setup)
+
+**Context:** Stories 2.2, 2.3, and 2.4 revealed fundamental incompatibilities between Cloudflare Workers runtime and TanStack Start's full-stack requirements. This migration supersedes the Cloudflare-specific infrastructure stories (1.1-1.5) while preserving R2 for object storage.
+
+**Acceptance Criteria:**
+1. Netlify site created and connected to GitHub repository
+2. Build configuration defined in netlify.toml (development/staging/production contexts)
+3. Custom domains configured: pm-staging.solsystemlabs.com, pm.solsystemlabs.com
+4. Neon PostgreSQL project created with three branches (development, staging, production)
+5. Prisma schema updated to use standard generator (remove Cloudflare WASM generator)
+6. R2 API tokens created and configured in Netlify environment variables
+7. AWS SDK S3 client implemented for R2 access (replace native bindings)
+8. All `getContext('cloudflare')` patterns replaced with `process.env` access
+9. CLAUDE.md deployment section replaced with Netlify documentation
+10. PRD infrastructure references updated
+11. solution-architecture.md updated with new platform architecture
+12. Story 2.2 code simplified (remove WASM generator, per-request connection factory)
+13. Story 2.3 reverted to server-side extraction (remove client-side workaround)
+14. Story 2.4 simplified (server handles zip extraction)
+15. Successful deployment to all three environments with end-to-end testing
+
+**Technical Notes:**
+- Netlify Functions: 1GB memory (vs Workers 128MB), 10s timeout, Node.js 20 runtime
+- Neon PostgreSQL: Instant branching, standard PostgreSQL compatibility
+- R2 access via S3-compatible API using @aws-sdk/client-s3
+- See full story documentation: `/docs/stories/story-1.8.md`
+
+**Effort Estimate:** 1-2 weeks
+
+**Story Status:** Pending
+
+**Detailed Documentation:** [Story 1.8](/docs/stories/story-1.8.md)
 
 ---
 

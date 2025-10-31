@@ -1,23 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
-import { getStorageClient, type CloudflareEnv } from "~/lib/storage";
+import { getStorageClient } from "~/lib/storage";
 
 export const Route = createFileRoute("/api/test-r2")({
   server: {
     handlers: {
-      GET: async ({ request }) => {
+      GET: async () => {
         try {
-          // Access Cloudflare bindings from request context (staging/production)
-          // In TanStack Start, bindings are available via request.context.cloudflare.env
-          // In development, getStorageClient() will use MinIO from process.env instead
-          // TypeScript doesn't know about context on Request, so we use type assertion
-          const requestWithContext = request as typeof request & {
-            context?: { cloudflare?: { env?: CloudflareEnv } };
-          };
-          const cfEnv = requestWithContext.context?.cloudflare?.env;
-
           // Get environment-appropriate storage client
-          const storage = await getStorageClient(cfEnv);
+          const storage = await getStorageClient();
 
           const key = "test/test.txt";
           const testContent = `Hello from ${storage.getStorageType()}!`;
