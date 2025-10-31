@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a TanStack Start application - a type-safe, client-first, full-stack React framework built on TanStack Router. It's configured for deployment on Cloudflare Workers.
+This is a TanStack Start application - a type-safe, client-first, full-stack React framework built on TanStack Router. It's configured for deployment on Netlify.
 
 ## Development Commands
 
@@ -45,7 +45,7 @@ npm run cf-typegen    # Generate Cloudflare Workers types
 - **Testing**: Vitest with React Testing Library
 - **Linting**: ESLint v9 (flat config) with TypeScript and React plugins
 - **Formatting**: Prettier
-- **Deployment**: Cloudflare Workers (via Wrangler)
+- **Deployment**: Netlify Functions
 - **HTTP Client**: redaxios (lightweight axios alternative)
 
 ### Project Structure
@@ -88,54 +88,64 @@ src/
 - Target: ES2022
 - JSX: react-jsx (React 19 automatic runtime)
 
-## Cloudflare Workers Deployment
+## Netlify Deployment
 
-This project uses **Cloudflare Workers Builds** (native Git integration) for CI/CD. All deployments are handled automatically by Cloudflare when you push to specific branches.
+This project uses **Netlify's Git-based deployments** for CI/CD. All deployments are handled automatically by Netlify when you push to specific branches.
 
 ### Environments
-Three deployment environments configured in `wrangler.jsonc`:
+Three deployment environments configured:
 
-- **Development**: `pm-dev` worker (local development via `npm run dev`)
-- **Staging**: `pm-staging` worker → `pm-staging.solsystemlabs.com` (auto-deploy on push to `master`)
-- **Production**: `pm` worker → `pm.solsystemlabs.com` (auto-deploy on push to `production`)
+- **Development**: Local development via `npm run dev`
+- **Staging**: `pm-staging.solsystemlabs.com` (auto-deploy on push to `master`)
+- **Production**: `pm.solsystemlabs.com` (auto-deploy on push to `production`)
 
 ### Configuration
-All environments are defined in a single `wrangler.jsonc` file using Wrangler environments:
-```jsonc
-{
-  "name": "pm-dev",  // Default for local development
-  "env": {
-    "staging": { "name": "pm-staging", ... },
-    "production": { "name": "pm", ... }
-  }
-}
+
+Netlify configuration is defined in `netlify.toml`:
+
+```toml
+[build]
+  command = "npm run build"
+  publish = ".netlify"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Staging site (master branch)
+[context.master]
+  environment = { ENVIRONMENT = "staging" }
+
+# Production site (production branch)
+[context.production]
+  environment = { ENVIRONMENT = "production" }
+
+# Deploy Previews (PR branches)
+[context.deploy-preview]
+  environment = { ENVIRONMENT = "staging" }
 ```
 
-**Important**: TanStack Start uses Vite, which generates `dist/server/wrangler.json` during the build. The `CLOUDFLARE_ENV` environment variable (set in Cloudflare dashboard) tells Vite which environment configuration to use.
+**TanStack Start + Netlify**: TanStack Start's Netlify adapter automatically generates the correct build output for Netlify Functions (Node.js runtime).
 
 ### Deployment Strategy
 
-**Pull Requests (Isolated Previews)**:
-- Cloudflare runs: `npm run build` with `CLOUDFLARE_ENV=staging`
-- Vite generates: `dist/server/wrangler.json` for staging environment
-- Uploads via: `npx wrangler versions upload --config dist/server/wrangler.json --env staging`
-- Generates isolated preview URL (e.g., `feature-branch-pm-staging.<subdomain>.workers.dev`)
+**Pull Requests (Deploy Previews)**:
+- Netlify runs: `npm run build`
+- TanStack Start generates Netlify Functions bundle
+- Generates isolated preview URL (e.g., `deploy-preview-123--pm-staging.netlify.app`)
 - Preview URL posted as comment on PR
 - **Preview URLs are completely isolated from staging** - they do NOT affect the live staging environment
 - Same preview URL updates with each commit to the PR branch
 - Previews are deleted when PR is closed/merged
 
 **Push to `master` branch (Staging Deployment)**:
-- Cloudflare runs: `npm run build` with `CLOUDFLARE_ENV=staging`
-- Vite generates: `dist/server/wrangler.json` with `name: "pm-staging"`
-- Deploys via: `npx wrangler deploy --config dist/server/wrangler.json`
-- Updates live staging: https://pm-staging.solsystemlabs.com
+- Netlify runs: `npm run build`
+- Deploys to: https://pm-staging.solsystemlabs.com
+- Updates live staging environment
 
 **Push to `production` branch (Production Deployment)**:
-- Cloudflare runs: `npm run build` with `CLOUDFLARE_ENV=production`
-- Vite generates: `dist/server/wrangler.json` with `name: "pm"`
-- Deploys via: `npx wrangler deploy --config dist/server/wrangler.json`
-- Updates live production: https://pm.solsystemlabs.com
+- Netlify runs: `npm run build`
+- Deploys to: https://pm.solsystemlabs.com
+- Updates live production environment
 
 **Promoting staging to production**:
 ```bash
@@ -144,16 +154,14 @@ git merge master
 git push
 ```
 
-**Note**: The `CLOUDFLARE_ENV` variable must be set at **build time** in the Cloudflare dashboard (Settings → Build → Environment Variables). The traditional `--env` flag doesn't work with Vite-based projects because the configuration is generated during the build, not at deploy time.
+### Deploy Previews vs Environments
 
-### Preview URLs vs Environments
-
-**Preview URLs** (PR branches):
+**Deploy Previews** (PR branches):
 - Temporary, isolated deployments
-- Format: `<branch-name>-pm-staging.<subdomain>.workers.dev`
-- Automatically created for each PR (when "Enable Pull Request Previews" is checked)
+- Format: `deploy-preview-[pr-number]--pm-staging.netlify.app`
+- Automatically created for each PR
 - Do NOT affect staging or production
-- Public by default (can be protected with Cloudflare Access)
+- Public by default (can be password-protected in Netlify settings)
 
 **Staging Environment** (master branch):
 - Persistent deployment at `pm-staging.solsystemlabs.com`
@@ -166,32 +174,46 @@ git push
 - Live environment serving real users
 
 ### Setup Instructions
-See `CLOUDFLARE_SETUP.md` for detailed instructions on connecting your GitHub repository to Cloudflare Workers Builds.
 
-## Working with Cloudflare Workers Context
+1. **Connect Repository to Netlify**:
+   - Log in to Netlify Dashboard
+   - Click "Add new site" → "Import an existing project"
+   - Connect to GitHub repository
+   - Configure build settings:
+     - Build command: `npm run build`
+     - Publish directory: `.netlify`
+     - Production branch: `production`
+
+2. **Configure Custom Domains**:
+   - Staging site: Add `pm-staging.solsystemlabs.com`
+   - Production site: Add `pm.solsystemlabs.com`
+   - Configure DNS records as instructed by Netlify
+
+3. **Set Branch Deploys**:
+   - Enable branch deploys for `master` (staging)
+   - Enable deploy previews for pull requests
+
+## Working with Netlify Functions
 
 ### Accessing Environment Variables in API Routes
 
-To access Cloudflare environment variables and bindings in your server-side API routes, use `getContext('cloudflare')` from `vinxi/http`:
+Environment variables are accessed via `process.env` in Netlify Functions:
 
 ```typescript
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
-import { getContext } from 'vinxi/http'
 
 export const Route = createFileRoute('/api/example')({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        // Access Cloudflare context
-        const cf = getContext('cloudflare')
-
         // Access environment variables
-        const environment = cf.env.ENVIRONMENT // "development", "staging", or "production"
+        const environment = process.env.ENVIRONMENT // "development", "staging", or "production"
 
-        // Access other Cloudflare bindings (KV, R2, D1, etc.) when configured
-        // const db = cf.env.DB
-        // const bucket = cf.env.MY_BUCKET
+        // Access Cloudflare R2 via environment variables (see R2 section below)
+        const r2AccountId = process.env.R2_ACCOUNT_ID
+        const r2AccessKeyId = process.env.R2_ACCESS_KEY_ID
+        const r2SecretAccessKey = process.env.R2_SECRET_ACCESS_KEY
 
         console.log(`API called in ${environment} environment`)
 
@@ -204,65 +226,177 @@ export const Route = createFileRoute('/api/example')({
 
 ### Available Environment Variables
 
-The following environment variables are configured in `wrangler.jsonc`:
+Environment variables are configured in Netlify Dashboard (Site settings → Environment variables):
 
+**System Environment Variables** (set in netlify.toml):
 - **`ENVIRONMENT`**: Current deployment environment
   - `"development"` - Local development (`npm run dev`)
   - `"staging"` - Staging deployment (`pm-staging.solsystemlabs.com`)
   - `"production"` - Production deployment (`pm.solsystemlabs.com`)
 
+**Cloudflare R2 Environment Variables** (set in Netlify Dashboard):
+- `R2_ACCOUNT_ID` - Your Cloudflare account ID
+- `R2_ACCESS_KEY_ID` - R2 API token access key
+- `R2_SECRET_ACCESS_KEY` - R2 API token secret
+- `R2_BUCKET_NAME` - Environment-specific bucket name
+
+**Database Environment Variables** (set in Netlify Dashboard):
+- `DATABASE_URL` - Neon PostgreSQL connection string (environment-specific)
+
+### Accessing Cloudflare R2 from Netlify Functions
+
+Cloudflare R2 is accessed via the S3-compatible API using AWS SDK:
+
+```typescript
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+
+// Initialize R2 client
+const r2Client = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+})
+
+// Upload file to R2
+const uploadCommand = new PutObjectCommand({
+  Bucket: process.env.R2_BUCKET_NAME,
+  Key: 'models/example.stl',
+  Body: fileBuffer,
+  ContentType: 'application/octet-stream',
+  ContentDisposition: 'attachment; filename="example.stl"',
+})
+
+await r2Client.send(uploadCommand)
+
+// Generate public URL
+const r2Url = `https://${process.env.R2_BUCKET_NAME}.r2.cloudflarestorage.com/models/example.stl`
+```
+
+**R2 Bucket Configuration**:
+- Development: `pm-dev-files`
+- Staging: `pm-staging-files`
+- Production: `pm-files`
+
+Set the appropriate bucket name in Netlify environment variables for each deployment context.
+
 ### Observability & Logging
 
-**Observability is enabled** with 100% request sampling in `wrangler.jsonc`:
-```jsonc
-"observability": {
-  "enabled": true,
-  "head_sampling_rate": 1
-}
-```
-
-**Accessing logs**:
+**Netlify Functions Logging**:
 - Local: View in terminal during `npm run dev`
-- Deployed: Cloudflare Dashboard → Workers & Pages → [worker name] → Logs
+- Deployed: Netlify Dashboard → Functions → [function name] → Logs
 - All `console.log()`, `console.error()`, etc. are automatically captured
+- Logs retained for 1 hour on free tier, 30 days on paid tiers
 
-**Note**: TanStack Start currently has limitations accessing Cloudflare context in SSR loaders. The `getContext('cloudflare')` approach works reliably in:
-- API route handlers (`src/routes/api/*.ts`)
-- Server functions called from client-side code
+**Log Filtering**:
+- Filter by log level (info, warn, error)
+- Filter by time range
+- Search logs by text
 
-### Smart Placement
+**Performance Monitoring**:
+- Function execution duration visible in Netlify Dashboard
+- Cold start vs warm start metrics
+- Invocation count per function
 
-**Smart Placement is enabled** in `wrangler.jsonc`:
-```jsonc
-"placement": {
-  "mode": "smart"
-}
-```
+### Netlify Functions Limits
 
-This automatically optimizes where your worker executes:
-- If your worker makes multiple subrequests to backend services, it will run closer to those backends
-- No code changes needed - it analyzes traffic patterns automatically
-- Takes ~15 minutes after deployment to start optimizing
+**Free Tier Limits** (relevant for MVP):
+- **Runtime**: 10 seconds per invocation
+- **Memory**: 1024 MB (1 GB) per function
+- **Invocations**: 125,000 per month
+- **Execution time**: 100 hours per month
+
+**Key Differences from Cloudflare Workers**:
+- ✅ **Much higher memory**: 1 GB vs 128 MB (supports large file processing)
+- ✅ **Standard Node.js runtime**: No WASM compilation needed
+- ⚠️ **Shorter timeout**: 10s vs 30s (still adequate for most operations)
+- ⚠️ **Invocation limits**: 125k/month vs unlimited (acceptable for MVP)
 
 ### Adding Secrets
 
-For sensitive values (API keys, tokens, etc.), **never use `vars` in `wrangler.jsonc`**. Use Wrangler secrets instead:
+For sensitive values (API keys, tokens, database passwords):
 
+**Via Netlify Dashboard** (recommended):
+1. Go to Site settings → Environment variables
+2. Add variable with key and value
+3. Select deployment contexts: Production, Deploy Previews, Branch deploys
+4. Variable automatically injected into `process.env`
+
+**Via Netlify CLI** (for local development):
 ```bash
-# For local development
-echo "SECRET_VALUE" > .dev.vars
-# Add to .dev.vars file:
-# MY_SECRET=secret_value_here
+# Link to Netlify site
+netlify link
 
-# For staging
-npx wrangler secret put MY_SECRET --env staging
+# Set environment variable
+netlify env:set MY_SECRET "secret_value_here"
 
-# For production
-npx wrangler secret put MY_SECRET --env production
+# List environment variables
+netlify env:list
 ```
 
-Access secrets the same way as environment variables:
+**For local development only** (`.env.local` file):
+```bash
+# Never commit this file!
+MY_SECRET=secret_value_here
+DATABASE_URL=postgresql://localhost/mydb
+```
+
+Access secrets via `process.env`:
 ```typescript
-const cf = getContext('cloudflare')
-const secret = cf.env.MY_SECRET
+const secret = process.env.MY_SECRET
+const dbUrl = process.env.DATABASE_URL
 ```
+
+### Database Access (Neon PostgreSQL)
+
+**Connection String Format**:
+```
+postgresql://[user]:[password]@[host]/[database]?sslmode=require
+```
+
+**Neon Database Branching**:
+- **Main branch**: Production database
+- **Development branch**: For local development
+- **Preview branches**: Auto-created for deploy previews (optional)
+
+**Setting up Neon for each environment**:
+1. Create Neon project
+2. Create branches: `main` (production), `staging`, `development`
+3. Copy connection strings from Neon dashboard
+4. Add to Netlify environment variables:
+   - Production context: Production database connection string
+   - Deploy previews: Staging database connection string
+
+**Prisma Configuration**:
+```typescript
+// Use Neon's standard PostgreSQL generator (no WASM needed!)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+```
+
+### Deployment Checklist
+
+Before first deployment:
+
+- [ ] Repository connected to Netlify
+- [ ] Custom domains configured (pm-staging.solsystemlabs.com, pm.solsystemlabs.com)
+- [ ] Branch deploys enabled: `master` → staging, `production` → production
+- [ ] Deploy previews enabled for PRs
+- [ ] Environment variables set:
+  - [ ] `ENVIRONMENT` (in netlify.toml)
+  - [ ] `R2_ACCOUNT_ID`
+  - [ ] `R2_ACCESS_KEY_ID`
+  - [ ] `R2_SECRET_ACCESS_KEY`
+  - [ ] `R2_BUCKET_NAME`
+  - [ ] `DATABASE_URL`
+- [ ] R2 buckets created and accessible
+- [ ] Neon database branches created
+- [ ] Test deployment succeeds
