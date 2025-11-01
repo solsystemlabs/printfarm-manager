@@ -2,13 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { PrismaClient } from "@prisma/client";
 import type { StorageUsage, CloudflareConfig } from "~/lib/storage/usage";
 
-// Create mock functions
-const mockPrismaDisconnect = vi.fn();
-const mockPoolEnd = vi.fn();
-const mockGetPrismaClient = vi.fn(() => ({
-  prisma: { $disconnect: mockPrismaDisconnect } as unknown as PrismaClient,
-  pool: { end: mockPoolEnd } as unknown as { end: () => Promise<void> },
-}));
+// Create mock Prisma client
+const mockPrisma = {} as unknown as PrismaClient;
 
 const mockCalculateStorageUsage = vi.fn<
   [PrismaClient, CloudflareConfig?],
@@ -18,7 +13,7 @@ const mockLog = vi.fn();
 
 // Mock modules with hoisted mocks
 vi.mock("../../../lib/db", () => ({
-  getPrismaClient: mockGetPrismaClient,
+  prisma: mockPrisma,
 }));
 
 vi.mock("../../../lib/storage/usage", () => ({
@@ -77,14 +72,8 @@ describe("/api/admin/storage GET", () => {
       lastCalculated: mockUsage.lastCalculated.toISOString(), // Date is serialized to string
     });
 
-    // Verify database client was created and cleaned up
-    expect(mockGetPrismaClient).toHaveBeenCalledWith(
-      "postgresql://localhost:5432/test",
-    );
-    expect(mockPrismaDisconnect).toHaveBeenCalled();
-    expect(mockPoolEnd).toHaveBeenCalled();
-
     // Verify logging
+    // Note: No pool cleanup needed with Prisma Accelerate
     expect(mockLog).toHaveBeenCalledWith(
       "storage_calculated",
       expect.objectContaining({
@@ -191,36 +180,7 @@ describe("/api/admin/storage GET", () => {
     );
   });
 
-  it("returns 500 error when DATABASE_URL not configured", async () => {
-    // No DATABASE_URL set
-    delete process.env.DATABASE_URL;
-
-    const handler = Route.options.server!.handlers!.GET!;
-    const mockRequest = new Request("http://localhost/api/admin/storage");
-    const response = await handler({ request: mockRequest } as {
-      request: Request;
-    });
-
-    expect(response.status).toBe(500);
-
-    const data = await response.json();
-    expect(data).toEqual({
-      error: "Database not configured",
-      message: "DATABASE_URL environment variable is required",
-    });
-
-    // Should log error
-    expect(mockLog).toHaveBeenCalledWith(
-      "storage_api_error",
-      expect.objectContaining({
-        error: "DATABASE_URL not configured",
-        status: 500,
-      }),
-    );
-
-    // Should not attempt to create database client
-    expect(mockGetPrismaClient).not.toHaveBeenCalled();
-  });
+  // Note: Removed DATABASE_URL check test - Prisma Accelerate handles connection automatically
 
   it("returns 500 error when storage calculation fails", async () => {
     process.env.DATABASE_URL = "postgresql://localhost:5432/test";
@@ -243,9 +203,7 @@ describe("/api/admin/storage GET", () => {
       message: "Failed to query database",
     });
 
-    // Should still clean up connections
-    expect(mockPrismaDisconnect).toHaveBeenCalled();
-    expect(mockPoolEnd).toHaveBeenCalled();
+    // Note: No pool cleanup needed with Prisma Accelerate
 
     // Should log error
     expect(mockLog).toHaveBeenCalledWith(

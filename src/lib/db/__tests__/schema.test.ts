@@ -90,6 +90,30 @@ describe("Database Schema", () => {
   describe("Filament Entity", () => {
     let createdFilamentId: string;
 
+    beforeEach(async () => {
+      // Clean up any existing test data from previous runs
+      await prisma.filament
+        .deleteMany({
+          where: {
+            OR: [
+              {
+                brand: "Bambu Lab",
+                colorHex: "#FF5733",
+                materialType: "PLA",
+                filamentType: "Basic",
+              },
+              {
+                brand: "Test Brand",
+                colorHex: "#000000",
+                materialType: "PETG",
+                filamentType: "Matte",
+              },
+            ],
+          },
+        })
+        .catch(() => {});
+    });
+
     afterEach(async () => {
       if (createdFilamentId) {
         await prisma.filament

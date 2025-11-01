@@ -3,8 +3,8 @@
     <epicId>2</epicId>
     <storyId>2.5</storyId>
     <title>Implement Slice File Upload API</title>
-    <status>Draft</status>
-    <generatedAt>2025-10-25</generatedAt>
+    <status>ContextReadyDraft</status>
+    <generatedAt>2025-10-31</generatedAt>
     <generator>BMAD Story Context Workflow</generator>
     <sourceStoryPath>/home/taylor/projects/printfarm-manager/docs/stories/story-2.5.md</sourceStoryPath>
   </metadata>
@@ -17,7 +17,7 @@
 - Create Slice Upload API Endpoint
   - Create `/src/routes/api/slices/upload.ts` file
   - Implement POST handler following TanStack Start pattern
-  - Access Cloudflare context and R2 bucket binding
+  - Initialize AWS SDK S3 client for R2 access using environment variables
   - Validate file presence in FormData
   - Validate file extension (.gcode.3mf, .gcode) - case-insensitive
   - Validate file size (≤50MB max)
@@ -129,8 +129,14 @@
       <doc>
         <path>/home/taylor/projects/printfarm-manager/CLAUDE.md</path>
         <title>Project Documentation for Claude Code</title>
-        <section>Cloudflare Workers Context - Accessing Environment Variables in API Routes</section>
-        <snippet>Use getContext('cloudflare') from vinxi/http to access Cloudflare environment variables and bindings. Access R2 bucket via cf.env.FILES_BUCKET. Environment-specific buckets: pm-dev-files (development), pm-staging-files (staging), pm-files (production).</snippet>
+        <section>Netlify Functions - Accessing Environment Variables and R2</section>
+        <snippet>Per Story 1.8 (Netlify migration), use process.env (NOT getContext) to access environment variables. R2 accessed via AWS SDK S3 client with credentials from process.env.R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY. Environment-specific buckets: pm-dev-files (development), pm-staging-files (staging), pm-files (production). Netlify Functions runtime: 1GB memory, 10s timeout, Node.js 20.</snippet>
+      </doc>
+      <doc>
+        <path>/home/taylor/projects/printfarm-manager/docs/stories/story-1.8.md</path>
+        <title>Story 1.8: Migrate from Cloudflare Workers to Netlify Functions</title>
+        <section>Complete Story (Status: Complete)</section>
+        <snippet>Platform migration documentation with code pattern changes. Cloudflare Workers (128MB, V8 isolate, native bindings) → Netlify Functions (1GB, Node.js 20, S3 SDK). Key changes: getContext('cloudflare') → process.env, native R2 bindings → AWS SDK S3Client, WASM Prisma → standard generator, Xata → Neon PostgreSQL. Includes complete code examples for R2 access and environment variable patterns.</snippet>
       </doc>
     </docs>
     <code>
@@ -156,18 +162,18 @@
         <reason>Structured logging utilities required for NFR-9 compliance. Used for upload lifecycle events: slice_upload_start, slice_upload_complete, slice_upload_error with performance metrics (duration_ms).</reason>
       </artifact>
       <artifact>
-        <path>/home/taylor/projects/printfarm-manager/src/lib/storage/index.ts</path>
+        <path>/home/taylor/projects/printfarm-manager/src/lib/storage/client.ts</path>
         <kind>Storage abstraction layer</kind>
         <symbol>getStorageClient</symbol>
-        <lines>N/A (file exists)</lines>
-        <reason>Storage factory that returns environment-appropriate client (MinIO for dev, R2 for staging/prod). Provides uploadFile() and getPublicUrl() methods used in upload endpoint. Extended in Story 2.2 to support file uploads.</reason>
+        <lines>1-50</lines>
+        <reason>Storage factory that returns environment-appropriate client. Development: MinIO (local Docker). Staging/Production: R2 via AWS SDK S3Client (per Story 1.8). Provides StorageClient interface with uploadFile(), getPublicUrl(), and delete() methods for atomic operations.</reason>
       </artifact>
       <artifact>
-        <path>/home/taylor/projects/printfarm-manager/src/lib/db/index.ts</path>
+        <path>/home/taylor/projects/printfarm-manager/src/lib/db.ts</path>
         <kind>Database client factory</kind>
         <symbol>getPrismaClient</symbol>
-        <lines>N/A (file exists)</lines>
-        <reason>Creates per-request Prisma client with Cloudflare WASM generator for Workers compatibility. Used instead of singleton. Requires pool cleanup in finally block to prevent connection leaks.</reason>
+        <lines>1-28</lines>
+        <reason>Creates per-request Prisma client with PostgreSQL adapter for Netlify Functions. Returns { prisma, pool } where pool must be cleaned up in finally block. Standard prisma-client-js generator (not WASM). Used for serverless connection management.</reason>
       </artifact>
       <artifact>
         <path>/home/taylor/projects/printfarm-manager/prisma/schema.prisma</path>
@@ -184,15 +190,17 @@
         <package name="@prisma/client">^6.18.0</package>
         <package name="@prisma/adapter-pg">^6.17.1</package>
         <package name="@aws-sdk/client-s3">^3.911.0</package>
+        <package name="@aws-sdk/s3-request-presigner">^3.919.0</package>
         <package name="minio">^8.0.6</package>
         <package name="pg">^8.16.3</package>
+        <package name="react">^19.0.0</package>
       </node>
       <frameworks>
         <framework>TanStack Start - Full-stack React framework with file-based routing</framework>
-        <framework>Cloudflare Workers - Serverless execution environment for API routes</framework>
-        <framework>Prisma - Database ORM with dual generators (Cloudflare WASM + local binary)</framework>
-        <framework>R2 - Cloudflare object storage for file uploads</framework>
-        <framework>Xata - PostgreSQL database with automatic branching</framework>
+        <framework>Netlify Functions - Serverless Node.js 20 runtime (1GB memory, 10s timeout)</framework>
+        <framework>Prisma - Database ORM with standard generator (per Story 1.8 migration)</framework>
+        <framework>R2 - Cloudflare object storage accessed via AWS SDK S3 API</framework>
+        <framework>Neon - PostgreSQL database with instant branching (per Story 1.8 migration)</framework>
       </frameworks>
     </dependencies>
   </artifacts>
@@ -219,22 +227,23 @@
    - Use json() from @tanstack/react-start for responses
    - No separate controller files - everything in route file
 
-4. **Cloudflare Workers Environment Access**
-   - Use process.env (NOT getContext('cloudflare')) for Node.js compatibility
-   - TanStack Start adapter automatically injects R2 bindings into process.env.FILES_BUCKET
-   - Environment detection: process.env.ENVIRONMENT or process.env.CLOUDFLARE_ENV
+4. **Netlify Functions Environment Access (Per Story 1.8)**
+   - Use process.env to access environment variables (NOT getContext)
+   - R2 access via AWS SDK S3 client (NOT native bindings)
+   - Environment variables: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME
+   - Environment detection: process.env.ENVIRONMENT
 
-5. **Database Client Management**
-   - Use getPrismaClient(databaseUrl) factory (NOT singleton from ~/lib/db/client)
-   - Per-request client pattern required for Cloudflare Workers WASM compatibility
-   - MUST cleanup connection pool in finally block: await pool.end()
-   - Prevents connection leaks on any error path
+5. **Database Client Management (Updated in Story 1.8)**
+   - Use getPrismaClient(databaseUrl) factory for per-request client
+   - Returns { prisma, pool } - MUST cleanup pool in finally block: await pool.end()
+   - Standard `prisma-client-js` generator with PostgreSQL adapter (NOT WASM)
+   - Neon PostgreSQL with pooled connections via @prisma/adapter-pg
 
-6. **Storage Abstraction Layer**
-   - Use getStorageClient() factory for environment-appropriate storage
-   - MinIO for development (local Docker), R2 for staging/production
-   - Provides uploadFile() and getPublicUrl() methods
-   - Storage cleanup on DB failure: await storage.delete(r2Key)
+6. **Storage Abstraction Layer (Updated in Story 1.8)**
+   - Use AWS SDK S3Client for R2 access (S3-compatible API)
+   - Direct S3 commands: PutObjectCommand, GetObjectCommand, DeleteObjectCommand
+   - Storage client factory handles environment-based configuration
+   - Storage cleanup on DB failure: await r2Client.send(new DeleteObjectCommand({...}))
 
 7. **Error Handling Standards (NFR-6)**
    - Use createErrorResponse() utility for consistent error format
@@ -313,63 +322,16 @@ FormData field: 'file' (File object)
 ```
 
 **Storage Client Interface (reuse from Story 2.2):**
-```typescript
-interface StorageClient {
-  uploadFile(key: string, file: File, options: { contentType: string; contentDisposition: string }): Promise<void>;
-  getPublicUrl(key: string): string;
-  delete(key: string): Promise<void>;
-  getStorageType(): 'minio' | 'r2';
-}
-```
+Storage client provides unified interface for MinIO (dev) and R2 (staging/prod). Key methods: put(), get(), delete(), uploadFile(), getPublicUrl(), generatePresignedUploadUrl(). Returns type 'MinIO' or 'Cloudflare R2' from getStorageType().
 
 **Database Client Interface (reuse from Story 2.1):**
-```typescript
-interface PrismaClient {
-  slice: {
-    create(args: { data: SliceCreateInput }): Promise<Slice>;
-  };
-}
-
-interface SliceCreateInput {
-  filename: string;
-  r2Key: string;
-  r2Url: string;
-  fileSize: number;
-  contentType: string;
-  metadataExtracted: boolean; // default: false
-  // Optional fields for Epic 3
-  metadataJson?: object;
-  layerHeight?: number;
-  nozzleTemp?: number;
-  bedTemp?: number;
-  printSpeed?: number;
-  infillPercent?: number;
-  supportsEnabled?: boolean;
-  estimatedTimeSec?: number;
-  filamentUsedG?: number;
-}
-```
+Prisma client with slice.create() method. SliceCreateInput requires: filename, r2Key, r2Url, fileSize, contentType, metadataExtracted (defaults false). Optional fields for Epic 3: metadataJson, curated fields (layerHeight, nozzleTemp, bedTemp, printSpeed, infillPercent, supportsEnabled, estimatedTimeSec, filamentUsedG).
 
 **Logger Interface (reuse from Story 1.5):**
-```typescript
-function log(event: string, data?: Record<string, unknown>): void;
-function logError(event: string, error: Error | string, data?: Record<string, unknown>): void;
-function logPerformance(event: string, durationMs: number, data?: Record<string, unknown>): void;
-```
+Structured logging functions: log(event, data?), logError(event, error, data?), logPerformance(event, durationMs, data?). All accept optional Record of additional context.
 
 **Error Response Utility (reuse from Story 2.2):**
-```typescript
-function createErrorResponse(
-  code: string,
-  message: string,
-  statusCode: number,
-  options?: {
-    field?: string;
-    details?: Record<string, unknown>;
-    originalError?: Error | unknown;
-  }
-): Response;
-```
+createErrorResponse(code, message, statusCode, options?) creates sanitized API error responses. Options include field (for validation errors), details (structured data), originalError (logged server-side only, never exposed to client).
   </interfaces>
   <tests>
     <standards>

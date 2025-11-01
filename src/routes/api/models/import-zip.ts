@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
-import { getPrismaClient } from "~/lib/db";
+import { prisma } from "~/lib/db";
 import { getStorageClient } from "~/lib/storage";
 import { createErrorResponse } from "~/lib/utils/errors";
 import { log, logPerformance } from "~/lib/utils/logger";
@@ -97,8 +97,6 @@ export const Route = createFileRoute("/api/models/import-zip")({
 
         const { request } = handlerContext;
         const startTime = Date.now();
-        let pool: Awaited<ReturnType<typeof getPrismaClient>>["pool"] | null =
-          null;
 
         try {
           // Parse multipart form data containing extracted files
@@ -151,22 +149,8 @@ export const Route = createFileRoute("/api/models/import-zip")({
           // Get environment-appropriate storage client
           const storage = await getStorageClient();
 
-          // Get database configuration
-          const databaseUrl = process.env.DATABASE_URL;
-          if (!databaseUrl) {
-            return createErrorResponse(
-              "DATABASE_NOT_CONFIGURED",
-              "Database connection not configured",
-              500,
-            );
-          }
-
-          // Get Prisma client for this request
-          const dbClient = getPrismaClient(databaseUrl);
-          const prisma = dbClient.prisma;
-          pool = dbClient.pool;
-
           // Process each file
+          // Prisma Accelerate handles connection pooling automatically
           const imported: ImportedFileResult[] = [];
           const failed: FailedFileResult[] = [];
           let totalBytes = 0;
@@ -336,21 +320,8 @@ export const Route = createFileRoute("/api/models/import-zip")({
             500,
             { originalError: error },
           );
-        } finally {
-          // Always clean up database connection pool
-          if (pool) {
-            try {
-              await pool.end();
-            } catch (poolError) {
-              log("pool_cleanup_error", {
-                error:
-                  poolError instanceof Error
-                    ? poolError.message
-                    : String(poolError),
-              });
-            }
-          }
         }
+        // Note: No cleanup needed - Prisma Accelerate handles connection pooling
       },
     },
   },

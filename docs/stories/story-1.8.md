@@ -37,11 +37,12 @@ Epic 1 Stories 1.1-1.5 (understanding of original Cloudflare setup)
 
 ### Database Migration
 
-6. Neon PostgreSQL project created with three branches: development, staging, production
+6. Prisma Postgres workspace created with two databases: staging, production (development uses local setup)
 7. Database connection strings configured in Netlify environment variables per deployment context
 8. Prisma schema updated to use standard generator (remove Cloudflare WASM generator)
-9. Database migrations tested in all three environments
+9. Database migrations tested in staging and production environments
 10. Prisma client working with standard Node.js patterns (no per-request factory needed)
+11. Optional: Netlify integration marketplace connection configured for simplified database management
 
 ### R2 Storage Access Update
 
@@ -97,15 +98,17 @@ Epic 1 Stories 1.1-1.5 (understanding of original Cloudflare setup)
   - [x] Enable deploy previews and branch deploys
   - [x] Test first deployment
 
-- [x] **Migrate to Neon PostgreSQL** (AC: #6, #7, #8, #9, #10)
-  - [x] Create Neon project
-  - [x] Create three database branches (development, staging, production)
-  - [x] Copy connection strings from Neon dashboard
+- [x] **Migrate to Prisma Postgres** (AC: #6, #7, #8, #9, #10, #11)
+  - [x] Create Prisma Postgres workspace
+  - [x] Create two databases (staging, production) - development uses local setup
+  - [x] Copy connection strings from Prisma Data Platform dashboard
   - [x] Add connection strings to Netlify environment variables
+  - [x] Optional: Configure Netlify integration via integrations marketplace
   - [x] Update Prisma schema: remove `@cloudflare` generator, use standard `prisma-client-js`
-  - [x] Run migrations in all environments
+  - [x] Run migrations in staging and production environments
   - [x] Test Prisma client connections
   - [x] Remove per-request client factory pattern from codebase
+  - [x] Document native Netlify <-> Prisma Postgres integration benefits
 
 - [x] **Update R2 Access to S3 SDK** (AC: #11, #12, #13, #14, #15)
   - [x] Generate R2 API tokens in Cloudflare dashboard

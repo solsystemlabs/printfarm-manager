@@ -82,7 +82,7 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 - Database migrations handled via Xata CLI or Prisma (decide during implementation)
 - Connection strings stored as Cloudflare secrets (not in wrangler.jsonc)
 
-> **DEPRECATED (2025-10-30)**: This story was superseded by Story 1.8, which migrates to Neon PostgreSQL with instant branching capabilities. The Xata-specific branching infrastructure described here is no longer in use. This story remains as historical documentation.
+> **DEPRECATED (2025-10-30)**: This story was superseded by Story 1.8, which migrates to Prisma Postgres with database branching capabilities. The Xata-specific branching infrastructure described here is no longer in use. This story remains as historical documentation.
 
 ---
 
@@ -201,7 +201,7 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 1. Netlify site created and connected to GitHub repository
 2. Build configuration defined in netlify.toml (development/staging/production contexts)
 3. Custom domains configured: pm-staging.solsystemlabs.com, pm.solsystemlabs.com
-4. Neon PostgreSQL project created with three branches (development, staging, production)
+4. Prisma Postgres workspace created with two databases (staging, production) - development uses local setup
 5. Prisma schema updated to use standard generator (remove Cloudflare WASM generator)
 6. R2 API tokens created and configured in Netlify environment variables
 7. AWS SDK S3 client implemented for R2 access (replace native bindings)
@@ -216,7 +216,7 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 
 **Technical Notes:**
 - Netlify Functions: 1GB memory (vs Workers 128MB), 10s timeout, Node.js 20 runtime
-- Neon PostgreSQL: Instant branching, standard PostgreSQL compatibility
+- Prisma Postgres: Database branching, standard PostgreSQL compatibility, native Netlify integration
 - R2 access via S3-compatible API using @aws-sdk/client-s3
 - See full story documentation: `/docs/stories/story-1.8.md`
 
