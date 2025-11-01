@@ -243,7 +243,10 @@ Environment variables are configured in Netlify Dashboard (Site settings → Env
 - `R2_BUCKET_NAME` - Environment-specific bucket name
 
 **Database Environment Variables** (set in Netlify Dashboard):
-- `DATABASE_URL` - Neon PostgreSQL connection string (environment-specific)
+- `DATABASE_URL` - Prisma Postgres with Accelerate connection string (environment-specific)
+  - Format: `prisma+postgres://accelerate.prisma-data.net/?api_key=YOUR_API_KEY`
+  - Get from Prisma Console (console.prisma.io) → Database → Connection String
+  - Note: Migrations work with this URL (no separate directUrl needed for Prisma Postgres)
 
 ### Accessing Cloudflare R2 from Netlify Functions
 
@@ -351,37 +354,64 @@ const secret = process.env.MY_SECRET
 const dbUrl = process.env.DATABASE_URL
 ```
 
-### Database Access (Neon PostgreSQL)
+### Database Access (Prisma Postgres with Accelerate)
+
+**This project uses Prisma Postgres (managed database service) with built-in Prisma Accelerate.**
 
 **Connection String Format**:
-```
-postgresql://[user]:[password]@[host]/[database]?sslmode=require
-```
+- **DATABASE_URL**: `prisma+postgres://accelerate.prisma-data.net/?api_key=YOUR_API_KEY`
+- **Note**: No separate `directUrl` needed - migrations work with `prisma+postgres://` URLs
 
-**Neon Database Branching**:
-- **Main branch**: Production database
-- **Development branch**: For local development
-- **Preview branches**: Auto-created for deploy previews (optional)
-
-**Setting up Neon for each environment**:
-1. Create Neon project
-2. Create branches: `main` (production), `staging`, `development`
-3. Copy connection strings from Neon dashboard
+**Setting up Prisma Postgres with Accelerate**:
+1. Create Prisma Postgres workspace at console.prisma.io
+2. Create databases: `production`, `staging`
+3. For each database:
+   - Click "Generate API Key" to get connection string
+   - Copy the `prisma+postgres://...` URL
 4. Add to Netlify environment variables:
-   - Production context: Production database connection string
-   - Deploy previews: Staging database connection string
+   - Production context:
+     - `DATABASE_URL` = `prisma+postgres://...` (production API key)
+   - Staging context (branch:master):
+     - `DATABASE_URL` = `prisma+postgres://...` (staging API key)
+   - Deploy previews: Use staging URL
+
+**Prisma Accelerate Benefits**:
+- ✅ Automatic connection pooling (no manual pool management)
+- ✅ Query result caching with configurable TTL
+- ✅ Edge-ready (works in serverless environments)
+- ✅ Built-in monitoring and performance metrics
+- ✅ Simplified code (no `pg` or `@prisma/adapter-pg` needed)
 
 **Prisma Configuration**:
 ```typescript
-// Use Neon's standard PostgreSQL generator (no WASM needed!)
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")  // prisma+postgres:// URL
+  // Note: No directUrl needed - migrations work with prisma+postgres://
+}
+
 generator client {
   provider = "prisma-client-js"
 }
+```
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+**Client Initialization**:
+```typescript
+// src/lib/db/client.ts
+import { PrismaClient } from "@prisma/client";
+import { withAccelerate } from "@prisma/extension-accelerate";
+
+export const prisma = new PrismaClient().$extends(withAccelerate());
+```
+
+**Running Migrations**:
+```bash
+# Migrations work directly with DATABASE_URL (prisma+postgres://)
+npx prisma migrate deploy
+
+# Or for development
+npx prisma migrate dev
 ```
 
 ### Deployment Checklist
@@ -398,7 +428,7 @@ Before first deployment:
   - [ ] `R2_ACCESS_KEY_ID`
   - [ ] `R2_SECRET_ACCESS_KEY`
   - [ ] `R2_BUCKET_NAME`
-  - [ ] `DATABASE_URL`
+  - [ ] `DATABASE_URL` (Prisma Postgres with Accelerate: `prisma+postgres://...`)
 - [ ] R2 buckets created and accessible
-- [ ] Neon database branches created
+- [ ] Prisma Postgres databases created (Accelerate included by default)
 - [ ] Test deployment succeeds

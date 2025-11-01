@@ -1,12 +1,13 @@
 // Prisma schema for PrintFarm Manager
-// Database: PostgreSQL
+// Database: Prisma Postgres with Prisma Accelerate
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Note: directUrl NOT needed for Prisma Postgres - migrations work with prisma+postgres:// URLs
 }
 
-// Standard Prisma Client generator
+// Prisma Client generator with Accelerate support
 generator client {
   provider = "prisma-client-js"
 }

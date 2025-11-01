@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json } from "@tanstack/react-start";
-import { getPrismaClient } from "~/lib/db";
+import { prisma } from "~/lib/db";
 import { getStorageClient } from "~/lib/storage";
 import { createErrorResponse } from "~/lib/utils/errors";
 import { log, logPerformance } from "~/lib/utils/logger";
@@ -24,8 +24,6 @@ export const Route = createFileRoute("/api/models/upload")({
     handlers: {
       POST: async ({ request }) => {
         const startTime = Date.now();
-        let pool: Awaited<ReturnType<typeof getPrismaClient>>["pool"] | null =
-          null;
 
         try {
           // Get environment-appropriate storage client (MinIO for dev, R2 for staging/prod)
@@ -128,31 +126,8 @@ export const Route = createFileRoute("/api/models/upload")({
           // Generate public URL for the uploaded file
           const publicUrl = storage.getPublicUrl(storageKey);
 
-          // Get database URL from environment
-          const databaseUrl = process.env.DATABASE_URL;
-          if (!databaseUrl) {
-            // Cleanup storage since we uploaded but can't save to DB
-            try {
-              await storage.delete(storageKey);
-            } catch {
-              log("model_upload_cleanup_failed", {
-                error: "cleanup_failed_no_database",
-                storageKey,
-              });
-            }
-            return createErrorResponse(
-              "DATABASE_NOT_CONFIGURED",
-              "Database connection not configured",
-              500,
-            );
-          }
-
-          // Get Prisma client for this request
-          const dbClient = getPrismaClient(databaseUrl);
-          const prisma = dbClient.prisma;
-          pool = dbClient.pool;
-
           // Create database record (atomic operation - cleanup storage on failure)
+          // Prisma Accelerate handles connection pooling automatically
           try {
             const model = await prisma.model.create({
               data: {
@@ -235,22 +210,8 @@ export const Route = createFileRoute("/api/models/upload")({
             500,
             { originalError: error },
           );
-        } finally {
-          // Always clean up database connection pool
-          if (pool) {
-            try {
-              await pool.end();
-            } catch (poolError) {
-              // Log but don't throw - we're already in cleanup
-              log("pool_cleanup_error", {
-                error:
-                  poolError instanceof Error
-                    ? poolError.message
-                    : String(poolError),
-              });
-            }
-          }
         }
+        // Note: No cleanup needed - Prisma Accelerate handles connection pooling
       },
     },
   },

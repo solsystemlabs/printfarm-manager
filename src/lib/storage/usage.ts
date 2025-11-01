@@ -1,5 +1,3 @@
-import { PrismaClient } from "@prisma/client";
-
 /**
  * Storage usage breakdown by file type
  */
@@ -145,7 +143,10 @@ async function queryR2StorageMetrics(
  * @param prisma - Prisma client instance
  * @returns Breakdown of storage by models, slices, and images
  */
-async function calculateDatabaseBreakdown(prisma: PrismaClient): Promise<{
+async function calculateDatabaseBreakdown(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prisma: any, // Accepts both PrismaClient and extended clients
+): Promise<{
   models: { count: number; bytes: number };
   slices: { count: number; bytes: number };
   images: { count: number; bytes: number };
@@ -230,7 +231,8 @@ async function calculateDatabaseBreakdown(prisma: PrismaClient): Promise<{
  * ```
  */
 export async function calculateStorageUsage(
-  prisma: PrismaClient,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prisma: any, // Accepts both PrismaClient and extended clients
   cloudflareConfig?: CloudflareConfig,
 ): Promise<StorageUsage> {
   // Get breakdown from database

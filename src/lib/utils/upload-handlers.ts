@@ -9,7 +9,7 @@
  */
 
 import { json } from "@tanstack/react-start";
-import { getPrismaClient } from "~/lib/db";
+import { prisma } from "~/lib/db";
 import { getStorageClient } from "~/lib/storage";
 import { createErrorResponse } from "./errors";
 import { log, logPerformance } from "./logger";
@@ -158,7 +158,8 @@ export async function handlePresignedUrlGeneration(
  * Returns the created record which must have at minimum an 'id' field
  */
 export type RecordCreator<T extends { id: string }> = (
-  prisma: ReturnType<typeof getPrismaClient>["prisma"],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prismaClient: any, // Accepts extended Prisma client
   data: {
     filename: string;
     storageKey: string;
@@ -188,7 +189,6 @@ export async function handleUploadCompletion<
   },
 >(request: Request, config: UploadConfig, createRecord: RecordCreator<T>) {
   const startTime = Date.now();
-  let pool: Awaited<ReturnType<typeof getPrismaClient>>["pool"] | null = null;
 
   try {
     // Parse JSON request body
@@ -229,26 +229,8 @@ export async function handleUploadCompletion<
       storageType: storage.getStorageType(),
     });
 
-    // Get database URL from environment
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
-      log(`${config.entityType}_upload_complete_error`, {
-        error: "database_not_configured",
-        storageKey,
-      });
-      return createErrorResponse(
-        "DATABASE_NOT_CONFIGURED",
-        "Database connection not configured",
-        500,
-      );
-    }
-
-    // Get Prisma client for this request
-    const dbClient = getPrismaClient(databaseUrl);
-    const prisma = dbClient.prisma;
-    pool = dbClient.pool;
-
     // Create database record (entity-specific logic)
+    // Prisma Accelerate handles connection pooling automatically
     try {
       const record = await createRecord(prisma, {
         filename,
@@ -301,17 +283,6 @@ export async function handleUploadCompletion<
       500,
       { originalError: error },
     );
-  } finally {
-    // Always clean up database connection pool
-    if (pool) {
-      try {
-        await pool.end();
-      } catch (poolError) {
-        log("pool_cleanup_error", {
-          error:
-            poolError instanceof Error ? poolError.message : String(poolError),
-        });
-      }
-    }
   }
+  // Note: No cleanup needed - Prisma Accelerate handles connection pooling
 }

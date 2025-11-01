@@ -58,7 +58,7 @@ The print farm business has reached a critical inflection point where the curren
 
 *What depends on this system:* Business growth capacity (adding products currently blocked), assistant autonomy (100% blocked without recipe info), operational efficiency (hours lost weekly to reslicing), printer uptime (idle while searching for files), and future SaaS opportunity (requires operational proof first). This isn't an optimization—it's a prerequisite for growth.
 
-*What this system depends on:* All upstream dependencies are ready or owner-controlled. Technical infrastructure is production-ready (TanStack Start, Netlify Functions, Cloudflare R2, Prisma with Neon PostgreSQL). Domain knowledge is documented (Bambu Lab metadata format, recipe repository model, AMS slot tracking requirements). Operational inputs are owner-controlled (model uploads, sliced files, product definitions). Zero external blockers—no waiting on vendors, approvals, or unproven technology.
+*What this system depends on:* All upstream dependencies are ready or owner-controlled. Technical infrastructure is production-ready (TanStack Start, Netlify Functions, Cloudflare R2, Prisma with Prisma Postgres). Native Netlify + Prisma integration provides unified ecosystem for deployment and database management. Domain knowledge is documented (Bambu Lab metadata format, recipe repository model, AMS slot tracking requirements). Operational inputs are owner-controlled (model uploads, sliced files, product definitions). Zero external blockers—no waiting on vendors, approvals, or unproven technology.
 
 *Circular dependency risk:* Business growth demands the system, but growth also limits development time. The system must be built NOW while operational pain is high but not yet catastrophic. Waiting until business is larger means LESS time available for development.
 
@@ -336,7 +336,7 @@ The window is closing, not opening. The system must exist before the business sc
 - System shall support three environments: development (local), staging (pm-staging.solsystemlabs.com), production (pm.solsystemlabs.com)
 - System shall use Netlify's Git-based deployments for automated deployments (staging on master branch, production on production branch)
 - System shall generate isolated preview URLs for all pull requests without affecting staging/production
-- System shall use environment-specific configuration with separate Cloudflare R2 buckets per environment and Neon database branches for PR-specific database isolation
+- System shall use environment-specific configuration with separate Cloudflare R2 buckets per environment and Prisma Postgres databases for PR-specific database isolation
 - System shall complete deployments in ≤5 minutes from git push to live environment
 
 **NFR-11: Scalability and Future Growth**
@@ -348,7 +348,7 @@ The window is closing, not opening. The system must exist before the business sc
 - System shall monitor Netlify Functions metrics (execution time, memory usage) to identify optimization opportunities before hitting limits
 
 **NFR-12: Backup and Disaster Recovery**
-- System shall use managed database with automated daily backups (Neon provides automatic backups)
+- System shall use managed database with automated daily backups (Prisma Postgres provides automatic backups)
 - System shall maintain R2 file versioning to recover from accidental deletions (Cloudflare R2 versioning enabled)
 - System shall document database restoration procedure for catastrophic failure scenarios
 - System shall test recovery process quarterly to ensure RTO (Recovery Time Objective) of ≤4 hours (not a major focus for MVP)
@@ -741,7 +741,7 @@ The PrintFarm Manager MVP is delivered through **5 epics** spanning approximatel
 
 **Epic 1: Deployment & Operations Foundation** (Stories: 6-8, Priority: CRITICAL)
 - Establishes three environments (dev/staging/production) with automated deployments
-- Configures Netlify Functions, Neon database branches, Cloudflare R2 buckets
+- Configures Netlify Functions, Prisma Postgres databases, Cloudflare R2 buckets
 - Implements logging, monitoring, and observability
 - Enables development team to work efficiently with proper CI/CD pipeline
 - **Rationale:** Without deployment infrastructure, no features can be tested or released
@@ -907,7 +907,7 @@ Since this is a Level 3 project, you need solution architecture before story imp
 4. **Metadata Example:** `/home/taylor/projects/printfarm-manager/docs/bambu-lab-metadata-example.json`
 
 **Ask architect to:**
-- Design solution architecture for TanStack Start + Netlify Functions + Neon + R2
+- Design solution architecture for TanStack Start + Netlify Functions + Prisma Postgres + R2
 - Define database schema (tables, relationships, indexes) based on Epic 2 Story 2.1 requirements
 - Create API endpoint specifications for all file operations
 - Design metadata extraction pipeline architecture
@@ -936,11 +936,11 @@ This is a user-facing system with complex UI workflows. After architecture is co
 - [ ] **Environment Setup Verification**
   - Confirm all three environments operational (dev/staging/production)
   - Test Netlify Git deployment pipeline
-  - Verify Neon branching works for PR previews
+  - Verify Prisma Postgres databases work for PR previews
   - Validate R2 buckets accessible from all environments
 
 - [ ] **Technical Spikes (if needed)**
-  - Spike: Neon database branching integration with Netlify deployments
+  - Spike: Prisma Postgres database integration with Netlify deployments
   - Spike: R2 file header configuration for forced downloads
   - Spike: Fuzzy search options (PostgreSQL full-text vs Levenshtein)
   - Spike: Image resizing library selection (sharp vs canvas)
